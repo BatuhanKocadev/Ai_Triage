@@ -1,0 +1,21 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Docker & Çevre Değişkenleri
+.env
+Dockerfile*
+docker-compose.yml
+
+# Projeye Özel Veriler
+chroma_data/
