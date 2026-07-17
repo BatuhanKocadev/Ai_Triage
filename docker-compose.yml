@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: ai_triage_chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ai_triage_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - chromadb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./app:/app/app
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ai_triage_frontend
+    restart: always
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./frontend:/app/frontend
+
+volumes:
+  chroma_data:
+    name: ai_triage_chroma_storage

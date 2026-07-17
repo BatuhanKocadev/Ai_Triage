@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.api import health, speech, ai 
-from app.utils.logger import logger 
+from app.api import health, speech, ai, document, auth
+from app.utils.logger import logger
+from app.api import auth
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Tıbbi Triyaj Pipeline API başlatılıyor...")
@@ -17,7 +19,7 @@ app = FastAPI(
     ),
     version="1.0.0",
     contact={
-        "name": "Batuhan Kocaa",
+        "name": "Batuhan Koca",
         "url": "https://github.com/BatuhanKocadev/Ai_Triage.git",
         "email": "batuhankocadev@gmail.com",
     },
@@ -30,3 +32,5 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(speech.router)
 app.include_router(ai.router)
+app.include_router(document.router)
+app.include_router(auth.router)

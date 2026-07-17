@@ -1,12 +1,9 @@
 from fastapi import APIRouter, status
 from pydantic import BaseModel
-
-# health prefix'i ile bir router oluşturuyoruz
 router = APIRouter(
     prefix="/health",
     tags=["Sistem Durumu"]
 )
-
 class SistemDurumYaniti(BaseModel):
     durum: str
     mesaj: str
