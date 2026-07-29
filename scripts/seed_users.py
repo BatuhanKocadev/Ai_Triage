@@ -1,0 +1,50 @@
+"""Başlangıç kullanıcılarını oluşturur.
+
+Kullanım (proje kökünden):
+    .venv\\Scripts\\python.exe scripts/seed_users.py
+
+Tekrar çalıştırılabilir: var olan kullanıcıyı yeniden eklemez, atlar.
+"""
+
+import io
+import sys
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+from app.db.database import SessionLocal
+from app.models.user import User
+from app.services.auth_service import hash_password
+
+BASLANGIC_KULLANICILARI = [
+    {"username": "admin", "password": "admin123", "role": "admin"},
+    {"username": "doctor", "password": "doctor123", "role": "user"},
+]
+
+
+def main() -> None:
+    db = SessionLocal()
+    try:
+        for veri in BASLANGIC_KULLANICILARI:
+            mevcut = db.query(User).filter(User.username == veri["username"]).first()
+            if mevcut:
+                print(f"  atlandı  : {veri['username']} (zaten var, rol={mevcut.role})")
+                continue
+
+            db.add(User(
+                username=veri["username"],
+                hashed_password=hash_password(veri["password"]),
+                role=veri["role"],
+            ))
+            print(f"  eklendi  : {veri['username']} (rol={veri['role']})")
+
+        db.commit()
+
+        print("\nVeritabanındaki kullanıcılar:")
+        for kullanici in db.query(User).order_by(User.id).all():
+            print(f"  #{kullanici.id}  {kullanici.username:10} {kullanici.role}")
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    main()
