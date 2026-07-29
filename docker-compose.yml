@@ -1,4 +1,6 @@
-version: '3.8'
+# Proje adı sabitlendi: klasör adı değişse bile (Ai_Triage / Ai_Triage-myself)
+# aynı konteyner ve volume'ler kullanılmaya devam eder, mevcut veri kaybolmaz.
+name: ai_triage
 
 services:
   chromadb:
@@ -12,6 +14,24 @@ services:
     environment:
       - IS_PERSISTENT=TRUE
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai_triage_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=triage
+      - POSTGRES_PASSWORD=triage
+      - POSTGRES_DB=ai_triage
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U triage -d ai_triage"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   backend:
     build:
       context: .
@@ -21,14 +41,18 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - chromadb
+      chromadb:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql+psycopg2://triage:triage@postgres:5432/ai_triage
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     volumes:
       - ./app:/app/app
 
@@ -50,3 +74,5 @@ services:
 volumes:
   chroma_data:
     name: ai_triage_chroma_storage
+  pg_data:
+    name: ai_triage_pg_storage

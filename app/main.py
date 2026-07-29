@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.api import health, speech, ai, document, auth
 from app.utils.logger import logger
-from app.api import auth
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
