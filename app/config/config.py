@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # ilgili sorguların 7/8'ini geçiriyor, alakasızların hiçbirini geçirmiyor.
     rerank_threshold: float = 0.52
 
+    # Ses tanıma (STT) — faster-whisper
+    whisper_model_size: str = "medium"
+    whisper_device: str = "auto"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
