@@ -8,6 +8,7 @@ from datetime import datetime
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 API_LOGIN_URL = f"{BACKEND_URL}/auth/login"
+API_ME_URL = f"{BACKEND_URL}/auth/me"
 API_ANALYSIS_URL = f"{BACKEND_URL}/ai/analiz"
 API_UPLOAD_URL = f"{BACKEND_URL}/document/upload"
 
@@ -39,11 +40,18 @@ if st.session_state.access_token is None:
                 if response.status_code == 200:
                     token_data = response.json()
                     st.session_state.access_token = token_data["access_token"]
-                    if username_input == "admin":
-                        st.session_state.user_role = "admin"
+                    # Rol JWT'nin içinde; kullanıcı adından tahmin etmek yerine
+                    # gerçek rolü /auth/me'den okuyoruz.
+                    me_response = requests.get(
+                        API_ME_URL,
+                        headers={"Authorization": f"Bearer {st.session_state.access_token}"}
+                    )
+                    if me_response.status_code == 200:
+                        st.session_state.user_role = me_response.json()["role"]
+                        st.rerun()
                     else:
-                        st.session_state.user_role = "user"
-                    st.rerun()
+                        st.session_state.access_token = None
+                        st.error("Kullanıcı bilgisi alınamadı.")
                 else:
                     st.error("Kullanıcı adı veya şifre hatalı!")
             except Exception as e:
@@ -186,7 +194,7 @@ else:
                             st.error(f"Yükleme sırasında bağlantı hatası: {str(e)}")
 
             st.markdown("---")
-            st.header("Bekleyen Sorular")
+            st.header("Bekleyen Sorular (geçici — Gün 19'da gerçek veriye bağlanacak)")
             
             if st.session_state.pending_questions:
                 for q in list(st.session_state.pending_questions):

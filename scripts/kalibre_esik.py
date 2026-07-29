@@ -17,7 +17,7 @@ import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 from app.config.config import settings
-from app.services.chroma_service import triage_collection
+from app.services.chroma_service import get_collection
 from app.services.rag_service import get_reranker, calculate_sigmoid
 
 # Bilgi tabanındaki protokollerle ilgili olan, geçmesi beklenen sorgular.
@@ -46,7 +46,7 @@ ALAKASIZ = [
 
 def en_yuksek_skor(sorgu: str) -> float:
     """Sorgu için bilgi tabanındaki en iyi eşleşmenin normalize skorunu döndürür."""
-    sonuc = triage_collection.query(query_texts=[sorgu], n_results=10)
+    sonuc = get_collection().query(query_texts=[sorgu], n_results=10)
     dokumanlar = sonuc["documents"][0]
     if not dokumanlar:
         return 0.0
@@ -55,13 +55,13 @@ def en_yuksek_skor(sorgu: str) -> float:
 
 
 def main() -> None:
-    if triage_collection.count() == 0:
+    if get_collection().count() == 0:
         print("Bilgi tabanı boş. Önce /document/upload ile doküman yükleyin.")
         sys.exit(1)
 
     print(f"Model: {settings.reranker_model}")
     print(f"Mevcut eşik: {settings.rerank_threshold}")
-    print(f"Bilgi tabanındaki parça sayısı: {triage_collection.count()}\n")
+    print(f"Bilgi tabanındaki parça sayısı: {get_collection().count()}\n")
 
     print("=== İLGİLİ sorgular (geçmeli) ===")
     ilgili_skorlar = []

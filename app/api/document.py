@@ -6,7 +6,7 @@ import docx
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.utils.logger import logger
 from app.models.user import User
-from app.services.chroma_service import triage_collection
+from app.services.chroma_service import get_collection
 from app.services.auth_service import require_admin_role
 
 router = APIRouter(
@@ -122,7 +122,7 @@ async def upload_document(
             })
             id_list.append(f"{safe_filename}_chunk_{index}")
         
-        triage_collection.upsert(
+        get_collection().upsert(
             documents=text_chunks,
             metadatas=metadata_list,
             ids=id_list

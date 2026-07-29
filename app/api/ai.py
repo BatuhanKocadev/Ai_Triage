@@ -10,7 +10,7 @@ from app.models.visit import AIRecommendation, Visit
 from app.services.llm_service import get_structured_completion, LLMError
 from app.services.rag_service import retrieve_and_rerank
 from app.utils.logger import logger
-from app.services.chroma_service import triage_collection
+from app.services.chroma_service import get_collection
 from app.services.auth_service import require_user_or_admin_role
 
 router = APIRouter(
@@ -130,7 +130,7 @@ def analyze_symptoms(
         # değerlendirme sırasında kod değiştirmeden ayarlanabiliyor.
         relevant_documents = retrieve_and_rerank(
             query=request_data.symptom_text,
-            collection=triage_collection,
+            collection=get_collection(),
             metadata_filter=filter_kwargs
         )
     except Exception as e:
