@@ -1,8 +1,9 @@
 import chromadb
-import os
 
-CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
+from app.config.config import settings
 
-chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+# Ayarlar pydantic-settings üzerinden okunuyor: önce ortam değişkenleri
+# (Docker Compose bunları veriyor), yoksa .env dosyası, o da yoksa varsayılan.
+# Doğrudan os.getenv kullanıldığında .env dosyası hiç devreye girmiyordu.
+chroma_client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
 triage_collection = chroma_client.get_or_create_collection(name="triage_documents")

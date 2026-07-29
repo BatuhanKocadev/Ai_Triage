@@ -1,0 +1,30 @@
+AKUT KARIN AĞRISI TRİYAJ PROTOKOLÜ
+
+Kapsam
+Acil servise karın ağrısı ile başvuran erişkin hastaların önceliklendirilmesi.
+
+İlk Değerlendirme
+Tüm hastalarda tam kan sayımı, C-reaktif protein (CRP), böbrek ve karaciğer
+fonksiyon testleri ile tam idrar tetkiki istenir. Doğurganlık çağındaki kadın
+hastalarda gebelik testi (beta-hCG) zorunludur.
+
+Kırmızı Alan Kriterleri
+Ani başlangıçlı, şiddetli, yaygın karın ağrısı ve defans/rebound bulgusu olan
+hastalar kırmızı alana alınır. Bu hastalarda ayakta direkt karın grafisi ve acil
+batın ultrasonografisi istenir; genel cerrahi konsültasyonu yapılır.
+Hipotansiyon veya taşikardi eşlik ediyorsa şok protokolü başlatılır.
+
+Sarı Alan Kriterleri
+Sağ alt kadran ağrısı, ateş ve lökositoz üçlüsü apandisit açısından anlamlıdır;
+bu hastalar sarı alanda takip edilir ve abdominal ultrasonografi istenir.
+Sağ üst kadran ağrısında safra kesesi ultrasonografisi eklenir.
+
+Yeşil Alan Kriterleri
+Kramp tarzında, aralıklı, vital bulguları normal, batın muayenesi rahat olan
+hastalar yeşil alanda değerlendirilir. Gastroenterit ön tanısıyla semptomatik
+tedavi verilir.
+
+Yönlendirme
+Kırmızı kod alan hastalar Genel Cerrahi bölümüne, sarı kod alan hastalar Acil
+Dahiliye takibine, yeşil kod alan hastalar poliklinik değerlendirmesine
+yönlendirilir.

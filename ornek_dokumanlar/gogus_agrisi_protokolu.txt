@@ -1,0 +1,35 @@
+AKUT GÖĞÜS AĞRISI TRİYAJ PROTOKOLÜ
+
+Kapsam
+Bu protokol, acil servise göğüs ağrısı şikayeti ile başvuran erişkin hastaların
+ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+İlk Değerlendirme
+Akut göğüs ağrısı ile başvuran her hastada ilk 10 dakika içinde 12 derivasyonlu
+EKG çekilmelidir. Eş zamanlı olarak Troponin I, tam kan sayımı ve temel biyokimya
+paneli istenir. Hastanın vital bulguları (tansiyon, nabız, ateş, saturasyon)
+kaydedilir.
+
+Kırmızı Alan Kriterleri
+ST segment elevasyonu saptanan hastalar doğrudan kırmızı alana alınır ve acil
+kardiyoloji konsültasyonu istenir. Aşağıdaki bulgulardan herhangi birinin varlığı
+da kırmızı kod gerektirir:
+- Sol kola veya çeneye yayılan baskı tarzında ağrı
+- Eşlik eden terleme, bulantı veya nefes darlığı
+- Sistolik tansiyonun 90 mmHg altında olması
+- Bilinç bulanıklığı
+
+Sarı Alan Kriterleri
+EKG'si normal, hemodinamisi stabil ancak riskli özgeçmişi (hipertansiyon,
+diyabet, sigara, aile öyküsü) olan hastalar sarı alanda takip edilir.
+Troponin ölçümü 3 saat sonra tekrarlanır. Akciğer grafisi çekilir.
+
+Yeşil Alan Kriterleri
+Ağrısı nefes alıp vermekle veya hareketle değişen, travma öyküsü bulunan,
+EKG ve vital bulguları normal olan genç hastalar yeşil alanda değerlendirilir.
+Kas-iskelet sistemi kaynaklı ağrı düşünülür; ileri tetkik gerekmeyebilir.
+
+Yönlendirme
+Kırmızı kod alan hastalar Kardiyoloji bölümüne, sarı kod alan hastalar Acil
+Dahiliye takibine, yeşil kod alan hastalar poliklinik değerlendirmesine
+yönlendirilir.

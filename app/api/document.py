@@ -5,6 +5,7 @@ import pdfplumber
 import docx
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.utils.logger import logger
+from app.models.user import User
 from app.services.chroma_service import triage_collection
 from app.services.auth_service import require_admin_role
 
@@ -64,7 +65,7 @@ def process_docx_content(file_bytes: bytes) -> str:
 async def upload_document(
     category: str = Form(...),
     file: UploadFile = File(...),
-    current_user: dict = Depends(require_admin_role)
+    current_user: User = Depends(require_admin_role)
 ):
     try:
         file_content = await file.read()
@@ -127,7 +128,7 @@ async def upload_document(
             ids=id_list
         )
         
-        logger.info(f"Uploaded and chunked: {file.filename} by {current_user['username']}")
+        logger.info(f"Uploaded and chunked: {file.filename} by {current_user.username}")
         
         return {
             "status": "success",
