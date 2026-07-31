@@ -46,3 +46,7 @@ hata_logu.txt
 
 # Araç durumu (Serena MCP proje önbelleği — makineye özel, paylaşılmaz)
 .serena/
+
+# Claude Code worktree'leri: depo içinde duran ayrı çalışma ağaçları, asla
+# commit'lenmemeli. .claude/ altındaki diğer dosyalar (ayarlar) paylaşılabilir.
+.claude/worktrees/
