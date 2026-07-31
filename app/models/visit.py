@@ -21,6 +21,10 @@ class Visit(Base):
     symptom_text = Column(String, nullable=False)
     chronic_disease = Column(String, nullable=True)
     vitals = Column(JSON, nullable=True)
+    # Şikayetin geliş kanalı ("ses"/"metin"): doktor transkript hatası ihtimalini
+    # bilmeli, rapor da "vakaların %X'i sesli girildi" diyebilmeli.
+    # server_default sayesinde tablodaki eski satırlar migration'da "metin" alır.
+    giris_tipi = Column(String(10), default="metin", server_default="metin", nullable=False)
     # bekliyor -> incelendi -> tamamlandi
     status = Column(String(20), default="bekliyor", nullable=False, index=True)
     created_at = Column(

@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, status, HTTPException, Depends
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 from enum import Enum
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -42,6 +42,9 @@ class AnalysisRequest(BaseModel):
     chronic_disease: Optional[str] = Field(None)
     vitals: Optional[Vitals] = None
     source_document: Optional[str] = Field(None)
+    # Şikayetin nereden geldiği: ses akışı "ses" gönderir, yazılı akış "metin".
+    # Literal sayesinde bu ikisi dışında bir değer daha istekte reddedilir.
+    giris_tipi: Literal["metin", "ses"] = "metin"
 
 class AnalysisResponse(BaseModel):
     status: str
@@ -101,6 +104,8 @@ def _kaydet(db: Session, request_data: "AnalysisRequest", sonuc: AnalysisRespons
         symptom_text=request_data.symptom_text,
         chronic_disease=request_data.chronic_disease,
         vitals=request_data.vitals.model_dump() if request_data.vitals else None,
+        # Giriş kanalı ziyaretle birlikte kalıcı hale getiriliyor (Gün 15).
+        giris_tipi=request_data.giris_tipi,
     )
     db.add(ziyaret)
     db.flush()  # ziyaret.id üretilsin ki öneriye bağlayabilelim

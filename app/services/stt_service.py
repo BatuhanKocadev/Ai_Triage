@@ -49,7 +49,9 @@ def transcribe(dosya_yolu: str) -> str:
         raise STTError(f"Ses dosyası bulunamadı: {dosya_yolu}")
 
     try:
-        segments, _ = get_model().transcribe(dosya_yolu, language="tr")
+        # vad_filter: konuşma içermeyen bölümleri ayıklıyor; bu olmayınca Whisper
+        # tam sessizliğe "İzlediğiniz için teşekkürler" gibi kalıp cümleler uyduruyor.
+        segments, _ = get_model().transcribe(dosya_yolu, language="tr", vad_filter=True)
         return " ".join(segment.text.strip() for segment in segments).strip()
     except Exception as exc:
         raise STTError(f"Ses dosyası transkript edilemedi: {dosya_yolu}") from exc
