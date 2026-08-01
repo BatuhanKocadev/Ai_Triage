@@ -62,10 +62,11 @@ Testler `tests/` altında, pytest ile çalışır. Bağımlılıklar `requiremen
 ```
 
 `entegrasyon` işaretli testler gerçek Postgres ister: `docker compose up -d postgres` ve
-`ai_triage_test` veritabanı. Ollama ve faster-whisper hiçbir testte çağrılmaz —
-`tests/yardimcilar/` altındaki sahte servislerle değiştirilir ve **uç modülünün
-ad alanında** monkeypatch'lenir (`app.api.ai.get_structured_completion`), servis
-modülünde değil.
+`ai_triage_test` veritabanı. Ollama, faster-whisper, ChromaDB ve cross-encoder
+(reranker) hiçbir testte çağrılmaz — dördü de `tests/yardimcilar/` altındaki sahte
+servislerle değiştirilir (`sahte_llm.py`, `sahte_stt.py`, `sahte_rag.py`) ve **uç
+modülünün ad alanında** monkeypatch'lenir (`app.api.ai.get_structured_completion`,
+`app.api.ai.get_collection`), servis modülünde değil.
 
 Paketin mevcut durumu ve bilinen kapsam boşlukları için `docs/superpowers/ek-c-ilerleme.md`.
 
