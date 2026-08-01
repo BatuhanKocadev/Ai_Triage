@@ -6,13 +6,19 @@ from tests.yardimcilar.veri_uretici import ziyaret_verisi
 
 
 @pytest.mark.entegrasyon
-def test_jetonsuz_istek_401_doner(istemci):
+def test_jetonsuz_istek_401_doner(istemci, esik_alti):
+    # Uçtan yetkilendirme bağımlılığının düşmesini yakalar; hasta verisi
+    # jetonsuz işlenmemeli. esik_alti güvenlik ağı: yetki kapısı düşerse istek
+    # gövdeye girer ve fixture olmadan gerçek ChromaDB/Ollama'ya gidilir.
     yanit = istemci.post("/ai/analiz", json=ziyaret_verisi())
     assert yanit.status_code == 401
 
 
 @pytest.mark.entegrasyon
-def test_bozuk_jeton_401_doner(istemci):
+def test_bozuk_jeton_401_doner(istemci, esik_alti):
+    # Bozuk imzalı jetonun kabul edilmesini yakalar: jwt.decode'un
+    # doğrulamasız çağrılması ya da except JWTError dalının düşmesi.
+    # esik_alti: kapı düşerse istek gövdeye ilerler, gerçek servise gitmesin.
     yanit = istemci.post(
         "/ai/analiz",
         json=ziyaret_verisi(),
@@ -22,16 +28,21 @@ def test_bozuk_jeton_401_doner(istemci):
 
 
 @pytest.mark.entegrasyon
-def test_tanimsiz_rol_403_doner(istemci, yetkili_baslik):
+def test_tanimsiz_rol_403_doner(istemci, yetkili_baslik, esik_alti):
     # require_user_or_admin_role yalnızca "user" ve "admin" kabul eder.
+    # esik_alti: rol kontrolü gevşerse istek gövdeye ilerler, gerçek servise gitmesin.
     baslik = yetkili_baslik(kullanici_adi="doktor_ayse", rol="doktor")
     yanit = istemci.post("/ai/analiz", json=ziyaret_verisi(), headers=baslik)
     assert yanit.status_code == 403
 
 
 @pytest.mark.entegrasyon
-def test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner(istemci, jeton_uret):
+def test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner(
+    istemci, jeton_uret, esik_alti
+):
     # Jeton imzası geçerli ama kullanıcı silinmişse erişim reddedilmeli.
+    # esik_alti: kullanıcı arama dalı düşerse istek gövdeye ilerler,
+    # gerçek servise gitmesin.
     jeton = jeton_uret(kullanici_adi="hic_var_olmayan", rol="user")
     yanit = istemci.post(
         "/ai/analiz",
