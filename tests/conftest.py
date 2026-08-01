@@ -27,6 +27,16 @@ from app.models.visit import AIRecommendation, Visit  # noqa: E402,F401
 @pytest.fixture(scope="session")
 def test_motoru():
     """Test veritabanına tek bir motor açar ve şemayı bir kez kurar."""
+    # Güvenlik kilidi: aşağıdaki drop_all bir şemayı tamamen siler ve
+    # os.environ.setdefault, DATABASE_URL zaten tanımlıysa (CI, docker compose)
+    # hiçbir şey yapmaz. Motora dokunmadan önce hedefi doğruluyoruz.
+    if not settings.database_url.endswith("/ai_triage_test"):
+        pytest.exit(
+            f"Testler yalnızca ai_triage_test üzerinde çalışır. "
+            f"Bulunan: {settings.database_url}",
+            returncode=3,
+        )
+
     motor = create_engine(settings.database_url, pool_pre_ping=True)
     Base.metadata.create_all(bind=motor)
     yield motor
