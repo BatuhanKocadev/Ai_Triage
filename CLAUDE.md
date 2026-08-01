@@ -53,8 +53,11 @@ Yeni modeller `app/models/__init__.py` içinde import edilmelidir (ya da `env.py
 
 ## Test ve linting
 
-Testler `tests/` altında, pytest ile çalışır. Bağımlılıklar `requirements-dev.txt` içinde
-(üretim imajına girmez). Yapılandırma depo kökündeki `pytest.ini`.
+Testler `tests/` altında, pytest ile çalışır. Bağımlılıklar `requirements-dev.txt` içinde.
+`Dockerfile.backend` yalnızca `requirements.txt`'i kurar, yani test **bağımlılıkları**
+üretim imajına kurulmaz; ancak `COPY . .` satırı ve `.dockerignore`'da bir dışlama
+bulunmaması yüzünden `tests/`, `pytest.ini` ve `requirements-dev.txt` **dosyaları**
+imaja kopyalanır. Yapılandırma depo kökündeki `pytest.ini`.
 
 ```bash
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
@@ -64,9 +67,13 @@ Testler `tests/` altında, pytest ile çalışır. Bağımlılıklar `requiremen
 `entegrasyon` işaretli testler gerçek Postgres ister: `docker compose up -d postgres` ve
 `ai_triage_test` veritabanı. Ollama, faster-whisper, ChromaDB ve cross-encoder
 (reranker) hiçbir testte çağrılmaz — dördü de `tests/yardimcilar/` altındaki sahte
-servislerle değiştirilir (`sahte_llm.py`, `sahte_stt.py`, `sahte_rag.py`) ve **uç
-modülünün ad alanında** monkeypatch'lenir (`app.api.ai.get_structured_completion`,
-`app.api.ai.get_collection`), servis modülünde değil.
+servislerle değiştirilir (`sahte_llm.py`, `sahte_stt.py`, `sahte_rag.py`) ve **adın
+arandığı ad alanında** monkeypatch'lenir; yani adı tanımlayan modülde değil, onu
+`import` edip kullanan modülde. Uç testlerinde bu, uç modülüdür
+(`app.api.ai.get_structured_completion`, `app.api.ai.get_collection` — `ai.py` bu
+adları kendi ad alanına almış durumda). Birim testlerinde ise servis modülü olabilir:
+`tests/birim/test_rag_esik_kapisi.py` doğru şekilde `app.services.rag_service` üzerinde
+`get_reranker`'ı yamalar, çünkü ad orada tanımlı ve orada aranıyor.
 
 Paketin mevcut durumu ve bilinen kapsam boşlukları için `docs/superpowers/ek-c-ilerleme.md`.
 
@@ -83,7 +90,7 @@ Linter/formatter hâlâ yapılandırılmamıştır.
 5. Normalizasyon: modelin ham çıktısı sabit triyaj kelime dağarcığına (`Kırmızı`/`Sarı`/`Yeşil`) ve temiz bir tetkik listesine indirgenir — küçük yerel modeller tam yazım/büyük-küçük harfte kayabiliyor (bkz. `_normalize_triage_code`, `_sadelestir`).
 6. Kalıcı hale getirme: her sonuç (eşik altı olanlar dahil) `Visit` + `AIRecommendation` çifti olarak yazılır (`app/models/visit.py`), böylece bekleyen vakalar doktor inceleme kuyruğunda görünür.
 
-`app/services/openai_client.py` (OpenAI SDK istemcisi) mevcut akışta kullanılmayan, eski (legacy) bir dosyadır — analiz motoru olarak yerini `llm_service.py` (Ollama) almıştır; ayarlardaki `openai_api_key` artık isteğe bağlıdır.
+Eski bulut tabanlı OpenAI SDK istemcisi (`app/services/openai_client.py`) **artık depoda yoktur**; analiz motoru olarak yerini `llm_service.py` (Ollama) almıştır ve adı yalnızca `llm_service.py`'nin docstring'inde tarihsel bir not olarak geçer. Ayarlardaki `openai_api_key` artık isteğe bağlıdır (`app/config/config.py:9`).
 
 ### Doküman yükleme (`POST /document/upload`, `app/api/document.py`)
 
