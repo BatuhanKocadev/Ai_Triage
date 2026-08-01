@@ -53,7 +53,23 @@ Yeni modeller `app/models/__init__.py` içinde import edilmelidir (ya da `env.py
 
 ## Test ve linting
 
-Bu repoda şu anda hiçbir test suite, linter veya formatter yapılandırılmamıştır (`app/tests/` boş, pytest/ruff/black konfigürasyonu yok). `pytest` veya `ruff check` gibi geleneksel komutların anlamlı bir şey yapacağını varsaymayın — önce ilgili konfigürasyon/bağımlılıkları eklemeniz gerekir.
+Testler `tests/` altında, pytest ile çalışır. Bağımlılıklar `requirements-dev.txt` içinde
+(üretim imajına girmez). Yapılandırma depo kökündeki `pytest.ini`.
+
+```bash
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.venv\Scripts\python.exe -m pytest -m "not yavas"
+```
+
+`entegrasyon` işaretli testler gerçek Postgres ister: `docker compose up -d postgres` ve
+`ai_triage_test` veritabanı. Ollama ve faster-whisper hiçbir testte çağrılmaz —
+`tests/yardimcilar/` altındaki sahte servislerle değiştirilir ve **uç modülünün
+ad alanında** monkeypatch'lenir (`app.api.ai.get_structured_completion`), servis
+modülünde değil.
+
+Paketin mevcut durumu ve bilinen kapsam boşlukları için `docs/superpowers/ek-c-ilerleme.md`.
+
+Linter/formatter hâlâ yapılandırılmamıştır.
 
 ## Mimari
 
