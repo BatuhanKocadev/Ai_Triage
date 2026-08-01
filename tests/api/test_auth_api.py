@@ -39,3 +39,32 @@ def test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner(istemci, jeton_uret
         headers={"Authorization": f"Bearer {jeton}"},
     )
     assert yanit.status_code == 401
+
+
+@pytest.mark.entegrasyon
+def test_admin_olmayan_dokuman_yukleyemez(istemci, yetkili_baslik):
+    # Regresyon: require_admin_role'ün rol kontrolü gevşerse (auth_service.py:78)
+    # sıradan "user" rolü protokol dokümanı yükleyebilir ve tüm hastaların
+    # sorguladığı ortak ChromaDB koleksiyonunu değiştirebilir.
+    # require_admin_role bağımlılık katmanında çalışır: 403 dönerken dosya
+    # hiç işlenmez ve ChromaDB'ye dokunulmaz, bu yüzden test güvenli.
+    yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("protokol.txt", b"deneme icerigi", "text/plain")},
+        headers=yetkili_baslik(kullanici_adi="sade_kullanici", rol="user"),
+    )
+    assert yanit.status_code == 403
+
+
+@pytest.mark.entegrasyon
+def test_dokuman_yukleme_jetonsuz_401_doner(istemci):
+    # Regresyon: /document/upload ucundan auth bağımlılığı düşerse
+    # (app/api/document.py, Depends(require_admin_role)) uç tamamen halka
+    # açılır — jetonsuz bir istek dokümanı ChromaDB'ye yazabilir.
+    yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("protokol.txt", b"deneme icerigi", "text/plain")},
+    )
+    assert yanit.status_code == 401
