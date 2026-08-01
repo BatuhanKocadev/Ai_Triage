@@ -17,6 +17,8 @@ from app.api.ai import _normalize_tetkikler, _normalize_triage_code, _sadelestir
     ],
 )
 def test_sadelestir_turkce_karakterleri_ascii_yapar(girdi, beklenen):
+    # maketrans tablosu ya da .lower().strip() zinciri bozulursa modelin
+    # "Kirmizi"/"KIRMIZI" yazımı "Kırmızı" ile eşleşmez, her kod "Belirsiz"e düşer.
     assert _sadelestir(girdi) == beklenen
 
 
@@ -33,6 +35,8 @@ def test_sadelestir_turkce_karakterleri_ascii_yapar(girdi, beklenen):
     ],
 )
 def test_triyaj_kodu_gecerli_kumeye_indirgenir(ham_kod, beklenen):
+    # Eşleştirme döngüsü iki tarafı da sadeleştirmezse ya da kanonik yazım yerine
+    # sadeleştirilmiş hali dönerse, geçerli kodlar kayda yanlış/"Belirsiz" yazılır.
     assert _normalize_triage_code(ham_kod) == beklenen
 
 
@@ -57,6 +61,8 @@ def test_tek_string_tetkik_listeye_cevrilir():
 
 @pytest.mark.parametrize("ham", [None, 42, {"a": 1}])
 def test_liste_olmayan_tetkik_bos_liste_doner(ham):
+    # Liste koruması kalkarsa None/int'te TypeError fırlar, dict'te de anahtarlar
+    # tetkik sanılıp listeye sızar.
     assert _normalize_tetkikler(ham) == []
 
 
