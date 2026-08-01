@@ -46,3 +46,12 @@ hata_logu.txt
 
 # Araç durumu (Serena MCP proje önbelleği — makineye özel, paylaşılmaz)
 .serena/
+
+# Test artıkları: pytest-cov'un ham veri dosyası ve pytest önbelleği,
+# her koşuda yeniden üretilir — sürüm kontrolüne girmemeli.
+.coverage
+.coverage.*
+.pytest_cache/
+
+# Claude Code worktree'leri: depo içinde duran ayrı çalışma ağaçları
+.claude/worktrees/
