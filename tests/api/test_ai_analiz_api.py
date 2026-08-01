@@ -26,21 +26,32 @@ def esik_ustu(monkeypatch):
 
 @pytest.fixture
 def esik_alti(monkeypatch):
-    """RAG'i eşiğin altında kalmış gibi ayarlar; LLM hiç çağrılmamalı."""
+    """RAG'i eşiğin altında kalmış gibi ayarlar; LLM hiç çağrılmamalı.
+
+    DİKKAT — yalnızca doğrulama/yetki kontrol eden testler de bu fixture'ı alır,
+    gereksiz görünse bile SİLMEYİN. O testler bugün uç gövdesine hiç girmiyor
+    (401/422 daha önce dönüyor), ama tam da korudukları kural gevşerse (min_length,
+    le=120, Literal) istek gövdeye giriyor ve gerçek get_collection() çağrılıyor.
+    Geliştirici makinesinde `docker compose up` ile ChromaDB ayakta olduğundan
+    çağrı başarılı olabiliyor, eşiği geçip gerçek Ollama'ya gidiyor: temiz bir
+    kırmızı yerine dakikalarca süren takılma. Bu fixture o yolu kapatır.
+    """
     monkeypatch.setattr(ai_modulu, "get_collection", lambda: object())
     monkeypatch.setattr(ai_modulu, "retrieve_and_rerank", lambda **kwargs: [])
 
 
 @pytest.mark.entegrasyon
-def test_jetonsuz_istek_401_doner(istemci):
+def test_jetonsuz_istek_401_doner(istemci, esik_alti):
     # Uçtan yetkilendirme bağımlılığının düşmesini yakalar; hasta verisi
-    # jetonsuz işlenmemeli.
+    # jetonsuz işlenmemeli. esik_alti güvenlik ağı: yetki kapısı düşerse istek
+    # gövdeye girer ve fixture olmadan gerçek ChromaDB/Ollama'ya gidilir.
     assert istemci.post("/ai/analiz", json=ziyaret_verisi()).status_code == 401
 
 
 @pytest.mark.entegrasyon
-def test_kisa_sikayet_422_doner(istemci, yetkili_baslik):
+def test_kisa_sikayet_422_doner(istemci, yetkili_baslik, esik_alti):
     # symptom_text min_length=10; 9 karakter reddedilmeli.
+    # esik_alti: kural gevşerse test temiz kırmızı versin, gerçek servise gitmesin.
     yanit = istemci.post(
         "/ai/analiz",
         json=ziyaret_verisi(symptom_text="karin agr"),
@@ -50,8 +61,9 @@ def test_kisa_sikayet_422_doner(istemci, yetkili_baslik):
 
 
 @pytest.mark.entegrasyon
-def test_gecersiz_yas_422_doner(istemci, yetkili_baslik):
+def test_gecersiz_yas_422_doner(istemci, yetkili_baslik, esik_alti):
     # patient_age le=120 sınırının üstü reddedilmeli.
+    # esik_alti: kural gevşerse test temiz kırmızı versin, gerçek servise gitmesin.
     yanit = istemci.post(
         "/ai/analiz",
         json=ziyaret_verisi(patient_age=200),
@@ -61,8 +73,9 @@ def test_gecersiz_yas_422_doner(istemci, yetkili_baslik):
 
 
 @pytest.mark.entegrasyon
-def test_gecersiz_giris_tipi_422_doner(istemci, yetkili_baslik):
+def test_gecersiz_giris_tipi_422_doner(istemci, yetkili_baslik, esik_alti):
     # giris_tipi Literal["metin","ses"]; başka değer reddedilmeli.
+    # esik_alti: kural gevşerse test temiz kırmızı versin, gerçek servise gitmesin.
     yanit = istemci.post(
         "/ai/analiz",
         json=ziyaret_verisi(giris_tipi="faks"),
