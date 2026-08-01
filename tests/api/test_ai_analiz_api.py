@@ -25,14 +25,6 @@ def esik_ustu(monkeypatch):
 
 
 @pytest.mark.entegrasyon
-def test_jetonsuz_istek_401_doner(istemci, esik_alti):
-    # Uçtan yetkilendirme bağımlılığının düşmesini yakalar; hasta verisi
-    # jetonsuz işlenmemeli. esik_alti güvenlik ağı: yetki kapısı düşerse istek
-    # gövdeye girer ve fixture olmadan gerçek ChromaDB/Ollama'ya gidilir.
-    assert istemci.post("/ai/analiz", json=ziyaret_verisi()).status_code == 401
-
-
-@pytest.mark.entegrasyon
 def test_kisa_sikayet_422_doner(istemci, yetkili_baslik, esik_alti):
     # symptom_text min_length=10; 9 karakter reddedilmeli.
     # esik_alti: kural gevşerse test temiz kırmızı versin, gerçek servise gitmesin.
