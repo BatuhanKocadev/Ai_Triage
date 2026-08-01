@@ -8,7 +8,8 @@ Gün 1–16 arasında yazılan üretim kodunun **hiç testi yoktu**. Bu gün ger
 dönük bir test ağı örüldü: `pytest` çatısı kuruldu, gerçek Postgres üzerinde
 işlem-bazlı izolasyon veren fixture'lar yazıldı, dış servisler (Ollama,
 faster-whisper, ChromaDB, cross-encoder) sahtelerle değiştirildi ve dokuz
-görevde toplam 68 test eklendi.
+görevde toplam **67** test eklendi (68 yazıldı; biri tekrar olduğu için son
+düzeltme turunda silindi, aşağıda "Test paketinin kendi zayıflıkları" madde 10).
 
 Yöntem: her test **kırmızı görülmeden sayılmadı**. Testler mevcut davranışı
 dondurduğu (karakterizasyon testi) için çoğu ilk koşuda yeşil geçiyor; bu yüzden
@@ -26,15 +27,24 @@ onayıyla uygulandı.
 
 | Ölçüm | Değer |
 |---|---|
-| Toplam test sayısı | **68** (`pytest --collect-only` → 68 tests collected) |
-| Geçen / kalan | **68 passed / 0 failed** (`pytest -m "not yavas"`, 19.41 sn) |
+| Toplam test sayısı | **67** (`pytest --collect-only` → 67 tests collected) |
+| Geçen / kalan | **67 passed / 0 failed** (`pytest -m "not yavas"`, 21.42 sn) |
 | Kapsama (`app/`) | **%72** (536 ifadenin 149'u kapsanmıyor) |
-| Test dosyası sayısı | 8 (`tests/api/` 4, `tests/birim/` 4) |
+| Test dosyası sayısı | 8 (`tests/api/` 4, `tests/birim/` 4) + 2 `conftest.py` (`tests/`, `tests/api/`) |
 | Uyarı | 2 (ikisi de üçüncü parti kütüphane, aşağıda açıklandı) |
-| Hiç test görmeyen modüller | **Yok** — `app/` altındaki 21 modülün hepsi kapsama raporunda görünüyor. Ancak dört modülde yalnızca modül iskeleti (import'lar, `def`/dekoratör satırları) çalışıyor, **fonksiyon gövdeleri hiç çalışmıyor**: `document.py` (%17), `llm_service.py` (%24), `stt_service.py` (%37), `chroma_service.py` (%50). Gerekçeleri aşağıdaki tabloda. |
+| Hiç test görmeyen modüller | **Yok** — `app/` altındaki 21 **içe aktarılabilir** modülün hepsi kapsama raporunda görünüyor. Ancak dört modülde yalnızca modül iskeleti (import'lar, `def`/dekoratör satırları) çalışıyor, **fonksiyon gövdeleri hiç çalışmıyor**: `document.py` (%17), `llm_service.py` (%24), `stt_service.py` (%37), `chroma_service.py` (%50). Gerekçeleri aşağıdaki tabloda. |
+
+**"21 modül" ile "24 dosya" farkı.** `app/` altında toplam 24 `.py` dosyası var
+(`find app -name "*.py" | wc -l` → 24), kapsama raporunda 21 satır görünüyor.
+Aradaki üçü Alembic'e ait: `app/db/alembic/env.py` ve
+`app/db/alembic/versions/` altındaki iki migration. Hiçbiri testlerde import
+edilmiyor **ve** coverage.py'nin dosya taraması `__init__.py` içermeyen alt
+dizinlere inmiyor (`app/db/alembic/` içermiyor), dolayısıyla bu üç dosya
+kapsama paydasına hiç girmiyor. "Hiç test görmeyen modül yok" iddiası bu üçü
+kapsamaz — migration'lar da test edilmiyor, yalnızca ölçülmüyor.
 
 `-m "not yavas"` bugün **hiçbir testi elemiyor**: `yavas` işaretli test yok
-(`grep -rn "mark.yavas" tests/` boş döner). 68 sayısı paketin tamamıdır.
+(`grep -rn "mark.yavas" tests/` boş döner). 67 sayısı paketin tamamıdır.
 İşaret ileride Ollama/Whisper modeli gerektiren testler eklenirse diye
 `pytest.ini` içinde hazır bekletiliyor.
 
@@ -43,8 +53,8 @@ onayıyla uygulandı.
 | Dosya | Test | Neyi donduruyor |
 |---|---|---|
 | `tests/birim/test_triyaj_normalizasyon.py` | 22 | `_sadelestir`, `_normalize_triage_code`, `_normalize_tetkikler` |
-| `tests/api/test_ai_analiz_api.py` | 11 | `/ai/analiz` sözleşmesi: 401/422/200, eşik altı yolu, DB yazımı |
 | `tests/api/test_speech_api.py` | 11 | `/speech/transkript` sözleşmesi (Whisper modeli yüklenmeden) |
+| `tests/api/test_ai_analiz_api.py` | 10 | `/ai/analiz` sözleşmesi: 422/200, eşik altı yolu, DB yazımı |
 | `tests/birim/test_rag_esik_kapisi.py` | 8 | Eşik altı / üstü / tam sınır davranışı |
 | `tests/api/test_auth_api.py` | 6 | Jeton ve rol kapıları (401 / 403) |
 | `tests/birim/test_auth_service.py` | 5 | Parola hash'i, JWT üretimi ve süresi |
@@ -117,13 +127,46 @@ seçimin sonucu, ihmal değil:
 #### Uyarı filtresi hakkında önemli düzeltme
 
 `pytest.ini` içinde `filterwarnings = error::DeprecationWarning:app.*` girdisi
-var. Bu girdi yukarıdaki uyarıyı **hiçbir zaman yakalayamazdı**:
-`StarletteDeprecationWarning`, `DeprecationWarning`'den değil **`UserWarning`**'den
-türüyor (`starlette/exceptions.py:36`). Filtreyi genişletmek çözüm değildir;
-yalnızca `error::UserWarning` ya da çıplak `error` bunu hataya çevirir — ikisi de
-üçüncü parti gürültüsünü de hataya çevireceği için bugün tercih edilmedi.
-Bu, "uyarı filtrem var, demek ki korunuyorum" varsayımının yanlış olabileceğinin
-somut örneğidir.
+var. Bu girdi yukarıdaki uyarıyı **hiçbir zaman yakalayamazdı** ve bunun
+birbirinden **bağımsız iki** sebebi var:
+
+1. **Kategori.** `StarletteDeprecationWarning`, `DeprecationWarning`'den değil
+   **`UserWarning`**'den türüyor (`starlette/exceptions.py:36`).
+2. **Modül kapsamı.** Kategori düzeltilse bile `:app.*` kapsamı tutmaz.
+   Starlette uyarıyı `stacklevel=3` ile basıyor (`starlette/status.py:200-204`),
+   yani uyarı `app.api.speech`'e değil bir **üstteki çerçeveye** atfediliyor.
+
+Ölçüm (mutasyon: `speech.py`'deki iki sabit geçici olarak eski
+`HTTP_422_UNPROCESSABLE_ENTITY` adına döndürüldü, ölçümden sonra
+`git checkout` ile geri alındı; koşu `pytest tests/api/test_speech_api.py`):
+
+| `filterwarnings` değeri | Sonuç |
+|---|---|
+| `error::UserWarning:app.*` | **Ateşlemiyor.** `11 passed, 4 warnings`. Kategori artık doğru, ama uyarı `app.*` modülüne atfedilmiyor: çıktıda kaynak olarak `.venv/Lib/site-packages/fastapi/routing.py:344` görünüyor. `stacklevel=3`'ün doğrudan kanıtı. |
+| `error::UserWarning` | Ateşliyor, ama hedefe hiç ulaşmadan: `tests/conftest.py:14`'teki `from fastapi.testclient import TestClient` sırasında üçüncü parti uyarı hataya dönüyor ve paket **toplanamıyor** (`ImportError while loading conftest`). |
+| `error:.*HTTP_422_UNPROCESSABLE_ENTITY.*:UserWarning` | **Ateşliyor ve yalnızca hedefi vuruyor.** `2 failed, 9 passed, 2 warnings` — kalan iki uyarı üçüncü parti olanlar, onlara dokunmuyor. |
+
+Dolayısıyla önceki metnin "filtreyi genişletmek çözüm değildir" sonucu **fazla
+güçlüydü**. Doğrusu: çıplak `error::UserWarning` (ve `error`) gerçekten
+kullanılamaz — üçüncü parti gürültüsünü de hataya çevirir, hatta toplama
+aşamasında paketi durdurur. Ama **mesaj kapsamlı** bir filtre temiz bir
+seçenekti: hedefi hataya çevirir, üçüncü parti uyarılara dokunmaz. Bugün
+değerlendirilmedi; kayıt dışı kalmasın diye buraya yazıldı.
+
+> **Tuzak:** mesaj kapsamlı filtre `pytest.ini`'nin `filterwarnings` satırına
+> yazılmalı — pytest ini filtrelerinde mesaj desenini **regex** olarak işler.
+> Komut satırındaki `-W` ise (CPython davranışını taklit ederek) mesaj desenini
+> kaçırır (escape) ve birebir eşleştirir; aynı desen orada sessizce çalışmaz.
+> Ölçüm sırasında bu ayrım bizzat gözlendi.
+
+**`pytest.ini`'deki `filterwarnings` satırı silinmedi.** Bütünsel inceleme onu
+ölü konfigürasyon sayıp kaldırılmasını önerdi, kullanıcı kararı bunu ezdi:
+satır *bu* uyarı için atıl, ama `app/` kodundan varsayılan `stacklevel` ile
+fırlatılan bir `DeprecationWarning` için hâlâ ateşler. Silmek gerçek bir
+korumayı kaldırırdı.
+
+Bu bölüm, "uyarı filtrem var, demek ki korunuyorum" varsayımının yanlış
+olabileceğinin somut örneğidir — üstelik **iki ayrı** sebepten.
 
 #### Kalan iki uyarı (bilinçli olarak bırakıldı)
 
@@ -142,7 +185,17 @@ görevin kapsamı dışındadır. Bağımlılık yükseltmesiyle çözülürler.
 Bu tablo bugünün en değerli çıktılarından biri: testler hangi davranışları
 **dondurmadığını** da belgeliyor. Aşağıdakiler mutasyon denemelerinde hayatta
 kalan ya da incelemelerde tespit edilen gerçek boşluklardır. "Hayatta kaldı"
-demek: o satır silinse ya da bozulsa paket yine 68/68 yeşil verir.
+demek: o satır silinse ya da bozulsa paket yine 67/67 yeşil verir.
+
+**Kapsam beyanı — bu ağ yalnızca backend'i ölçüyor.** `--cov=app` paydası
+`app/` ile sınırlı. `frontend/app.py` (339 satır; tek dosyalık Streamlit
+uygulamasının tamamı) ve `scripts/seed_users.py` (50 satır; admin/doctor
+hesaplarını yaratan script) **hiç test görmüyor ve bu belgedeki hiçbir
+yüzdenin içinde değil** — %72 onlara rağmen değil, onlar sayılmadan hesaplandı.
+"Bu paket fark etmeden üretimde ne bozulabilir?" sorusunun en büyük dürüst
+cevabı aşağıdaki satırlar değil, bu iki dosyadır: kullanıcının gördüğü
+uygulamanın tamamı ve ilk girişi mümkün kılan script. Aşağıdaki tablo
+backend'in içindeki boşlukları listeler.
 
 | Dosya:satır | Korumasız davranış | Neden önemli |
 |---|---|---|
@@ -174,14 +227,14 @@ tespit edilip bilinçli olarak ertelendi.
 |---|---|---|
 | 1 | Yanıltıcı test yorumu | `test_bos_koleksiyon_sonucu_bos_liste_doner`'in yorumu "reranker çağrılmadan boş dönmeli" diyor ama bunu **hiçbir şey assert etmiyor**; `rag_service.py:58-59` tamamen silinse test yine yeşil kalır. Testin gerçek koruma değeri farklı: boş yolun `IndexError` fırlatmaması (satır 72'deki `scored_docs and` kısa devresi). Yorum, verilmeyen bir garantiyi tarif ediyor. Yorum plandan birebir geldiği için bu görevde düzeltilmedi. |
 | 2 | Adı fazla vaat eden test | `test_suresi_dolmus_jeton_reddedilir` aslında `jose.jwt.decode`'u doğrudan test ediyor, `app/` içindeki reddetme yolunu değil. Gerçekte `auth_service.py:44-45`'i pinliyor. Güçlü hâli: API üzerinden süresi dolmuş jetonla 401 beklemek. |
-| 3 | Testin ağır uca bağlanması | `test_auth_api.py`'deki 4 API testi auth kapısını `/ai/analiz` üzerinden yokluyor — uygulamanın en ağır ucu. Bugün güvenli (hepsi auth katmanında kısa devre yapıyor) ama tek satırlık bir üretim değişikliği onları RAG/LLM hattına sürükleyebilir. |
+| 3 | Testin ağır uca bağlanması (**kapatıldı**) | `test_auth_api.py`'deki 4 API testi auth kapısını `/ai/analiz` üzerinden yokluyor — uygulamanın en ağır ucu. Hepsi auth katmanında kısa devre yapıyor, ama tek satırlık bir üretim değişikliği onları RAG/LLM hattına sürükleyebilirdi ve o dosyada bunu engelleyen hiçbir şey yoktu. Son düzeltme turunda dördüne de `esik_alti` verildi (madde 10'a bakınız); artık kapı gerilerse istek gerçek `get_collection()`'a değil sahteye gidiyor. |
 | 4 | Sahte servis kapsamı | `esik_alti` yaması `get_structured_completion`'ı yamalamıyor; dört test Ollama'dan yalnızca eşik kapısı (`ai.py:145`) da sağlam kaldığı sürece uzak duruyor. Doğrulama **ve** kapı birlikte bozulursa testler gerçek LLM'e gider. |
 | 5 | Yamalanmayan sahte | `test_speech_api.py`'deki 2. ve 3. test (`.txt` reddi, boyut sınırı) `transcribe`'ı yamalamıyor; yorum "STT hiç çağrılmadan reddedilmeli" diyor ama bunu hiçbir şey ayırt etmiyor. Yamalanırsa hem iddia pinlenir hem `WHISPER_MODEL_SIZE` geçici çözümüne gerek kalmaz. |
 | 6 | Görünenden dar kapsam | `test_string_olmayan_triyaj_kodu_belirsiz_doner`'de 4 tip vakasının 3'ü mutasyon altında aynı şekilde patlıyor (`AttributeError: translate`) — dört ayrı vaka gibi görünüp tek bir mekanizmayı ölçüyor. |
 | 7 | Eksik assert | `test_dokumanlar_skora_gore_siralanir` yalnızca `sonuc[0]`'ı assert ediyor. `len(sonuc) == 2` + `sonuc[1]` eklenirse tam sıralama bedavaya pinlenir. |
 | 8 | Eksik assert | Mutlu yol testi `AnalysisResponse.status` alanını hiç assert etmiyor; eşik altı testi `sources == []` ve açıklayıcı `ai_note`'u pinlemiyor. |
 | 9 | Kısmi mutasyon kanıtı | Görev 4'ün 4. mutasyonu `test_jeton_kullanici_adi_ve_rol_tasir`'ın yalnızca `sub` yarısını yanlışlıyor; `role` assert'i için bağımsız kırmızı kanıtı yok. |
-| 10 | Tekrar eden test | `test_jetonsuz_istek_401_doner` hem `tests/api/test_auth_api.py:9` hem `tests/api/test_ai_analiz_api.py` içinde birebir aynı. İkisi de kendi görev brief'lerinden geldi; doğru evi `test_auth_api.py`. |
+| 10 | Tekrar eden test (**kapatıldı**) | `test_jetonsuz_istek_401_doner` hem `tests/api/test_auth_api.py:9` hem `tests/api/test_ai_analiz_api.py` içindeydi; ikisi de kendi görev brief'inden gelmişti. Bu satır önce **"birebir aynı"** ve **"doğru evi `test_auth_api.py`"** diyordu; ikisi de yanlıştı. Kopyalar `esik_alti` fixture'ı bakımından farklıydı ve **korunan kopya `test_ai_analiz_api.py`'dekiydi** — `esik_alti` o dosyada tanımlı olduğu için `test_auth_api.py` ona erişemiyordu. Tavsiye olduğu gibi uygulansaydı güçlü kopya silinip korumasız olan bırakılırdı. Yapılan sıra: (1) `esik_alti` `tests/api/conftest.py`'ye taşındı, (2) `test_auth_api.py`'deki dört `/ai/analiz` testine verildi, (3) **ancak ondan sonra** `test_ai_analiz_api.py`'deki kopya silindi. Sıra bu işin özüydü; iki ayrı commit'te yapıldı ki kayıtta da görünsün. Test sayısı 68 → 67. |
 | 11 | Örtük assert | `test_saglik.py`'deki iki izolasyon testinde açık assert yok; pass/fail `db_oturum.commit()` patlar mı diye örtülüyor. Tripwire için meşru ama paketin geri kalanındaki açık-assert üslubundan sapıyor. |
 | 12 | Ölü import | `tests/birim/test_rag_esik_kapisi.py`'de `import pytest` kullanılmıyor (yalnızca `monkeypatch` fixture'ı var, o import gerektirmez). Plandan birebir korunmuş; silinmeli. |
 | 13 | Eksik yorum | `tests/conftest.py`'deki `join_transaction_mode` yorumu, connection pool'un `reset_on_return="rollback"` varsayılanının `islem.rollback()`'i bağımsız olarak yedeklediğini söylemiyor. İleride bakan biri `rollback`'i silince testlerin kırmızı olmamasına şaşırabilir. |
@@ -204,6 +257,14 @@ Her görevde, o görevin testlerinin gerçekten bir şey ölçtüğünü kanıtl
 | Görev 8 — Ses zinciri | 8 (7 davranış grubu) | Hepsi kırmızı |
 | Görev 9 — `require_admin_role` | 2 | 2/2 kırmızı (aşağıda) |
 | Görev 9 — bütünsel | 1 | 7 test kırmızı (aşağıda) |
+
+**Bu sayıların kaynağı.** Tablodaki 54 mutasyonun tamamı, görev raporlarından
+ve SDD ledger'ından alınan **beyanlardır**; her iki kaynak da birleştirmeden
+(merge) sonra siliniyor. Bu belgeden komut/çıktı ile yeniden üretilebilen tek
+grup Görev 9'unkilerdir (aşağıda üçünün de kırmızısı gösteriliyor); kalan 51
+mutasyon için burada tekrarlanabilir kanıt yok. Ek C'nin kendi süreç notu
+"Rapordaki iddialar komut/çıktı ile desteklenmeli" dediği için bu ayrım açıkça
+yazıldı.
 
 Görev 1–3 (çatı ve fixture'lar) için ledger ayrı mutasyon sayısı tutmadı;
 Görev 2'nin izolasyon testi bir düzeltme turunda commit tabanlı sızıntı
@@ -255,6 +316,7 @@ ile doğrulandı.
 | `require_admin_role` hiçbir testten geçmiyordu | Görev 4'te tespit edildi, kullanıcı onayıyla Görev 9 Adım 0 olarak eklendi. Artık `/document/upload` için hem 403 (admin olmayan) hem 401 (jetonsuz) testi var, ikisi de mutasyonla kırmızı görüldü. **Not:** izin veren dal (satır 83) hâlâ açık — yukarıdaki boşluk tablosuna bakınız. |
 | Planda yanlış mutasyon hedefi | Görev 4'ün brief'i mutasyon için `auth_service.py:78` / `require_admin_role`'u gösteriyordu; oysa o görevin testleri `require_user_or_admin_role`'dan geçiyordu (doğrusu `:87`). Uygulayıcı bunu fark etti, plan düzeltildi. `:78` mutasyonu bugün doğru evine, Görev 9'a taşındı. |
 | Veritabanı izolasyonu şüphesi | Görev 2'de açılan soru Görev 7'de kapandı. `yetkili_baslik` her testte aynı benzersiz `test_kullanici`'yı ekliyor ve `test_ai_analiz_api.py`'deki 5 test `_kaydet` üzerinden gerçekten `commit` ediyor; izolasyon bozuk olsa `users` tablosundaki unique kısıtında çatışırdı. Arka arkaya iki temiz tam koşu izolasyonun **çalıştığını** kanıtlıyor, yalnızca "çatışmadığını" değil. |
+| **`tests/conftest.py` üretim şemasını silebilirdi** | `os.environ.setdefault("DATABASE_URL", ...)` değişken **zaten tanımlıysa hiçbir şey yapmaz**. Durum tam olarak budur: `docker compose` içinde backend servisi `DATABASE_URL`'i üretim `ai_triage`'ına işaret ederek export ediyor, ve değişkeni job değişkeni olarak veren her CI işi aynı durumda. `test_motoru` sonra o adrese `create_all`, oturum sonunda `drop_all` uyguluyordu — yani üretim şeması silinirdi. `test_config.py`'nin "URL `/ai_triage_test` ile biter" assert'i koruma değildi: `tests/api/` `tests/birim/`'den önce toplanıyor (onlarca test çoktan yanlış veritabanına yazmış olurdu) ve `drop_all` başarısızlıklardan bağımsız olarak teardown'da yine koşuyor. Çözüm: `create_engine`'e dokunmadan önce hedefi doğrulayan fail-fast `pytest.exit` kilidi (`tests/conftest.py`, `test_motoru`'nun ilk satırları). `pytest.fail` değil `pytest.exit` — amaç tek testi kırmızı yapmak değil, oturumu durdurmak. **Hiçbir görev incelemesi bunu görmedi**: her inceleme yalnızca kendi görevinin diff'ini görüyordu ve bu satır Görev 1'den beri hiç değişmemişti, yani hiçbir diff'te belirmedi. Bulgu ancak tüm dalı birden gören bütünsel incelemeden çıktı. Kanıt aşağıdaki "Doğrulama kanıtı" bölümünde. |
 | `.coverage` dosyası takipsizdi | `.gitignore:52` içinde; `git check-ignore -v .coverage` ile doğrulandı. Depoya sızmıyor. |
 | `asyncio_mode` boşluğu | Kontrolör kararı: gerçek bir boşluk değil, plan boyunca hiç async test fonksiyonu yok. Yine de ileriye dönük not olarak yukarıda kayıtlı. |
 
@@ -293,8 +355,10 @@ Gün 22'de kapatılması önerilen ilk beş test:
 Global Kısıt kapsamına girmiyor.
 
 **4. Ertelenen test-kalitesi düzeltmeleri.** Yukarıdaki "Test paketinin kendi
-zayıflıkları" tablosundaki 15 maddenin tamamı. Hiçbiri paketin doğruluğunu
-bozmuyor, hepsi güç/netlik kaybı.
+zayıflıkları" tablosundaki 15 maddenin **13'ü**. Madde 3 (auth testlerinin ağır
+uca korumasız bağlanması) ve madde 10 (tekrar eden test) son düzeltme turunda
+kapatıldı; ikisi de gerçek bir güvenlik ağı boşluğuydu, ertelenemezdi. Kalan 13
+madde paketin doğruluğunu bozmuyor, hepsi güç/netlik kaybı.
 
 ---
 
@@ -327,68 +391,108 @@ bozmuyor, hepsi güç/netlik kaybı.
 
 ### Doğrulama kanıtı
 
+#### 1. Veritabanı güvenlik kilidi gerçekten ateşliyor mu?
+
+Kilit, bu dalda yazılan tek yeni mantık parçası. Paketteki her davranış gibi
+**kırmızı görülmeden kabul edilmedi**: `DATABASE_URL` kasten üretim
+veritabanına çevrilip paket koşuldu (yalnızca o koşu için; kalıcı
+ayarlanmadı).
+
+```
+$ $env:DATABASE_URL = "postgresql://triage:triage@localhost:5432/ai_triage"
+$ .venv\Scripts\python.exe -m pytest -m "not yavas" --override-ini="addopts=" -v --no-header
+
+============================= test session starts =============================
+collecting ... collected 67 items
+
+tests/api/test_ai_analiz_api.py::test_kisa_sikayet_422_doner 
+
+============================= 2 warnings in 1.16s =============================
+! _pytest.outcomes.Exit: Testler yalnızca ai_triage_test üzerinde çalışır. Bulunan: postgresql://triage:triage@localhost:5432/ai_triage !
+
+$ echo $LASTEXITCODE
+3
+```
+
+Okunuşu: 67 test **toplandı**, ilk test adı yazıldı ama `PASSED`/`FAILED`
+almadan oturum kapandı. Kilit `create_engine`'den önce çalıştığı için ne motor
+açıldı ne `create_all` koştu — ve `drop_all`'a hiç sıra gelmedi. Süre 1.16 sn.
+Çıkış kodu 3 (`pytest.exit(..., returncode=3)`), yani CI bunu normal test
+başarısızlığından ayırt edebilir.
+
+Üretim şemasının el değmemiş kaldığı bağımsız olarak da doğrulandı:
+
+```
+ai_triage      -> ['ai_recommendations', 'alembic_version', 'users', 'visits']
+ai_triage_test -> []
+```
+
+(`ai_triage_test`'in boş olması beklenen durumdur: `test_motoru` şemayı her
+oturumun başında kurup sonunda `drop_all` ile kaldırıyor.)
+
+#### 2. Paketin tamamı
+
 ```
 $ .venv\Scripts\python.exe -m pytest -m "not yavas" --override-ini="addopts=" -v --no-header
 
 ============================= test session starts =============================
-collected 68 items
+collecting ... collected 67 items
 
-tests/api/test_ai_analiz_api.py::test_jetonsuz_istek_401_doner PASSED    [  1%]
-tests/api/test_ai_analiz_api.py::test_kisa_sikayet_422_doner PASSED      [  2%]
-tests/api/test_ai_analiz_api.py::test_gecersiz_yas_422_doner PASSED      [  4%]
-tests/api/test_ai_analiz_api.py::test_gecersiz_giris_tipi_422_doner PASSED [  5%]
-tests/api/test_ai_analiz_api.py::test_basarili_analiz_200_ve_sema_alanlari PASSED [  7%]
-tests/api/test_ai_analiz_api.py::test_klinik_uyari_nota_eklenir PASSED   [  8%]
-tests/api/test_ai_analiz_api.py::test_esik_altinda_llm_cagrilmaz_ve_belirsiz_doner PASSED [ 10%]
-tests/api/test_ai_analiz_api.py::test_llm_hatasi_502_doner PASSED        [ 11%]
-tests/api/test_ai_analiz_api.py::test_ziyaret_ve_oneri_veritabanina_yazilir PASSED [ 13%]
-tests/api/test_ai_analiz_api.py::test_ses_kaynakli_basvuru_giris_tipi_ses_kaydedilir PASSED [ 14%]
-tests/api/test_ai_analiz_api.py::test_varsayilan_giris_tipi_metindir PASSED [ 16%]
-tests/api/test_auth_api.py::test_jetonsuz_istek_401_doner PASSED         [ 17%]
-tests/api/test_auth_api.py::test_bozuk_jeton_401_doner PASSED            [ 19%]
-tests/api/test_auth_api.py::test_tanimsiz_rol_403_doner PASSED           [ 20%]
-tests/api/test_auth_api.py::test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner PASSED [ 22%]
-tests/api/test_auth_api.py::test_admin_olmayan_dokuman_yukleyemez PASSED [ 23%]
-tests/api/test_auth_api.py::test_dokuman_yukleme_jetonsuz_401_doner PASSED [ 25%]
-tests/api/test_saglik.py::test_saglik_ucu_200_doner PASSED               [ 26%]
-tests/api/test_saglik.py::test_izolasyon_denegi_ilk_testte_commit_edilir PASSED [ 27%]
-tests/api/test_saglik.py::test_izolasyon_denegi_ikinci_testte_hala_yaratilabilir PASSED [ 29%]
-tests/api/test_speech_api.py::test_jetonsuz_istek_401_doner PASSED       [ 30%]
-tests/api/test_speech_api.py::test_desteklenmeyen_format_400_doner PASSED [ 32%]
-tests/api/test_speech_api.py::test_cok_buyuk_dosya_400_doner PASSED      [ 33%]
-tests/api/test_speech_api.py::test_basarili_transkript_metin_sure_ve_model_doner PASSED [ 35%]
-tests/api/test_speech_api.py::test_stt_hatasi_422_doner PASSED           [ 36%]
-tests/api/test_speech_api.py::test_bos_transkript_422_doner PASSED       [ 38%]
-tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.wav] PASSED [ 39%]
-tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.mp3] PASSED [ 41%]
-tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.m4a] PASSED [ 42%]
-tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.ogg] PASSED [ 44%]
-tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.webm] PASSED [ 45%]
-tests/birim/test_auth_service.py::test_parola_hashlenir_ve_dogrulanir PASSED [ 47%]
-tests/birim/test_auth_service.py::test_gecersiz_parola_reddedilir PASSED [ 48%]
-tests/birim/test_auth_service.py::test_ayni_parola_farkli_hash_uretir PASSED [ 50%]
-tests/birim/test_auth_service.py::test_jeton_kullanici_adi_ve_rol_tasir PASSED [ 51%]
+tests/api/test_ai_analiz_api.py::test_kisa_sikayet_422_doner PASSED      [  1%]
+tests/api/test_ai_analiz_api.py::test_gecersiz_yas_422_doner PASSED      [  2%]
+tests/api/test_ai_analiz_api.py::test_gecersiz_giris_tipi_422_doner PASSED [  4%]
+tests/api/test_ai_analiz_api.py::test_basarili_analiz_200_ve_sema_alanlari PASSED [  5%]
+tests/api/test_ai_analiz_api.py::test_klinik_uyari_nota_eklenir PASSED   [  7%]
+tests/api/test_ai_analiz_api.py::test_esik_altinda_llm_cagrilmaz_ve_belirsiz_doner PASSED [  8%]
+tests/api/test_ai_analiz_api.py::test_llm_hatasi_502_doner PASSED        [ 10%]
+tests/api/test_ai_analiz_api.py::test_ziyaret_ve_oneri_veritabanina_yazilir PASSED [ 11%]
+tests/api/test_ai_analiz_api.py::test_ses_kaynakli_basvuru_giris_tipi_ses_kaydedilir PASSED [ 13%]
+tests/api/test_ai_analiz_api.py::test_varsayilan_giris_tipi_metindir PASSED [ 14%]
+tests/api/test_auth_api.py::test_jetonsuz_istek_401_doner PASSED         [ 16%]
+tests/api/test_auth_api.py::test_bozuk_jeton_401_doner PASSED            [ 17%]
+tests/api/test_auth_api.py::test_tanimsiz_rol_403_doner PASSED           [ 19%]
+tests/api/test_auth_api.py::test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner PASSED [ 20%]
+tests/api/test_auth_api.py::test_admin_olmayan_dokuman_yukleyemez PASSED [ 22%]
+tests/api/test_auth_api.py::test_dokuman_yukleme_jetonsuz_401_doner PASSED [ 23%]
+tests/api/test_saglik.py::test_saglik_ucu_200_doner PASSED               [ 25%]
+tests/api/test_saglik.py::test_izolasyon_denegi_ilk_testte_commit_edilir PASSED [ 26%]
+tests/api/test_saglik.py::test_izolasyon_denegi_ikinci_testte_hala_yaratilabilir PASSED [ 28%]
+tests/api/test_speech_api.py::test_jetonsuz_istek_401_doner PASSED       [ 29%]
+tests/api/test_speech_api.py::test_desteklenmeyen_format_400_doner PASSED [ 31%]
+tests/api/test_speech_api.py::test_cok_buyuk_dosya_400_doner PASSED      [ 32%]
+tests/api/test_speech_api.py::test_basarili_transkript_metin_sure_ve_model_doner PASSED [ 34%]
+tests/api/test_speech_api.py::test_stt_hatasi_422_doner PASSED           [ 35%]
+tests/api/test_speech_api.py::test_bos_transkript_422_doner PASSED       [ 37%]
+tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.wav] PASSED [ 38%]
+tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.mp3] PASSED [ 40%]
+tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.m4a] PASSED [ 41%]
+tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.ogg] PASSED [ 43%]
+tests/api/test_speech_api.py::test_desteklenen_formatlarin_hepsi_kabul_edilir[.webm] PASSED [ 44%]
+tests/birim/test_auth_service.py::test_parola_hashlenir_ve_dogrulanir PASSED [ 46%]
+tests/birim/test_auth_service.py::test_gecersiz_parola_reddedilir PASSED [ 47%]
+tests/birim/test_auth_service.py::test_ayni_parola_farkli_hash_uretir PASSED [ 49%]
+tests/birim/test_auth_service.py::test_jeton_kullanici_adi_ve_rol_tasir PASSED [ 50%]
 tests/birim/test_auth_service.py::test_suresi_dolmus_jeton_reddedilir PASSED [ 52%]
-tests/birim/test_config.py::test_ayarlar_env_dosyasindan_okunur PASSED   [ 54%]
+tests/birim/test_config.py::test_ayarlar_env_dosyasindan_okunur PASSED   [ 53%]
 tests/birim/test_config.py::test_veritabani_url_test_veritabanini_gosterir PASSED [ 55%]
-tests/birim/test_rag_esik_kapisi.py::test_koleksiyon_yoksa_bos_liste_doner PASSED [ 57%]
+tests/birim/test_rag_esik_kapisi.py::test_koleksiyon_yoksa_bos_liste_doner PASSED [ 56%]
 tests/birim/test_rag_esik_kapisi.py::test_esik_altinda_bos_liste_doner PASSED [ 58%]
-tests/birim/test_rag_esik_kapisi.py::test_esik_ustunde_dokuman_doner PASSED [ 60%]
+tests/birim/test_rag_esik_kapisi.py::test_esik_ustunde_dokuman_doner PASSED [ 59%]
 tests/birim/test_rag_esik_kapisi.py::test_tam_esik_degeri_dahil_edilir PASSED [ 61%]
-tests/birim/test_rag_esik_kapisi.py::test_dokuman_kaynagi_ciktiya_eklenir PASSED [ 63%]
+tests/birim/test_rag_esik_kapisi.py::test_dokuman_kaynagi_ciktiya_eklenir PASSED [ 62%]
 tests/birim/test_rag_esik_kapisi.py::test_dokumanlar_skora_gore_siralanir PASSED [ 64%]
-tests/birim/test_rag_esik_kapisi.py::test_metadata_filtresi_koleksiyona_gecirilir PASSED [ 66%]
+tests/birim/test_rag_esik_kapisi.py::test_metadata_filtresi_koleksiyona_gecirilir PASSED [ 65%]
 tests/birim/test_rag_esik_kapisi.py::test_bos_koleksiyon_sonucu_bos_liste_doner PASSED [ 67%]
-tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[Kırmızı-kirmizi] PASSED [ 69%]
+tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[K\u0131rm\u0131z\u0131-kirmizi] PASSED [ 68%]
 tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[KIRMIZI-kirmizi] PASSED [ 70%]
-tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[Yeşil-yesil] PASSED [ 72%]
-tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[  Sarı  -sari] PASSED [ 73%]
-tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[ŞİĞÜÖÇ-siguoc] PASSED [ 75%]
-tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[Kırmızı-Kırmızı] PASSED [ 76%]
-tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[kirmizi-Kırmızı] PASSED [ 77%]
-tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[KIRMIZI-Kırmızı] PASSED [ 79%]
-tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[  sari  -Sarı] PASSED [ 80%]
-tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[yesil-Yeşil] PASSED [ 82%]
+tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[Ye\u015fil-yesil] PASSED [ 71%]
+tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[  Sar\u0131  -sari] PASSED [ 73%]
+tests/birim/test_triyaj_normalizasyon.py::test_sadelestir_turkce_karakterleri_ascii_yapar[\u015e\u0130\u011e\xdc\xd6\xc7-siguoc] PASSED [ 74%]
+tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[K\u0131rm\u0131z\u0131-K\u0131rm\u0131z\u0131] PASSED [ 76%]
+tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[kirmizi-K\u0131rm\u0131z\u0131] PASSED [ 77%]
+tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[KIRMIZI-K\u0131rm\u0131z\u0131] PASSED [ 79%]
+tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[  sari  -Sar\u0131] PASSED [ 80%]
+tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[yesil-Ye\u015fil] PASSED [ 82%]
 tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[Mavi-Belirsiz] PASSED [ 83%]
 tests/birim/test_triyaj_normalizasyon.py::test_triyaj_kodu_gecerli_kumeye_indirgenir[-Belirsiz] PASSED [ 85%]
 tests/birim/test_triyaj_normalizasyon.py::test_string_olmayan_triyaj_kodu_belirsiz_doner[None] PASSED [ 86%]
@@ -404,13 +508,20 @@ tests/birim/test_triyaj_normalizasyon.py::test_tetkik_elemanlari_stringe_cevrili
 
 ============================== warnings summary ===============================
 ..\..\..\.venv\Lib\site-packages\fastapi\testclient.py:1
-  StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  C:\Users\batuh\Desktop\Ai_Triage-myself\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
 
 ..\..\..\.venv\Lib\site-packages\chromadb\telemetry\opentelemetry\__init__.py:128
-  DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16
+  C:\Users\batuh\Desktop\Ai_Triage-myself\.venv\Lib\site-packages\chromadb\telemetry\opentelemetry\__init__.py:128: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(f):
 
-======================= 68 passed, 2 warnings in 19.41s =======================
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 67 passed, 2 warnings in 21.42s =======================
 ```
+
+> pytest, parametrize test kimliklerindeki ASCII dışı karakterleri kaçırarak
+> (escape) basar; yukarıdaki \u0131 -> `ı`, \u015f -> `ş`, \u011e -> `Ğ` demektir.
+> Bu blok komut çıktısının birebir kopyasıdır, elle güzelleştirilmemiştir.
 
 Ortam: Windows 11, Python 3.14.6, pytest 8.4.2, gerçek PostgreSQL
 (`ai_triage_test` veritabanı). Ollama, faster-whisper, ChromaDB ve cross-encoder
