@@ -337,6 +337,36 @@ o oturum rollback korumasının dışında kalacağı için kendi verisini kendi
 temizlemek zorundadır. Kullanıcı kararı (1 Ağustos 2026): bugün eklenmeyecek,
 Gün 22'de (test derinleştirme ve CI günü) ele alınacak.
 
+**1b. Güvenlik kilidinin sınırı.** `tests/conftest.py`'deki `test_motoru`
+kilidi yalnızca veritabanı **adını** kontrol ediyor, host ya da kullanıcıyı
+değil. Şu URL kilitten geçer:
+
+```
+postgresql://triage:triage@prod-host:5432/ai_triage_test
+```
+
+Yani üretim sunucusunda `ai_triage_test` adlı bir veritabanı varsa kilit onu
+korumaz. Bugünkü tehdit modelinde (yerel makine + CI) yeterli, ama Gün 22'de
+CI kurulurken host doğrulaması da eklenmeli. Kilidin yanlış yönde başarısız
+olduğu bir durum daha var: sorgu parametreli bir URL (`.../ai_triage_test?sslmode=require`)
+sonek testini geçemez ve meşru bir CI koşusunu durdurur — güvenli yönde
+başarısızlık, ama Gün 22'de düzeltilmeli.
+
+**1c. Aynı kusur deseninin üçüncü örneği.** `test_speech_api.py`'de üç test
+(`test_jetonsuz_istek_401_doner`, `test_desteklenmeyen_format_400_doner`,
+`test_cok_buyuk_dosya_400_doner`) `transcribe`'ı yamalamıyor. Uzantı beyaz
+listesi ya da boyut sınırı gevşerse istek gövdeye ilerler ve gerçek
+faster-whisper `medium` modeli yüklenir — yüzlerce MB indirme, dakikalarca CPU.
+
+Bu, zaten kapatılmış madde 3 (`/ai/analiz`) ve madde 16 (`/document/upload`)
+ile **aynı mekanizmadır**. Kayda değer olan, aynı kusurun bu belgede üç farklı
+ağırlıkta değerlendirilmiş olması: `/ai/analiz`'deki Important sayılıp
+düzeltildi, `/document/upload`'daki birleştirme anında bulunup düzeltildi,
+buradaki ise madde 5 olarak Minor'da kaldı. Ağırlık farkı gerçek bir teknik
+gerekçeye değil, hangi incelemede görüldüğüne dayanıyordu. Kullanıcı kararı
+(2 Ağustos 2026): Gün 22'ye bırakıldı. Çözümü tanıdık — `dokuman_yazmayi_engelle`
+fixture'ının `transcribe` için birebir muadili.
+
 **2. Öncelik sırasına konmuş test adayları.** Yukarıdaki boşluk tablosundan
 Gün 22'de kapatılması önerilen ilk beş test:
 
