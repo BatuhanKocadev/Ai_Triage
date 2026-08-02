@@ -1,0 +1,5 @@
+pytest==8.4.2
+pytest-cov==6.2.1
+pytest-asyncio==1.1.0
+freezegun==1.5.2
+# httpx zaten requirements.txt icinde var (FastAPI TestClient onu kullanir)

@@ -70,14 +70,14 @@ async def ses_dosyasini_transkript_et(
         except STTError as exc:
             logger.error(f"STT hatası (kullanıcı={current_user.username}): {exc}")
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Ses anlaşılamadı, lütfen tekrar deneyin"
             )
         sure_saniye = time.perf_counter() - baslangic
 
         if not metin.strip():
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Ses anlaşılamadı, lütfen tekrar deneyin"
             )
 
