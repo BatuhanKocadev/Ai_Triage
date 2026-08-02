@@ -228,7 +228,7 @@ tespit edilip bilinçli olarak ertelendi.
 | 1 | Yanıltıcı test yorumu | `test_bos_koleksiyon_sonucu_bos_liste_doner`'in yorumu "reranker çağrılmadan boş dönmeli" diyor ama bunu **hiçbir şey assert etmiyor**; `rag_service.py:58-59` tamamen silinse test yine yeşil kalır. Testin gerçek koruma değeri farklı: boş yolun `IndexError` fırlatmaması (satır 72'deki `scored_docs and` kısa devresi). Yorum, verilmeyen bir garantiyi tarif ediyor. Yorum plandan birebir geldiği için bu görevde düzeltilmedi. |
 | 2 | Adı fazla vaat eden test | `test_suresi_dolmus_jeton_reddedilir` aslında `jose.jwt.decode`'u doğrudan test ediyor, `app/` içindeki reddetme yolunu değil. Gerçekte `auth_service.py:44-45`'i pinliyor. Güçlü hâli: API üzerinden süresi dolmuş jetonla 401 beklemek. |
 | 3 | Testin ağır uca bağlanması (**kapatıldı**) | `test_auth_api.py`'deki 4 API testi auth kapısını `/ai/analiz` üzerinden yokluyor — uygulamanın en ağır ucu. Hepsi auth katmanında kısa devre yapıyor, ama tek satırlık bir üretim değişikliği onları RAG/LLM hattına sürükleyebilirdi ve o dosyada bunu engelleyen hiçbir şey yoktu. Son düzeltme turunda dördüne de `esik_alti` verildi (madde 10'a bakınız); artık kapı gerilerse istek gerçek `get_collection()`'a değil sahteye gidiyor. |
-| 4 | Sahte servis kapsamı | `esik_alti` yaması `get_structured_completion`'ı yamalamıyor; dört test Ollama'dan yalnızca eşik kapısı (`ai.py:145`) da sağlam kaldığı sürece uzak duruyor. Doğrulama **ve** kapı birlikte bozulursa testler gerçek LLM'e gider. |
+| 4 | Sahte servis kapsamı | `esik_alti` yaması `get_structured_completion`'ı yamalamıyor; **sekiz** test (`test_ai_analiz_api.py` 4, `test_auth_api.py` 4) Ollama'dan yalnızca eşik kapısı (`ai.py:145`) da sağlam kaldığı sürece uzak duruyor. Bunlardan yedisi bu senaryoda açıkta; sekizincisi (`test_esik_altinda_llm_cagrilmaz_ve_belirsiz_doner`) `get_structured_completion`'ı kendisi yamaladığı için korunuyor. Doğrulama **ve** kapı birlikte bozulursa o yedi test gerçek LLM'e gider. |
 | 5 | Yamalanmayan sahte | `test_speech_api.py`'deki 2. ve 3. test (`.txt` reddi, boyut sınırı) `transcribe`'ı yamalamıyor; yorum "STT hiç çağrılmadan reddedilmeli" diyor ama bunu hiçbir şey ayırt etmiyor. Yamalanırsa hem iddia pinlenir hem `WHISPER_MODEL_SIZE` geçici çözümüne gerek kalmaz. |
 | 6 | Görünenden dar kapsam | `test_string_olmayan_triyaj_kodu_belirsiz_doner`'de 4 tip vakasının 3'ü mutasyon altında aynı şekilde patlıyor (`AttributeError: translate`) — dört ayrı vaka gibi görünüp tek bir mekanizmayı ölçüyor. |
 | 7 | Eksik assert | `test_dokumanlar_skora_gore_siralanir` yalnızca `sonuc[0]`'ı assert ediyor. `len(sonuc) == 2` + `sonuc[1]` eklenirse tam sıralama bedavaya pinlenir. |
@@ -240,6 +240,7 @@ tespit edilip bilinçli olarak ertelendi.
 | 13 | Eksik yorum | `tests/conftest.py`'deki `join_transaction_mode` yorumu, connection pool'un `reset_on_return="rollback"` varsayılanının `islem.rollback()`'i bağımsız olarak yedeklediğini söylemiyor. İleride bakan biri `rollback`'i silince testlerin kırmızı olmamasına şaşırabilir. |
 | 14 | Fixture teardown'u fazla geniş | `istemci` fixture'ının teardown'u `app.dependency_overrides.clear()` kullanıyor, yalnızca `get_db` anahtarını silmiyor. Bugün tek override o, ama ileride başka override eklenirse sessizce silinir. |
 | 15 | `asyncio_mode` ayarsız | `pytest-asyncio` kurulu ama `pytest.ini`'de `asyncio_mode` yok. Bugün etkisiz: pakette hiç `async def test_` yok (`/speech/transkript` async ama `TestClient` onu kendi sürüyor). İlk async test eklendiğinde ayarlanmalı. |
+| 16 | `/document/upload` testleri korumasız (**kapatıldı**) | Madde 3 ile aynı sınıftan, ama daha ağır sonuçlu ve birleştirme anına kadar kimse görmedi — üç inceleyici de `/ai/analiz` desenine odaklanıp aynı desenin bu uçta tekrarlandığını kaçırdı. `test_admin_olmayan_dokuman_yukleyemez` ve `test_dokuman_yukleme_jetonsuz_401_doner` hiçbir şey yamalamıyordu ve ilkinin yorumu *"403 dönerken ChromaDB'ye dokunulmaz, bu yüzden test güvenli"* diyordu — Görev 7'de **reddedilen** gerekçenin aynısı. Fark şu: `esik_alti`'nın önlediği risk gerçek servisten **okumaktı**; burada `document.py:125` `get_collection().upsert(...)` çalıştırıyor, yani her hasta sorgusunun tarandığı `triage_documents` koleksiyonuna **yazmak**. Kapatma: `tests/api/conftest.py`'ye `dokuman_yazmayi_engelle` fixture'ı eklendi; `upsert` çağrılırsa `AssertionError` fırlatıyor. Kanıt: `auth_service.py:78` mutasyonuyla koşulduğunda uç gerçekten gövdeye ilerledi ve fixture yazmayı yakaladı (`document.py:142` log satırı). Fixture olmasaydı o çağrı gerçek koleksiyona giderdi. |
 
 ---
 
@@ -355,10 +356,17 @@ Gün 22'de kapatılması önerilen ilk beş test:
 Global Kısıt kapsamına girmiyor.
 
 **4. Ertelenen test-kalitesi düzeltmeleri.** Yukarıdaki "Test paketinin kendi
-zayıflıkları" tablosundaki 15 maddenin **13'ü**. Madde 3 (auth testlerinin ağır
-uca korumasız bağlanması) ve madde 10 (tekrar eden test) son düzeltme turunda
-kapatıldı; ikisi de gerçek bir güvenlik ağı boşluğuydu, ertelenemezdi. Kalan 13
-madde paketin doğruluğunu bozmuyor, hepsi güç/netlik kaybı.
+zayıflıkları" tablosundaki 16 maddenin **13'ü**. Üçü kapatıldı: madde 3 (auth
+testlerinin ağır uca korumasız bağlanması) ve madde 10 (tekrar eden test) son
+düzeltme turunda, madde 16 (`/document/upload` testlerinin korumasızlığı)
+birleştirme öncesi son kontrolde. Üçü de gerçek bir güvenlik ağı boşluğuydu,
+ertelenemezdi. Kalan 13 madde paketin doğruluğunu bozmuyor, hepsi güç/netlik
+kaybı.
+
+Madde 16'nın geç bulunması kendi başına bir ders: aynı kusur deseni iki farklı
+uçta vardı, `/ai/analiz`'deki kopyası üç ayrı incelemede tartışıldı ve düzeltildi,
+`/document/upload`'daki kopyası hiçbirinde görülmedi. Bir deseni bir yerde
+düzeltmek, aynı deseni başka yerlerde aramayı gerektiriyor.
 
 ---
 

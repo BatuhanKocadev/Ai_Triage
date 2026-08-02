@@ -53,12 +53,12 @@ def test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner(
 
 
 @pytest.mark.entegrasyon
-def test_admin_olmayan_dokuman_yukleyemez(istemci, yetkili_baslik):
+def test_admin_olmayan_dokuman_yukleyemez(istemci, yetkili_baslik, dokuman_yazmayi_engelle):
     # Regresyon: require_admin_role'ün rol kontrolü gevşerse (auth_service.py:78)
     # sıradan "user" rolü protokol dokümanı yükleyebilir ve tüm hastaların
     # sorguladığı ortak ChromaDB koleksiyonunu değiştirebilir.
-    # require_admin_role bağımlılık katmanında çalışır: 403 dönerken dosya
-    # hiç işlenmez ve ChromaDB'ye dokunulmaz, bu yüzden test güvenli.
+    # dokuman_yazmayi_engelle: kapı gevşerse istek gövdeye ilerler ve
+    # get_collection().upsert() gerçek koleksiyona yazar — fixture o yolu keser.
     yanit = istemci.post(
         "/document/upload",
         data={"category": "protokol"},
@@ -69,10 +69,11 @@ def test_admin_olmayan_dokuman_yukleyemez(istemci, yetkili_baslik):
 
 
 @pytest.mark.entegrasyon
-def test_dokuman_yukleme_jetonsuz_401_doner(istemci):
+def test_dokuman_yukleme_jetonsuz_401_doner(istemci, dokuman_yazmayi_engelle):
     # Regresyon: /document/upload ucundan auth bağımlılığı düşerse
     # (app/api/document.py, Depends(require_admin_role)) uç tamamen halka
     # açılır — jetonsuz bir istek dokümanı ChromaDB'ye yazabilir.
+    # dokuman_yazmayi_engelle o yazmanın gerçek koleksiyona gitmesini keser.
     yanit = istemci.post(
         "/document/upload",
         data={"category": "protokol"},

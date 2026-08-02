@@ -3,6 +3,7 @@
 import pytest
 
 from app.api import ai as ai_modulu
+from app.api import document as document_modulu
 
 
 @pytest.fixture
@@ -19,3 +20,35 @@ def esik_alti(monkeypatch):
     """
     monkeypatch.setattr(ai_modulu, "get_collection", lambda: object())
     monkeypatch.setattr(ai_modulu, "retrieve_and_rerank", lambda **kwargs: [])
+
+
+class _YazmayiReddedenKoleksiyon:
+    """upsert çağrılırsa testi patlatır — gerçek koleksiyona yazılmadığını kanıtlar."""
+
+    def upsert(self, **kwargs):
+        raise AssertionError(
+            "ChromaDB'ye yazma girişimi: yetki kapısı testi uç gövdesine ilerledi. "
+            "Bu bir regresyondur — gerçek koleksiyona doküman yazılacaktı."
+        )
+
+
+@pytest.fixture
+def dokuman_yazmayi_engelle(monkeypatch):
+    """/document/upload testlerinin gerçek ChromaDB koleksiyonuna yazmasını önler.
+
+    DİKKAT — gereksiz görünse bile SİLMEYİN, `esik_alti` ile aynı sebepten.
+    `/document/upload` testleri bugün uç gövdesine hiç girmiyor (401/403 daha
+    önce dönüyor), ama tam da korudukları kural gevşerse (require_admin_role)
+    istek gövdeye ilerliyor ve `document.py:125` `get_collection().upsert(...)`
+    çalıştırıyor. `esik_alti`'ndan farkı şu: orada risk gerçek servisten
+    OKUMAKTI, burada gerçek `triage_documents` koleksiyonuna YAZMAK — yani her
+    hasta sorgusunun tarandığı vektör veritabanının kirlenmesi.
+
+    Bu tehlike ölçüldü: Görev 9'un `auth_service.py:78` mutasyonu
+    `assert 500 == 403` verdi; 500, isteğin gövdeye ilerleyip ChromaDB'ye
+    ulaşamamasından geliyordu. Chroma o an ayakta olsaydı test kırmızı olmak
+    yerine koleksiyona yazacaktı.
+    """
+    monkeypatch.setattr(
+        document_modulu, "get_collection", lambda: _YazmayiReddedenKoleksiyon()
+    )
