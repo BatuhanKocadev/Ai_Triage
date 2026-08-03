@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.api import health, speech, ai, document, auth
+from app.api import health, speech, ai, document, auth, doctor
 from app.utils.logger import logger
 
 @asynccontextmanager
@@ -33,3 +33,4 @@ app.include_router(speech.router)
 app.include_router(ai.router)
 app.include_router(document.router)
 app.include_router(auth.router)
+app.include_router(doctor.router)
