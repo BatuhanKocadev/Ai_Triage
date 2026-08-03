@@ -80,3 +80,19 @@ def test_dokuman_yukleme_jetonsuz_401_doner(istemci, dokuman_yazmayi_engelle):
         files={"file": ("protokol.txt", b"deneme icerigi", "text/plain")},
     )
     assert yanit.status_code == 401
+
+
+@pytest.mark.entegrasyon
+def test_rol_bilgisi_auth_me_ile_donuyor(istemci, yetkili_baslik):
+    # Panel rolü buradan okuyor (kullanıcı adından tahmin etmiyor); bu uç
+    # bozulursa arayüz yanlış sekmeleri açar. Parola hash'inin sızmadığı da
+    # burada sabitleniyor.
+    yanit = istemci.get(
+        "/auth/me", headers=yetkili_baslik(kullanici_adi="dr_veli", rol="doctor")
+    )
+
+    assert yanit.status_code == 200
+    govde = yanit.json()
+    assert govde["username"] == "dr_veli"
+    assert govde["role"] == "doctor"
+    assert "hashed_password" not in govde
