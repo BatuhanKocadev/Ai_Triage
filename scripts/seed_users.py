@@ -3,7 +3,9 @@
 Kullanım (proje kökünden):
     .venv\\Scripts\\python.exe scripts/seed_users.py
 
-Tekrar çalıştırılabilir: var olan kullanıcıyı yeniden eklemez, atlar.
+Tekrar çalıştırılabilir: var olan kullanıcıyı yeniden eklemez. Ancak rolü aşağıdaki
+listedekinden farklıysa mevcut satırın rolünü YAZAR (günceller) — yani script salt
+okunur değildir, canlı `ai_triage` veritabanında rol değiştirebilir.
 """
 
 import io
@@ -17,7 +19,10 @@ from app.services.auth_service import hash_password
 
 BASLANGIC_KULLANICILARI = [
     {"username": "admin", "password": "admin123", "role": "admin"},
-    {"username": "doctor", "password": "doctor123", "role": "user"},
+    {"username": "doctor", "password": "doctor123", "role": "doctor"},
+    # "doctor" artık ayrı bir rol olduğu için /ai/analiz'e girebilen bir hesap
+    # kalmıyordu; hasta başvurusu akışı bu hesapla denenir.
+    {"username": "hasta", "password": "hasta123", "role": "user"},
 ]
 
 
@@ -27,7 +32,14 @@ def main() -> None:
         for veri in BASLANGIC_KULLANICILARI:
             mevcut = db.query(User).filter(User.username == veri["username"]).first()
             if mevcut:
-                print(f"  atlandı  : {veri['username']} (zaten var, rol={mevcut.role})")
+                # Rol listedekinden farklıysa düzeltilir: "doctor" hesabı Gün 17
+                # öncesinde "user" rolüyle yazılmıştı.
+                if mevcut.role != veri["role"]:
+                    eski_rol = mevcut.role
+                    mevcut.role = veri["role"]
+                    print(f"  güncellendi: {veri['username']} (rol {eski_rol} -> {veri['role']})")
+                else:
+                    print(f"  atlandı    : {veri['username']} (zaten var, rol={mevcut.role})")
                 continue
 
             db.add(User(
@@ -35,7 +47,7 @@ def main() -> None:
                 hashed_password=hash_password(veri["password"]),
                 role=veri["role"],
             ))
-            print(f"  eklendi  : {veri['username']} (rol={veri['role']})")
+            print(f"  eklendi    : {veri['username']} (rol={veri['role']})")
 
         db.commit()
 

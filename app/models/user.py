@@ -13,7 +13,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False)  # "admin" veya "user"
+    role = Column(String(20), nullable=False)  # "admin", "doctor" veya "user"
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -40,6 +40,14 @@ class Visit(Base):
         cascade="all, delete-orphan",
     )
 
+    # Doktor onayı (Gün 17-18); ziyaret silinince incelemesi de silinir.
+    review = relationship(
+        "DoctorReview",
+        back_populates="visit",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self) -> str:
         return f"<Visit {self.id} ({self.status})>"
 
