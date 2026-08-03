@@ -124,19 +124,32 @@ başlığı HTML kabul etmediği için renk emoji ile veriliyor:
 hiç gidilmedi. Doktorun ilk bakması gereken vakalar bunlar ve diğer üçüyle
 karıştırılmamalı.
 
-### K8 — Kısmi refactor: yalnızca yeni kod fonksiyona alınır
+### K8 — Kısmi refactor: `hasta_sekmesi()` ve `doktor_sekmesi()` çıkarılır, admin yerinde kalır
 
-Yol haritasının REFACTOR adımı `hasta_sekmesi()`, `doktor_sekmesi()`, `admin_sekmesi()`
-üçünün de çıkarılmasını öneriyor. **Yalnızca `doktor_sekmesi()` yazılıyor**, mevcut hasta
-ve admin blokları yerinde bırakılıyor.
+**Bu karar plan yazılırken revize edildi.** İlk hâli "yalnızca yeni kod fonksiyona alınır,
+mevcut 340 satıra dokunulmaz" diyordu. Plan yazılırken görüldü ki bu mümkün değil:
 
-Gerekçe: Streamlit kodu konuma duyarlıdır (sidebar bağlamı, `session_state` sırası,
-`st.tabs` iç içe geçişi) ve bu dosyanın **hiç otomatik testi yok**. Çalışan 340 satırı
-test ağı olmadan taşımak, bugünün asıl işini riske atar. Yeni kod baştan fonksiyon olarak
-doğar; mevcut blokların çıkarılması Gün 22'ye bırakılır.
+`doctor` rolüne hasta sekmesi gösterilmeyeceği için (K2) `chat_container` o rolde `None`
+olur, dolayısıyla `frontend/app.py:118`'deki `with chat_container:` satırı koşullu hâle
+gelmek zorunda. Bu da altındaki **160 satırın tamamının** yeniden girintilenmesini
+gerektiriyor. Yani "dokunmama" seçeneği yok; seçim, o 160 satırı nasıl taşıyacağımız.
 
-Aynı gerekçeyle `istek_at(metot, yol, jeton, ...)` yardımcısı yazılır ama **yalnızca yeni
-doktor kodunda kullanılır**; mevcut sekiz `requests.*` çağrısı dönüştürülmez.
+İki seçenek eşit maliyetli: `if chat_container is not None:` ekleyip 160 satırı 4 boşluk
+içeri almak, ya da bloğu `hasta_sekmesi(auth_headers)` fonksiyonuna çıkarıp 4 boşluk dışarı
+almak. İkincisi seçildi — aynı mekanik iş, daha iyi yapı, ve yol haritasının REFACTOR
+adımını da kısmen karşılıyor.
+
+Blok kendi kendine yeterli: içindeki `age`, `gender`, `fever`, `pulse`,
+`chronic_disease`, `source_document` hep aynı blokta tanımlı, dışarıdan tek ihtiyacı
+`auth_headers`. Taşıma saf yer değiştirmedir ve `git diff -w` ile doğrulanabilir.
+
+**Admin bloğu yerinde kalıyor** — zaten `if admin_container:` ile korunuyor
+(`frontend/app.py:279`), yeniden girintileme gerektirmiyor, dolayısıyla ona dokunmak için
+bir sebep yok.
+
+`istek_at(metot, yol, jeton, ...)` yardımcısı yazılır ama **yalnızca yeni doktor kodunda
+kullanılır**; mevcut sekiz `requests.*` çağrısı dönüştürülmez — onları dönüştürmek için
+bir zorunluluk yok ve her biri farklı hata mesajı/zaman aşımı taşıyor.
 
 ### K9 — Yol haritasının test alan adları yanlış
 
