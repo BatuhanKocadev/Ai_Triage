@@ -260,6 +260,12 @@ TRIYAJ_ISARETI = {"Kırmızı": "🔴", "Sarı": "🟡", "Yeşil": "🟢", "Beli
 # belirsizliği gidermek (backend de 422 ile reddeder).
 ONAYLANABILIR_KODLAR = ["Kırmızı", "Sarı", "Yeşil"]
 
+# Vital ölçümlerin Türkçe etiketi ve birimi; panelde ham sözlük yerine bunlar yazılır.
+VITAL_ETIKETLERI = {"fever": ("Ateş", "°C"), "pulse": ("Nabız", "/dk")}
+
+# Doktor notunun üst sınırı; backend şeması da aynı sınırı koyuyor (max_length=1000).
+DOKTOR_NOTU_SINIRI = 1000
+
 
 def doktor_sekmesi(jeton: str):
     """Doktorun bekleyen vakaları görüp yapay zekâ önerisini onayladığı panel."""
@@ -268,10 +274,19 @@ def doktor_sekmesi(jeton: str):
     # Bir önceki çalıştırmada onay verilmişse mesajı burada gösterip bayrağı
     # HEMEN temizliyoruz; temizlenmezse mesaj her yeniden çizimde tekrar çıkar.
     if st.session_state.doktor_son_onay:
-        st.success(st.session_state.doktor_son_onay)
+        # Bayrak (seviye, mesaj) taşıyor: yarış durumu bir onay değildir, yeşil
+        # banner metni yalanlardı — seviyeye göre yeşil/sarı seçiliyor.
+        seviye, mesaj = st.session_state.doktor_son_onay
+        if seviye == "basari":
+            st.success(mesaj)
+        else:
+            st.warning(mesaj)
         st.session_state.doktor_son_onay = None
 
-    limit = st.session_state.doktor_liste_limiti
+    # Backend limiti 100 ile sınırlıyor (Query(..., le=100)); tavanın üstüne çıkarsak
+    # 422 döner ve limit session_state'te takılı kaldığı için panel kalıcı olarak
+    # hata ekranında kalırdı. K6'nın büyüyen penceresi tavana kadar aynen korunuyor.
+    limit = min(st.session_state.doktor_liste_limiti, 100)
     yanit = istek_at("GET", f"/doctor/bekleyen?limit={limit}&offset=0", jeton)
 
     if yanit is None:
@@ -295,10 +310,14 @@ def doktor_sekmesi(jeton: str):
         _vaka_karti(vaka, jeton)
 
     # Dönen kayıt sayısı limite eşitse muhtemelen daha fazlası var (tasarım kararı K6).
-    if len(vakalar) == limit:
+    if len(vakalar) == limit and limit < 100:
         if st.button("Daha fazla göster"):
             st.session_state.doktor_liste_limiti += 20
             st.rerun()
+    elif len(vakalar) == limit:
+        # Tavana gelindi: düğme yerine dürüst bir uyarı, çünkü daha fazlasını
+        # istemek backend'den 422 alır ve doktora yanlış bir söz vermiş oluruz.
+        st.caption("Panelin gösterebileceği en fazla vaka sayısına ulaşıldı; kuyrukta daha fazla vaka olabilir.")
 
 
 def _vaka_karti(vaka: dict, jeton: str):
@@ -311,14 +330,37 @@ def _vaka_karti(vaka: dict, jeton: str):
     )
 
     with st.expander(baslik):
-        st.markdown(f"**Şikayet:** {vaka['symptom_text']}")
+        # Şikayet hastanın serbest metni: markdown olarak yorumlanırsa içindeki
+        # '*', '_', '#' gibi karakterler metni sessizce yeniden biçimlendirir.
+        # Doktor tam olarak yazılanı görmeli, o yüzden gövde düz metin basılıyor.
+        st.markdown("**Şikayet:**")
+        st.text(vaka["symptom_text"])
         if vaka.get("chronic_disease"):
             st.markdown(f"**Kronik hastalık:** {vaka['chronic_disease']}")
         if vaka.get("vitals"):
-            st.markdown(f"**Vitaller:** {vaka['vitals']}")
+            # Ham Python sözlüğü yerine Türkçe etiketli metin; ölçüm eksikse atlanıyor,
+            # tanımadığımız bir ölçüm de kaybolmasın diye ham adıyla yazılıyor.
+            parcalar = []
+            for anahtar, deger in vaka["vitals"].items():
+                if deger is None:
+                    continue
+                ad, birim = VITAL_ETIKETLERI.get(anahtar, (anahtar, ""))
+                parcalar.append(f"{ad} {deger} {birim}".strip())
+            if parcalar:
+                st.markdown(f"**Vitaller:** {' · '.join(parcalar)}")
+        # ISO damgası mikrosaniyeye kadar uzun; doktora okunur tarih gösteriliyor.
+        try:
+            kayit_zamani = datetime.fromisoformat(vaka["created_at"]).strftime("%d.%m.%Y %H:%M")
+        except (TypeError, ValueError):
+            kayit_zamani = vaka["created_at"]  # beklenmedik biçim gelirse ham hâliyle
         # Şikayetin sesle mi yazıyla mı geldiği, transkript hatası ihtimalini
         # doktorun bilmesi için gösteriliyor.
-        st.caption(f"Giriş kanalı: {vaka['giris_tipi']} · Kayıt: {vaka['created_at']}")
+        st.caption(f"Giriş kanalı: {vaka['giris_tipi']} · Kayıt: {kayit_zamani}")
+
+        # Yapay zekânın yönlendirdiği birim: doktor bunu değiştiremiyor (onay
+        # şemasında karşılığı yok), tam da bu yüzden görmeden onaylamamalı.
+        if oneri.get("department"):
+            st.markdown(f"**Önerilen birim:** {oneri['department']}")
 
         if oneri.get("ai_note"):
             st.info(oneri["ai_note"])
@@ -352,7 +394,13 @@ def _vaka_karti(vaka: dict, jeton: str):
                 accept_new_options=True,
                 key=f"tetkik_{vid}",
             )
-            not_metni = st.text_area("Doktor notu (opsiyonel)", key=f"not_{vid}")
+            # max_chars: backend 1000 karakteri aşan notu 422 ile reddediyor; sınırı
+            # tarayıcıda uygulamak, gönderdikten sonra reddedilmekten iyidir.
+            not_metni = st.text_area(
+                "Doktor notu (opsiyonel)",
+                max_chars=DOKTOR_NOTU_SINIRI,
+                key=f"not_{vid}",
+            )
 
             if st.form_submit_button("Onayla", type="primary"):
                 _onayi_gonder(vid, kod, tetkikler, not_metni, jeton)
@@ -379,17 +427,28 @@ def _onayi_gonder(vid: str, kod: str, tetkikler: list, not_metni: str, jeton: st
     if yanit.status_code == 201:
         # Mesajı doğrudan basmıyoruz: rerun sonrası kaybolurdu. Bayrağa yazıp
         # listeyi tazeliyoruz, mesaj bir sonraki çizimde gösterilip siliniyor (K3).
-        st.session_state.doktor_son_onay = f"Vaka onaylandı: {kod}"
+        st.session_state.doktor_son_onay = ("basari", f"Vaka onaylandı: {kod}")
         st.rerun()
     elif yanit.status_code == 409:
-        # Hata değil, yarış durumu: başka bir doktor önce davranmış.
-        st.session_state.doktor_son_onay = "Bu vaka başka bir doktor tarafından incelenmiş."
+        # Hata değil, yarış durumu: başka bir doktor önce davranmış. Kullanıcıyı
+        # suçlamıyoruz ama "başarı" da demiyoruz — bu yüzden uyarı seviyesi.
+        st.session_state.doktor_son_onay = (
+            "uyari",
+            "Bu vaka başka bir doktor tarafından incelenmiş.",
+        )
         st.rerun()
     elif yanit.status_code == 404:
-        st.session_state.doktor_son_onay = "Vaka bulunamadı; liste tazelendi."
+        st.session_state.doktor_son_onay = ("uyari", "Vaka bulunamadı; liste tazelendi.")
         st.rerun()
     elif yanit.status_code == 401:
         st.error("Oturum süreniz dolmuş. Lütfen çıkıp yeniden giriş yapın.")
+    elif yanit.status_code == 422:
+        # Gövde şemayı geçemedi; en olası sebep notun sınırı aşması. Genel "tekrar
+        # deneyin" mesajı burada yanıltıcı olurdu, çünkü aynı içerik hep reddedilir.
+        st.error(
+            f"Onay gönderilemedi: girdiler geçerli değil. Doktor notu en fazla "
+            f"{DOKTOR_NOTU_SINIRI} karakter olabilir."
+        )
     else:
         st.error("Onay kaydedilemedi. Lütfen tekrar deneyin.")
 
@@ -437,6 +496,10 @@ else:
         if st.button("Çıkış Yap"):
             st.session_state.access_token = None
             st.session_state.user_role = None
+            # Doktor panelinin durumu oturumdan uzun yaşamamalı: takılı bir liste
+            # penceresi ya da gösterilmemiş onay mesajı yeni oturuma sızmasın.
+            st.session_state.doktor_liste_limiti = 20
+            st.session_state.doktor_son_onay = None
             st.rerun()
 
     auth_headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
