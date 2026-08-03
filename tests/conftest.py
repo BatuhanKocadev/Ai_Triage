@@ -20,6 +20,7 @@ from app.db.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 # Modeller Base.metadata'ya kaydolsun diye açıkça import ediliyor;
 # yoksa create_all boş şema üretir.
+from app.models.doctor_review import DoctorReview  # noqa: E402,F401
 from app.models.user import User  # noqa: E402,F401
 from app.models.visit import AIRecommendation, Visit  # noqa: E402,F401
 

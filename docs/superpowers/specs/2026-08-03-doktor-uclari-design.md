@@ -47,6 +47,12 @@ büyüyor ve `app/models/user.py:16`'daki `# "admin" veya "user"` yorumu güncel
 `require_user_or_admin_role` **genişletilmiyor**. Hasta başvurusu girmek ile doktor
 onayı vermek ayrı yetkilerdir; rol ayrımının tek anlamı budur.
 
+Bunun sonucu olarak `doctor` rolü **üç** uçtan 403 alır, ikiden değil: `POST /ai/analiz`
+(`app/api/ai.py:128`), `POST /document/upload` (`app/api/document.py:68`, zaten yalnızca
+admin) ve `POST /speech/transkript` (`app/api/speech.py:43`). Üçüncüsü ilk yazımda
+atlanmıştı; `/speech/*` grubunun yetki isteyen tek ucu budur (`/speech/kaydet` bir
+doğrulama demosudur ve bağımlılık taşımaz).
+
 Bunun yakaladığı gerçek tuzak: `scripts/seed_users.py:20` bugün `doctor` adında bir hesap
 üretiyor ama rolü `"user"`. O hesabın rolünü `"doctor"` yapmak, sistemde `user` rolünde
 hiç hesap bırakmaz ve hasta giriş akışı demo sırasında 403 ile ölür. Bu yüzden seed
@@ -62,9 +68,13 @@ Script idempotent kalır. Mevcut veritabanında `doctor` hesabı zaten `role="us
 yazılmış olabileceği için, script var olan kaydın rolünü de düzeltir — yoksa "atlandı"
 deyip yanlış rolü olduğu gibi bırakır.
 
-> Gün 19 notu: `frontend/app.py` rolü kullanıcı adından tahmin ediyor (`"admin"` → admin
-> sekmesi), `/auth/me`'den okumuyor. Üçüncü rol bu tahmini kesin olarak bozar. Düzeltmesi
-> Gün 19'un kapsamında, bugün frontend'e dokunulmuyor.
+> Gün 19 notu (düzeltildi): bu blok ilk yazımda `frontend/app.py`'nin rolü kullanıcı
+> adından tahmin ettiğini söylüyordu — **bu yanlıştı**. Frontend rolü girişten sonra
+> `/auth/me`'den okuyor (`frontend/app.py:85`), yani `doctor` hesabı sorunsuz giriş yapar
+> ve rolü doğru okunur. Gerçek sonuç şu: sekme seçimi hâlâ "admin mi, değil mi" ikilisi
+> olduğu için doktor hesabı sıradan hasta sohbet sekmesine düşer ve gönderdiğinde 403
+> alır (yukarıdaki üç uç `user`/`admin` istiyor). Doktor paneli Gün 19'un işi; o gelene
+> kadar hasta akışı demosu `hasta` hesabıyla yapılır.
 
 ### K3 — `DoctorReview` alan adları
 

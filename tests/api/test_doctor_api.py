@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.models.doctor_review import DoctorReview
+from app.models.user import User
 from app.models.visit import AIRecommendation, Visit
 
 
@@ -96,6 +97,10 @@ def test_liste_ai_onerisini_de_icerir(istemci, db_oturum, doktor_baslik):
     yanit = istemci.get("/doctor/bekleyen", headers=doktor_baslik)
 
     vaka = yanit.json()[0]
+    # gender ile giris_tipi aynı tipte olduğu için response_model ikisinin yer
+    # değiştirmesini yakalayamaz; eşleme burada tek tek sabitleniyor.
+    assert vaka["gender"] == "Erkek"
+    assert vaka["giris_tipi"] == "metin"
     assert vaka["ai_onerisi"]["triage_code"] == "Sarı"
     assert vaka["ai_onerisi"]["department"] == "Dahiliye"
     assert vaka["ai_onerisi"]["onerilen_tetkikler"] == ["EKG"]
@@ -158,6 +163,10 @@ def test_onayda_doktorun_degistirdigi_triyaj_kodu_kaydedilir(istemci, db_oturum,
     assert yanit.json()["onaylanan_triage_code"] == "Kırmızı"
     kayit = db_oturum.query(DoctorReview).filter_by(visit_id=ziyaret.id).one()
     assert kayit.onaylanan_triage_code == "Kırmızı"
+    # Onaylayan doktor JWT'den okunmalı: doctor_id'nin istek gövdesinden ya da
+    # sabit bir değerden gelmeye kayması bu satırla yakalanır.
+    doktor = db_oturum.query(User).filter_by(username="dr_ayse").one()
+    assert kayit.doctor_id == doktor.id
 
 
 @pytest.mark.entegrasyon
@@ -200,6 +209,9 @@ def test_olmayan_ziyaret_icin_404(istemci, doktor_baslik):
         "/doctor/inceleme", json=_onay_govdesi(uuid.uuid4()), headers=doktor_baslik
     )
     assert yanit.status_code == 404
+    # Mesaj da sabitleniyor: yoksa test "rota yok" ile "ziyaret yok" durumlarını
+    # birbirinden ayıramaz ve rota silinse bile yeşil kalırdı.
+    assert yanit.json()["detail"] == "Ziyaret bulunamadı"
 
 
 @pytest.mark.entegrasyon
@@ -215,6 +227,8 @@ def test_zaten_incelenmis_ziyaret_icin_409(istemci, db_oturum, doktor_baslik):
         "/doctor/inceleme", json=_onay_govdesi(ziyaret.id), headers=doktor_baslik
     )
     assert ikinci.status_code == 409
+    # Reddedilen istek hiçbir şey yazmamış olmalı: ziyarete ait tek satır kalır.
+    assert db_oturum.query(DoctorReview).filter_by(visit_id=ziyaret.id).count() == 1
 
 
 @pytest.mark.entegrasyon

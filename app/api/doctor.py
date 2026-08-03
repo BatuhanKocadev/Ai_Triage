@@ -10,6 +10,7 @@ from app.models.user import User
 from app.models.visit import Visit
 from app.schemas.doctor import AIOnerisi, BekleyenVaka, IncelemeIstegi, IncelemeYaniti
 from app.services.auth_service import require_doctor_role
+from app.utils.logger import logger
 
 router = APIRouter(prefix="/doctor", tags=["Doctor"])
 
@@ -46,7 +47,9 @@ def bekleyen_vakalar(
         db.query(Visit)
         .options(joinedload(Visit.recommendation))
         .filter(Visit.status == "bekliyor")
-        .order_by(Visit.created_at.desc())
+        # İkinci anahtar id: created_at eşitlendiğinde sıra rastgele kalmasın, aynı
+        # vaka iki sayfada birden çıkmasın ya da hiçbirinde kaybolmasın.
+        .order_by(Visit.created_at.desc(), Visit.id.desc())
         .limit(limit)
         .offset(offset)
         .all()
@@ -95,9 +98,21 @@ def inceleme_kaydet(
         # Yedek savunma: iki eşzamanlı onay yukarıdaki kontrolü birlikte geçerse
         # tekillik kısıtı devreye girer ve istek yine 409 ile döner.
         db.rollback()
+        # Cakisma ya da baska bir butunluk ihlali: izi kaybolmasin diye loglaniyor.
+        logger.warning(
+            f"Inceleme yazilamadi (butunluk ihlali): visit_id={istek.visit_id}, "
+            f"doctor_id={current_user.id}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Bu ziyaret zaten incelendi"
-        )
+        ) from None
 
     db.refresh(inceleme)
+    # Klinik karar iz kaydı: hangi doktor hangi ziyareti hangi kodla onayladı.
+    logger.info(
+        f"Inceleme kaydedildi: visit_id={inceleme.visit_id}, "
+        f"doctor_id={inceleme.doctor_id}, "
+        f"onaylanan_triage_code={inceleme.onaylanan_triage_code}"
+    )
     return inceleme

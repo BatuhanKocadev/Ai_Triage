@@ -20,12 +20,14 @@ class AIOnerisi(BaseModel):
     triage_code: str
     # Modelin yönlendirdiği poliklinik/bölüm adı.
     department: str
-    # Modelin önerdiği tetkikler; öneri boş dönebildiği için varsayılanı boş liste.
-    onerilen_tetkikler: list[str] = []
-    # Modelin doktora bıraktığı kısa gerekçe notu.
-    ai_note: str
+    # Modelin önerdiği tetkikler; sütun nullable olduğu için null da kabul edilir,
+    # yoksa tek bozuk satır bütün kuyruğu 500'e düşürürdü.
+    onerilen_tetkikler: Optional[list[str]] = None
+    # Modelin doktora bıraktığı kısa gerekçe notu; sütun nullable olduğu için opsiyonel.
+    ai_note: Optional[str] = None
     # Önerinin dayandığı protokol dokümanları; doktor kararı kaynağıyla birlikte görsün.
-    sources: list[str] = []
+    # Sütun nullable olduğu için null gelebilir, uç bunu tolere eder.
+    sources: Optional[list[str]] = None
 
 
 class BekleyenVaka(BaseModel):
@@ -76,8 +78,9 @@ class IncelemeYaniti(BaseModel):
     visit_id: uuid.UUID
     # İncelemeyi yapan doktorun kullanıcı kimliği.
     doctor_id: int
-    # Doktorun onayladığı triyaj kodu.
-    onaylanan_triage_code: str
+    # Doktorun onayladığı triyaj kodu; yanıt yalnızca isteği yankıladığı için
+    # istekle aynı üç değerle sınırlı ve bu kısıt OpenAPI şemasına da yansır.
+    onaylanan_triage_code: DoktorTriyajKodu
     # Doktorun onayladığı tetkik listesi.
     onaylanan_tetkikler: list[str]
     # Doktorun bıraktığı not; girilmemişse null.

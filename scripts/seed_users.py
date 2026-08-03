@@ -3,7 +3,9 @@
 Kullanım (proje kökünden):
     .venv\\Scripts\\python.exe scripts/seed_users.py
 
-Tekrar çalıştırılabilir: var olan kullanıcıyı yeniden eklemez, atlar.
+Tekrar çalıştırılabilir: var olan kullanıcıyı yeniden eklemez. Ancak rolü aşağıdaki
+listedekinden farklıysa mevcut satırın rolünü YAZAR (günceller) — yani script salt
+okunur değildir, canlı `ai_triage` veritabanında rol değiştirebilir.
 """
 
 import io
@@ -35,9 +37,9 @@ def main() -> None:
                 if mevcut.role != veri["role"]:
                     eski_rol = mevcut.role
                     mevcut.role = veri["role"]
-                    print(f"  guncellendi: {veri['username']} (rol {eski_rol} -> {veri['role']})")
+                    print(f"  güncellendi: {veri['username']} (rol {eski_rol} -> {veri['role']})")
                 else:
-                    print(f"  atlandı  : {veri['username']} (zaten var, rol={mevcut.role})")
+                    print(f"  atlandı    : {veri['username']} (zaten var, rol={mevcut.role})")
                 continue
 
             db.add(User(
@@ -45,7 +47,7 @@ def main() -> None:
                 hashed_password=hash_password(veri["password"]),
                 role=veri["role"],
             ))
-            print(f"  eklendi  : {veri['username']} (rol={veri['role']})")
+            print(f"  eklendi    : {veri['username']} (rol={veri['role']})")
 
         db.commit()
 

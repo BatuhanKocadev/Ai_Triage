@@ -46,7 +46,7 @@ Yeni modeller `app/models/__init__.py` içinde import edilmelidir (ya da `env.py
 
 ## Yardımcı script'ler
 
-- `scripts/seed_users.py` — varsayılan `admin`/`doctor` hesaplarını (admin123/doctor123) doğrudan Postgres'te, ORM üzerinden, idempotent şekilde oluşturur. Migration'lardan sonra, ilk girişten önce çalıştırılmalıdır.
+- `scripts/seed_users.py` — üç varsayılan hesabı doğrudan Postgres'te, ORM üzerinden oluşturur: `admin`/`admin123` (rol `admin`), `doctor`/`doctor123` (rol `doctor`), `hasta`/`hasta123` (rol `user`). Migration'lardan sonra, ilk girişten önce çalıştırılmalıdır. **Tam idempotent değildir:** var olan bir kullanıcıyı yeniden eklemez, ama rolü listedekinden farklıysa mevcut satırın rolünü yerinde yeniden yazar (Gün 17 öncesinde `doctor` hesabı `user` rolüyle yazılmıştı). Script canlı `ai_triage` veritabanına karşı çalıştığı için bu yazma işlemi bilinçli tercihtir.
 - `scripts/kalibre_esik.py` — mevcut ChromaDB içeriğine karşı ilgili/alakasız sorgular arasındaki reranker skor ayrımını ölçer ve `rerank_threshold` için bir değer önerir. Reranker modeli ya da yüklenen doküman seti değiştiğinde tekrar çalıştırılmalıdır; `/document/upload` ile önceden doküman yüklenmiş olması gerekir.
 
 İkisi de repo kökünden çalıştırılır: `.venv\Scripts\python.exe scripts/<isim>.py`.
@@ -98,7 +98,24 @@ Yalnızca admin. PDF/DOCX/TXT kabul eder, `pdfplumber`/`python-docx` ile metni (
 
 ### Yetkilendirme (`app/api/auth.py`, `app/services/auth_service.py`)
 
-Standart OAuth2-password-flow JWT auth (`python-jose`, `passlib` üzerinden bcrypt). Kullanıcılar bellekte değil Postgres'te tutulur (`app/models/user.py`) — eski bellek içi `mock_database`'in yerini gerçek tablo almıştır (bkz. `user.py` içindeki docstring). İki rol vardır: `admin` (doküman yükleyebilir) ve `user` (analiz çalıştırabilir); `require_admin_role` / `require_user_or_admin_role`, route'ları koruyan iki FastAPI bağımlılığıdır.
+Standart OAuth2-password-flow JWT auth (`python-jose`, `passlib` üzerinden bcrypt). Kullanıcılar bellekte değil Postgres'te tutulur (`app/models/user.py`) — eski bellek içi `mock_database`'in yerini gerçek tablo almıştır (bkz. `user.py` içindeki docstring).
+
+**Üç rol vardır:** `admin`, `doctor` ve `user`. Route'ları koruyan üç FastAPI bağımlılığı:
+
+| Bağımlılık | Geçen roller | Koruduğu uçlar |
+|---|---|---|
+| `require_admin_role` | `admin` | `POST /document/upload` |
+| `require_user_or_admin_role` | `user`, `admin` | `POST /ai/analiz`, `POST /speech/transkript` |
+| `require_doctor_role` | `doctor`, `admin` | `GET /doctor/bekleyen`, `POST /doctor/inceleme` |
+
+`admin` her iki doktor ucundan da geçer ("admin her şeyi görür"). Buna karşılık `doctor` rolü `require_user_or_admin_role` ile korunan uçlardan **403 alır** — hasta başvurusu girmek ile doktor onayı vermek bilinçli olarak ayrı yetkilerdir (tasarım kararı K2, `docs/superpowers/specs/2026-08-03-doktor-uclari-design.md`). `POST /speech/kaydet` bir doğrulama demosudur ve hiçbir yetki bağımlılığı taşımaz.
+
+### Doktor uçları (`app/api/doctor.py`)
+
+- `GET /doctor/bekleyen?limit=20&offset=0` — yalnızca `status == "bekliyor"` ziyaretleri, en yeni önce döndürür. Sıralama `created_at DESC, id DESC`; ikinci anahtar zaman damgaları eşitlendiğinde sayfalamayı belirlenimci kılar. Yapay zekâ önerisi `joinedload` ile aynı sorguda gömülü gelir (`ai_onerisi`, öneri yoksa `null`). `limit`: 1–100, `offset`: `ge=0`; sınır dışı değer 422.
+- `POST /doctor/inceleme` — başarıda `201` ve yazılan inceleme satırı. Ziyaret yoksa `404`, ziyaret zaten incelenmişse `409` (önce sorgu, ardından yedek savunma olarak `doctor_reviews.visit_id` unique kısıtı). `doctor_id` istek gövdesinden **alınmaz**, JWT'deki kullanıcıdan okunur.
+
+**Değişmez kural:** doktor onayı `AIRecommendation` satırına asla dokunmaz — üzerine yazmaz, silmez. Onay ayrı bir `doctor_reviews` satırıdır. "Yapay zekâ ne demişti, doktor ne dedi" farkı denetim izidir ve Gün 23'ün değerlendirmesi tam olarak bu farkı ölçecektir (`test_ai_onerisi_degismeden_saklanir`).
 
 ### Konfigürasyon (`app/config/config.py`)
 
@@ -107,9 +124,12 @@ Import anında bir kez okunan tek bir `pydantic-settings` `Settings` nesnesi (`s
 ### Veri modeli (`app/models/`)
 
 - `User` — `users` tablosu, eski auth mock'unun yerini alır.
-- `Visit` — tek bir hasta başvurusu (yaş, cinsiyet, şikayet metni, kronik hastalık, vitaller JSON, durum `bekliyor`/`incelendi`/`tamamlandi`).
+- `Visit` — tek bir hasta başvurusu (yaş, cinsiyet, şikayet metni, kronik hastalık, vitaller JSON, geliş kanalı `giris_tipi`, durum). `status` modelde `bekliyor`/`incelendi`/`tamamlandi` değerlerini taşır ama pratikte `bekliyor` → `tamamlandi` olarak sürülür: `/ai/analiz` ziyareti `bekliyor` yazar, `POST /doctor/inceleme` onu `tamamlandi` yapar. Ara değer `incelendi`'yi bugün hiçbir kod yolu yazmaz (tasarım kararı K5, ayrı bir reddetme akışı yok).
 - `AIRecommendation` — `Visit` ile 1:1 ilişkili (cascade delete), triyaj sonucunu tutar (`triage_code`, `department`, `onerilen_tetkikler`, `ai_note`, `sources`).
+- `DoctorReview` — `doctor_reviews` tablosu; incelenen her ziyaret için tek satır (`onaylanan_triage_code`, `onaylanan_tetkikler`, `doktor_notu`, `doctor_id`, `created_at`). `visit_id` **unique**'tir — "bir ziyaret bir kez incelenir" kuralının veritabanı seviyesindeki karşılığı ve uçtaki `409`'un dayanağı — ve ziyaretle birlikte cascade ile silinir. Bu satır `AIRecommendation`'ın yerine geçmez, **yanına** yazılır.
 
 ### Frontend (`frontend/app.py`)
 
-Tek dosyalık bir Streamlit uygulaması. Backend ile yalnızca HTTP üzerinden (`BACKEND_URL` ortam değişkeni, varsayılan `localhost:8000`) `requests` kullanarak konuşur — `app/` ile paylaşılan hiçbir Python import'u yoktur. Rol (`admin` vs `user`) şu anda `/auth/me`'den okunmak yerine kullanıcı adından client tarafında tahmin edilir (`"admin"` → admin sekmesi); rol bazlı UI'a dokunursanız bunu göz önünde bulundurun, çünkü backend'in gerçek JWT rol bilgisinden sapabilir.
+Tek dosyalık bir Streamlit uygulaması. Backend ile yalnızca HTTP üzerinden (`BACKEND_URL` ortam değişkeni, varsayılan `localhost:8000`) `requests` kullanarak konuşur — `app/` ile paylaşılan hiçbir Python import'u yoktur. Rol, girişten sonra `/auth/me`'den okunur ve `st.session_state.user_role` içinde tutulur (`frontend/app.py:85`) — kullanıcı adından tahmin **edilmez**; bağlantı yarıda koparsa oturum token'lı ama rolsüz kalmasın diye temizlenir.
+
+Sekme seçimi hâlâ ikili: `user_role == "admin"` ise sohbet + yönetici paneli, aksi hâlde yalnızca sohbet sekmesi. Bunun bugünkü sonucu: **`doctor` rolündeki bir hesap doğru rolle giriş yapar ama sıradan hasta sohbet sekmesine düşer ve gönderdiğinde 403 alır**, çünkü `/ai/analiz`, `/document/upload` ve `/speech/transkript` uçlarının üçü de hâlâ `admin` veya `user` istiyor. Doktor paneli sonraki fazın işidir (Gün 19); o gelene kadar hasta akışını denemek için `hasta` hesabını kullanın.
