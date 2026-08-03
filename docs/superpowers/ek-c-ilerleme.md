@@ -565,3 +565,114 @@ Ortam: Windows 11, Python 3.14.6, pytest 8.4.2, gerçek PostgreSQL
 (`ai_triage_test` veritabanı). Ollama, faster-whisper, ChromaDB ve cross-encoder
 **hiçbir testte çalıştırılmadı** — `tests/yardimcilar/` altındaki sahtelerle
 değiştirildiler.
+
+---
+
+## Gün 17+18 · Doktor uçları — bekleyen vakalar ve onay akışı (3 Ağustos 2026)
+
+### Bu gün ne yapıldı
+
+Dört görev, dördü de ayrı subagent'la ve her birinin sonunda incelemeyle: `doctor`
+rolü + `require_doctor_role`, `DoctorReview` modeli + migration `72dffb9e5194`,
+`GET /doctor/bekleyen`, `POST /doctor/inceleme`. Ardından tüm dal için geniş bir
+kod incelemesi ve tek düzeltme dalgası.
+
+Tasarım kararları (K1–K10) `docs/superpowers/specs/2026-08-03-doktor-uclari-design.md`,
+görev adımları `docs/superpowers/plans/2026-08-03-gun17-18-doktor-uclari.md`.
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 67 | **86** |
+| `app/` kapsaması | %72 | **%75** |
+| Uç sayısı | 5 | 7 |
+| Rol sayısı | 2 | 3 |
+
+Dalın commit'leri: `d33c6e7` (rol), `bf5283e`+`8463048` (model+migration),
+`b83b939` (liste ucu), `71d1c6a` (onay ucu), `23c3ca1` (inceleme düzeltmeleri).
+
+### İncelemenin bulduğu gerçek hatalar
+
+1. **Sayfalama belirlenimci değildi.** Liste yalnızca `created_at DESC` ile
+   sıralanıyordu. Zaman damgaları eşitlendiğinde — ki toplu ekleme bunu garanti
+   eder, Gün 23'ün değerlendirme seti toplu eklenecek — Postgres'in eşitlik
+   grubu içindeki sırası tanımsızdır ve `OFFSET 0` ile `OFFSET 2` sorguları
+   arasında değişebilir. Sonuç: aynı vaka iki sayfada birden görünebilir ya da
+   hiçbirinde görünmeyebilirdi. Bir triyaj kuyruğunda bu, hastanın iki kez
+   listelenmesi veya sessizce düşmesi demek. Düzeltme: `Visit.id.desc()` ikinci
+   anahtarı (`23c3ca1`).
+2. **`AIOnerisi` şeması sütunlardan katıydı.** `ai_note`, `onerilen_tetkikler` ve
+   `sources` şemada zorunluydu ama sütunlar `nullable=True`. Pydantic v2'de
+   varsayılan yalnızca alan **yokken** devreye girer; `from_attributes` ile alan
+   `None` taşıyarak var olur ve doğrulama patlar. Hata `_bekleyen_vakaya_cevir`
+   içinde oluştuğu için tek bozuk satır bütün kuyruğu 500'e düşürürdü, o satırı
+   atlamazdı. Bugün ulaşılamaz (tek yazma yolu `_kaydet` NULL üretemiyor) ama
+   şema artık NULL'a toleranslı.
+3. **Uçlar kendi yetki kapılarına hiçbir testle bağlı değildi.** Bu, Gün 11–16'da
+   üç uçta belgelenen desenin dördüncü tekrarı. Görev 1'in
+   `test_user_rolu_doktor_ucuna_403_alir` testi `require_doctor_role`'ü izole
+   sınıyordu; ucun onu **kullandığını** hiçbir şey kanıtlamıyordu. Mutasyon
+   deneyi bunu ölçtü: her iki uçtaki `Depends(require_doctor_role)` düz
+   `Depends(get_current_user)` ile değiştirildiğinde paketin tamamı yeşil
+   kalıyordu — yani `user` rolündeki bir jeton hasta şikayet metinlerini
+   okuyabilirdi ve tek bir test bunu görmezdi. Planın 17 testine iki test daha
+   eklendi (`test_user_rolu_bekleyen_listesine_403_alir`,
+   `test_user_rolu_inceleme_ucuna_403_alir`); eklendikten sonra aynı mutasyon
+   **yalnızca** o iki testi kırmızıya düşürdü.
+4. **Onay ucu hiç log basmıyordu** — üstelik denetim izinin ta kendisi olan modül.
+   Ayrıca her `IntegrityError` "Bu ziyaret zaten incelendi"ye çevriliyordu; bir
+   `doctor_id` yabancı anahtar ihlali doktora anlamsız bir mesaj gösterip hiçbir
+   iz bırakmayacaktı.
+
+### Belgelerdeki olgusal hatalar (düzeltildi)
+
+- `CLAUDE.md` iki rol ve iki bağımlılık diyordu; artık üç. Veri modeli listesinde
+  `DoctorReview` yoktu. `seed_users.py` açıklaması üç hesabı ve **mevcut satırın
+  rolünü yerinde yeniden yazdığını** söylemiyordu.
+- Hem `CLAUDE.md` hem tasarım dokümanı, `frontend/app.py`'nin rolü kullanıcı
+  adından tahmin ettiğini söylüyordu. **Yanlış** — frontend rolü `/auth/me`'den
+  okuyor (`frontend/app.py:85`). Bu iddia tasarım dokümanına `CLAUDE.md`'den
+  miras kalmıştı; ikisi de düzeltildi.
+- Tasarım dokümanı `doctor` rolünün iki uçtan dışlandığını söylüyordu; üç
+  (`/speech/transkript` de `require_user_or_admin_role` kullanıyor).
+
+### Gün 22'ye devredilenler (bu günden)
+
+Aşağıdakiler incelemede bulundu, bilinçli olarak ertelendi. Hiçbiri davranışı
+bugün bozmuyor.
+
+1. `AIOnerisi`'nin katı olduğu üç alanın **sütun tarafı** hâlâ `nullable=True`
+   (`app/models/visit.py`). Şema artık toleranslı; asıl temizlik sütunları
+   `nullable=False` yapmak ve migration yazmak.
+2. `ai_recommendations.visit_id` **unique değil**, oysa `Visit.recommendation`
+   ilişkisi `uselist=False` diyor. Bir ziyarete iki öneri satırı yazılırsa hem
+   ilişki yalanlanır hem de `joinedload` + `LIMIT 20` 19 farklı ziyaret döndürüp
+   bekleyen bir vakayı sessizce düşürür. Yeni `doctor_reviews.visit_id` doğru
+   şekilde unique; eski tablo hiç olmamıştı. Kendi migration'ını ister.
+3. `doctor_reviews.doctor_id` index'siz — doktora göre sorgu gerektiğinde
+   (Gün 23 raporlaması) eklenmeli.
+4. `limit`/`offset` sınırları (`ge=1, le=100`, `ge=0`) hiçbir testle tutturulmuyor.
+5. `_bekleyen_vakaya_cevir`'in on alan eşlemesinden dördü hâlâ doğrulanmıyor
+   (`patient_age`, `chronic_disease`, `vitals`, `created_at`); `response_model`
+   yalnızca tip uyumsuz takasları yakalar.
+6. Liste ucu `Visit.status == "bekliyor"` ile, onay ucu `DoctorReview` varlığıyla
+   "işlenmiş mi" sorusunu yanıtlıyor — iki ayrı doğruluk kaynağı. Bugün tek yazıcı
+   ikisini birlikte güncellediği için ayrışamıyorlar; ileride bir "vakayı yeniden
+   aç" özelliği gelirse ayrışır ve vaka kuyrukta görünüp sonsuza dek 409 döner.
+7. `test_inceleme_ziyarete_bagli_kaydedilir` yazdığı oturumdan okuyor; JSON
+   sütununun Postgres gidiş-dönüşü asıl olarak `test_onayda_tetkik_listesi_degistirilebilir`
+   tarafından kapsanıyor, beklenen testte değil.
+8. `IntegrityError` yakalayıcısı artık logluyor ama hâlâ her ihlali tek mesaja
+   çeviriyor; ihlal türünü ayırt etmiyor.
+9. Migration'ın `downgrade()`'i tabloyu düşürürken onaylanmış ziyaretleri
+   `status='tamamlandi'` hâlinde bırakır — kim kapattı, neye karar verdi bilgisi
+   kaybolur. Downgrade geliştirme kaçış kapısıdır, üretimde temiz geri alma
+   beklenmemeli.
+
+### Süreç notu
+
+Düzeltme dalgası ajanı API harcama limitine takılıp yarıda kesildi; iki dosyada
+commit'lenmemiş ama tutarlı düzenleme kaldı. SDD ledger'ına yazılan "MOLA"
+bölümü sayesinde hangi maddenin bittiği tek tek biliniyordu ve iş kaldığı yerden
+sürdürüldü — hiçbir adım tekrarlanmadı. Ledger'ın varlık sebebi tam olarak budur.

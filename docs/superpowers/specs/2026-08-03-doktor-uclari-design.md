@@ -267,7 +267,10 @@ karardır.
 - `app/api/ai.py` içindeki inline Pydantic modellerinin `app/schemas/` altına taşınması —
   yol haritası bunu REFACTOR adımında öneriyor, ama `ai.py`'nin şemalarını oynatmak
   `/ai/analiz`'in 20 testine dokunur. Gün 22'ye bırakılıyor.
-- `frontend/app.py`'deki rol tahmininin düzeltilmesi (Gün 19)
+- `frontend/app.py`'de doktora ayrı bir sekme açılması (Gün 19). Burada ilk yazımda
+  "rol tahmininin düzeltilmesi" yazıyordu; düzeltilecek bir tahmin yok — frontend rolü
+  zaten `/auth/me`'den okuyor (bkz. K2'nin altındaki düzeltme notu). Eksik olan tek şey
+  sekme seçiminin "admin mi, değil mi" ikilisinden çıkıp `doctor` rolünü tanıması.
 
 ## Bitti sayılır
 
