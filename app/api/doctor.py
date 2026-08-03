@@ -1,12 +1,14 @@
 """Doktorun bekleyen vakaları görüp onayladığı uçlar."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import get_db
+from app.models.doctor_review import DoctorReview
 from app.models.user import User
 from app.models.visit import Visit
-from app.schemas.doctor import AIOnerisi, BekleyenVaka
+from app.schemas.doctor import AIOnerisi, BekleyenVaka, IncelemeIstegi, IncelemeYaniti
 from app.services.auth_service import require_doctor_role
 
 router = APIRouter(prefix="/doctor", tags=["Doctor"])
@@ -50,3 +52,52 @@ def bekleyen_vakalar(
         .all()
     )
     return [_bekleyen_vakaya_cevir(ziyaret) for ziyaret in ziyaretler]
+
+
+@router.post(
+    "/inceleme", response_model=IncelemeYaniti, status_code=status.HTTP_201_CREATED
+)
+def inceleme_kaydet(
+    istek: IncelemeIstegi,
+    current_user: User = Depends(require_doctor_role),
+    db: Session = Depends(get_db),
+):
+    """Doktorun onayını ayrı bir satır olarak yazar; AI önerisine dokunmaz."""
+    ziyaret = db.query(Visit).filter(Visit.id == istek.visit_id).first()
+    if ziyaret is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ziyaret bulunamadı"
+        )
+
+    mevcut = (
+        db.query(DoctorReview).filter(DoctorReview.visit_id == istek.visit_id).first()
+    )
+    if mevcut is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Bu ziyaret zaten incelendi"
+        )
+
+    inceleme = DoctorReview(
+        visit_id=istek.visit_id,
+        # Doktor kimliği gövdeden değil jetondan: kimse başkasının adına onay yazamasın.
+        doctor_id=current_user.id,
+        onaylanan_triage_code=istek.onaylanan_triage_code,
+        onaylanan_tetkikler=istek.onaylanan_tetkikler,
+        doktor_notu=istek.doktor_notu,
+    )
+    db.add(inceleme)
+    # Vaka kuyruktan düşer; AIRecommendation satırına BİLEREK dokunulmuyor.
+    ziyaret.status = "tamamlandi"
+
+    try:
+        db.commit()
+    except IntegrityError:
+        # Yedek savunma: iki eşzamanlı onay yukarıdaki kontrolü birlikte geçerse
+        # tekillik kısıtı devreye girer ve istek yine 409 ile döner.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Bu ziyaret zaten incelendi"
+        )
+
+    db.refresh(inceleme)
+    return inceleme
