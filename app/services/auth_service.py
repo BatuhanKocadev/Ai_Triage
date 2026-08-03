@@ -90,3 +90,13 @@ async def require_user_or_admin_role(current_user: User = Depends(get_current_us
             detail="Access denied."
         )
     return current_user
+
+
+async def require_doctor_role(current_user: User = Depends(get_current_user)) -> User:
+    """Doktor veya admin rolü gerektiren uçları korur."""
+    if current_user.role not in ["doctor", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor access required."
+        )
+    return current_user
