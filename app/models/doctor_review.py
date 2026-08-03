@@ -14,6 +14,7 @@ class DoctorReview(Base):
 
     __tablename__ = "doctor_reviews"
 
+    # Birincil anahtar; incelemenin kendisini tekil olarak tanımlar.
     id = Column(Integer, primary_key=True)
     # unique: bir ziyaret yalnızca bir kez incelenir — uçtaki 409'un veritabanı karşılığı.
     visit_id = Column(
@@ -31,12 +32,14 @@ class DoctorReview(Base):
     onaylanan_tetkikler = Column(JSON, nullable=False, default=list)
     # Serbest metin doktor notu; zorunlu değil (tasarım kararı K7).
     doktor_notu = Column(String, nullable=True)
+    # İncelemenin kaydedilme zamanı; varsayılan modelde tanımlı, migration'a bel bağlanmaz.
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
+    # İncelemenin ait olduğu ziyaret; Visit.review ile çift yönlü bağlıdır.
     visit = relationship("Visit", back_populates="review")
 
     def __repr__(self) -> str:
