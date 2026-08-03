@@ -40,6 +40,13 @@ if "ses_transkript_suresi" not in st.session_state:
 if "ses_analiz_sonucu" not in st.session_state:
     st.session_state.ses_analiz_sonucu = None  # son sesli analiz sonucu (metin düzenlenince ekrandan kaybolmasın)
 
+# Doktor panelinin durumu: Streamlit her etkileşimde scripti baştan çalıştırdığı
+# için liste penceresi ve onay sonucu session_state'te saklanıyor.
+if "doktor_liste_limiti" not in st.session_state:
+    st.session_state.doktor_liste_limiti = 20  # "Daha fazla göster" bunu 20'şer artırır
+if "doktor_son_onay" not in st.session_state:
+    st.session_state.doktor_son_onay = None  # onay sonrası bir kez gösterilip temizlenir
+
 
 def istek_at(metot: str, yol: str, jeton: str, **kwargs):
     """Backend'e yetkili istek atar; adres kurma ve başlık ekleme tek yerde toplanır.
@@ -245,6 +252,148 @@ def hasta_sekmesi(auth_headers):
                 st.warning("Lütfen adınızı ve sorunuzu eksiksiz girin.")
 
 
+# Triyaj kodunun ekrandaki rengi; expander başlığı HTML kabul etmediği için
+# renk emoji ile veriliyor (tasarım kararı K7).
+TRIYAJ_ISARETI = {"Kırmızı": "🔴", "Sarı": "🟡", "Yeşil": "🟢", "Belirsiz": "⚪"}
+
+# Doktorun onaylayabileceği kodlar; "Belirsiz" bilerek yok — doktorun işi
+# belirsizliği gidermek (backend de 422 ile reddeder).
+ONAYLANABILIR_KODLAR = ["Kırmızı", "Sarı", "Yeşil"]
+
+
+def doktor_sekmesi(jeton: str):
+    """Doktorun bekleyen vakaları görüp yapay zekâ önerisini onayladığı panel."""
+    st.header("Bekleyen Vakalar")
+
+    # Bir önceki çalıştırmada onay verilmişse mesajı burada gösterip bayrağı
+    # HEMEN temizliyoruz; temizlenmezse mesaj her yeniden çizimde tekrar çıkar.
+    if st.session_state.doktor_son_onay:
+        st.success(st.session_state.doktor_son_onay)
+        st.session_state.doktor_son_onay = None
+
+    limit = st.session_state.doktor_liste_limiti
+    yanit = istek_at("GET", f"/doctor/bekleyen?limit={limit}&offset=0", jeton)
+
+    if yanit is None:
+        st.error("Sunucuya ulaşılamadı. Backend'in çalıştığından emin olup tekrar deneyin.")
+        return
+    if yanit.status_code == 401:
+        st.error("Oturum süreniz dolmuş. Lütfen çıkıp yeniden giriş yapın.")
+        return
+    if yanit.status_code != 200:
+        st.error("Bekleyen vakalar alınamadı. Lütfen kısa bir süre sonra tekrar deneyin.")
+        return
+
+    vakalar = yanit.json()
+    if not vakalar:
+        st.success("Bekleyen vaka yok. Kuyruk temiz.")
+        return
+
+    st.caption(f"{len(vakalar)} bekleyen vaka gösteriliyor.")
+
+    for vaka in vakalar:
+        _vaka_karti(vaka, jeton)
+
+    # Dönen kayıt sayısı limite eşitse muhtemelen daha fazlası var (tasarım kararı K6).
+    if len(vakalar) == limit:
+        if st.button("Daha fazla göster"):
+            st.session_state.doktor_liste_limiti += 20
+            st.rerun()
+
+
+def _vaka_karti(vaka: dict, jeton: str):
+    """Tek bir bekleyen vakayı ve onun inceleme formunu çizer."""
+    oneri = vaka.get("ai_onerisi") or {}
+    ai_kodu = oneri.get("triage_code", "Belirsiz")
+    baslik = (
+        f"{TRIYAJ_ISARETI.get(ai_kodu, '⚪')} {vaka['patient_age']} yaş, "
+        f"{vaka['gender']} — yapay zekâ: {ai_kodu}"
+    )
+
+    with st.expander(baslik):
+        st.markdown(f"**Şikayet:** {vaka['symptom_text']}")
+        if vaka.get("chronic_disease"):
+            st.markdown(f"**Kronik hastalık:** {vaka['chronic_disease']}")
+        if vaka.get("vitals"):
+            st.markdown(f"**Vitaller:** {vaka['vitals']}")
+        # Şikayetin sesle mi yazıyla mı geldiği, transkript hatası ihtimalini
+        # doktorun bilmesi için gösteriliyor.
+        st.caption(f"Giriş kanalı: {vaka['giris_tipi']} · Kayıt: {vaka['created_at']}")
+
+        if oneri.get("ai_note"):
+            st.info(oneri["ai_note"])
+        if oneri.get("sources"):
+            with st.expander("Kaynak dokümanlar"):
+                for kaynak in oneri["sources"]:
+                    st.write(kaynak)
+
+        st.markdown("---")
+
+        # Form anahtarları visit_id ile benzersizleştiriliyor; aksi hâlde Streamlit
+        # aynı anahtarı iki kez görüp hata verir.
+        vid = vaka["visit_id"]
+        with st.form(f"inceleme_{vid}"):
+            ai_tetkikler = oneri.get("onerilen_tetkikler") or []
+            varsayilan_kod = ai_kodu if ai_kodu in ONAYLANABILIR_KODLAR else "Sarı"
+
+            kod = st.radio(
+                "Triyaj kodu",
+                ONAYLANABILIR_KODLAR,
+                index=ONAYLANABILIR_KODLAR.index(varsayilan_kod),
+                horizontal=True,
+                key=f"kod_{vid}",
+            )
+            # accept_new_options: doktor yapay zekânın önermediği tetkiki de
+            # ekleyebilmeli, yoksa onay ucunun varlık sebebi boşa çıkar (K5).
+            tetkikler = st.multiselect(
+                "Tetkikler",
+                options=ai_tetkikler,
+                default=ai_tetkikler,
+                accept_new_options=True,
+                key=f"tetkik_{vid}",
+            )
+            not_metni = st.text_area("Doktor notu (opsiyonel)", key=f"not_{vid}")
+
+            if st.form_submit_button("Onayla", type="primary"):
+                _onayi_gonder(vid, kod, tetkikler, not_metni, jeton)
+
+
+def _onayi_gonder(vid: str, kod: str, tetkikler: list, not_metni: str, jeton: str):
+    """Onayı backend'e yollar ve sonucuna göre paneli tazeler."""
+    yanit = istek_at(
+        "POST",
+        "/doctor/inceleme",
+        jeton,
+        json={
+            "visit_id": vid,
+            "onaylanan_triage_code": kod,
+            "onaylanan_tetkikler": tetkikler,
+            "doktor_notu": not_metni or None,
+        },
+    )
+
+    if yanit is None:
+        st.error("Sunucuya ulaşılamadı. Onay kaydedilmedi.")
+        return
+
+    if yanit.status_code == 201:
+        # Mesajı doğrudan basmıyoruz: rerun sonrası kaybolurdu. Bayrağa yazıp
+        # listeyi tazeliyoruz, mesaj bir sonraki çizimde gösterilip siliniyor (K3).
+        st.session_state.doktor_son_onay = f"Vaka onaylandı: {kod}"
+        st.rerun()
+    elif yanit.status_code == 409:
+        # Hata değil, yarış durumu: başka bir doktor önce davranmış.
+        st.session_state.doktor_son_onay = "Bu vaka başka bir doktor tarafından incelenmiş."
+        st.rerun()
+    elif yanit.status_code == 404:
+        st.session_state.doktor_son_onay = "Vaka bulunamadı; liste tazelendi."
+        st.rerun()
+    elif yanit.status_code == 401:
+        st.error("Oturum süreniz dolmuş. Lütfen çıkıp yeniden giriş yapın.")
+    else:
+        st.error("Onay kaydedilemedi. Lütfen tekrar deneyin.")
+
+
 # Rol bilgisi de yoksa oturum yarım kalmış demektir (örn. giriş sırasında
 # bağlantı koptu); kullanıcıyı tekrar giriş ekranına döndürüyoruz.
 if st.session_state.access_token is None or st.session_state.user_role is None:
@@ -313,6 +462,12 @@ else:
     if chat_container is not None:
         with chat_container:
             hasta_sekmesi(auth_headers)
+
+    # Doktor paneli ham jetonu alır: istek_at'in üçüncü parametresi başlık sözlüğü
+    # değil jetonun kendisidir, auth_headers geçilirse istek sessizce 401 döner.
+    if doktor_container is not None:
+        with doktor_container:
+            doktor_sekmesi(st.session_state.access_token)
 
     if admin_container:
         with admin_container:
