@@ -242,3 +242,42 @@ def test_user_rolu_inceleme_ucuna_403_alir(istemci, db_oturum, hasta_baslik):
     )
 
     assert yanit.status_code == 403
+
+
+@pytest.mark.entegrasyon
+def test_bekleyen_liste_yaniti_panelin_bekledigi_alanlari_icerir(istemci, db_oturum, doktor_baslik):
+    # Panel bu alan adlarını doğrudan okuyor; biri sessizce yeniden adlandırılırsa
+    # ekran hata vermeden boşalır. Sözleşme burada kilitleniyor.
+    _ziyaret_ekle(db_oturum, sikayet="Panelin okudugu vaka")
+
+    vaka = istemci.get("/doctor/bekleyen", headers=doktor_baslik).json()[0]
+
+    for alan in (
+        "visit_id", "patient_age", "gender", "symptom_text",
+        "chronic_disease", "vitals", "giris_tipi", "created_at",
+    ):
+        assert alan in vaka, f"panelin beklediği üst düzey alan eksik: {alan}"
+
+    # Öneri alanları üst düzeyde DEĞİL, ai_onerisi altında iç içe (tasarım kararı K9).
+    assert "triage_code" not in vaka
+    for alan in ("triage_code", "department", "onerilen_tetkikler", "ai_note", "sources"):
+        assert alan in vaka["ai_onerisi"], f"panelin beklediği öneri alanı eksik: {alan}"
+
+
+@pytest.mark.entegrasyon
+def test_onay_sonrasi_vaka_bekleyen_listesinde_gorunmez(istemci, db_oturum, doktor_baslik):
+    # Panelin "onaylayınca vaka listeden düşer" davranışının kanıtı; kuyruğun
+    # kapanması bu davranışa bağlı.
+    ziyaret = _ziyaret_ekle(db_oturum, sikayet="Onaylanacak vaka")
+    ziyaret_id = str(ziyaret.id)
+
+    onceki = istemci.get("/doctor/bekleyen", headers=doktor_baslik).json()
+    assert ziyaret_id in [vaka["visit_id"] for vaka in onceki]
+
+    onay = istemci.post(
+        "/doctor/inceleme", json=_onay_govdesi(ziyaret.id), headers=doktor_baslik
+    )
+    assert onay.status_code == 201
+
+    sonraki = istemci.get("/doctor/bekleyen", headers=doktor_baslik).json()
+    assert ziyaret_id not in [vaka["visit_id"] for vaka in sonraki]
