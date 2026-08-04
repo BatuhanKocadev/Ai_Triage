@@ -1,0 +1,34 @@
+[TABLO ADI BÜYÜK HARFLE] TRİYAJ PROTOKOLÜ
+
+Kaynak
+[Yayının adı], [kurum], [yıl]. [URL]
+[Varsa ikinci kaynak aynı biçimde.]
+
+Kapsam
+Bu protokol, acil servise [şikayet] ile başvuran [erişkin/pediatrik] hastaların
+ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+İlk Değerlendirme
+[Hastaya ilk ne yapılır? Hangi tetkik ilk kaçıncı dakikada istenir? Hangi vital
+bulgular kaydedilir? Kaynaktaki sırayı koru.]
+
+[Tablo adı] — Kırmızı Alan Kriterleri
+[Hangi bulgu doğrudan kırmızı kod gerektirir? Madde madde yaz:]
+- [bulgu]
+- [bulgu]
+- [bulgu]
+
+[Tablo adı] — Sarı Alan Kriterleri
+[Hangi hasta sarı alanda takip edilir? Hangi tetkik kaç saat sonra tekrarlanır?]
+
+[Tablo adı] — Yeşil Alan Kriterleri
+[Hangi hasta yeşil alanda değerlendirilir? İleri tetkik gerekiyor mu?]
+
+[Tablo adı] — Önerilen Tetkikler
+[Bu tabloda istenen tetkiklerin tam adları. Modelin döndürdüğü
+onerilen_tetkikler alanı buradan besleniyor — kısaltma değil tam ad yaz:
+"CRP" değil "C-reaktif protein (CRP)".]
+
+[Tablo adı] — Yönlendirme
+Kırmızı kod alan hastalar [bölüm] bölümüne, sarı kod alan hastalar [bölüm]
+takibine, yeşil kod alan hastalar [bölüm] değerlendirmesine yönlendirilir.
