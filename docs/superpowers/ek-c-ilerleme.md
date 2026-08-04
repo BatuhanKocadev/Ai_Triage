@@ -676,3 +676,110 @@ Düzeltme dalgası ajanı API harcama limitine takılıp yarıda kesildi; iki do
 commit'lenmemiş ama tutarlı düzenleme kaldı. SDD ledger'ına yazılan "MOLA"
 bölümü sayesinde hangi maddenin bittiği tek tek biliniyordu ve iş kaldığı yerden
 sürdürüldü — hiçbir adım tekrarlanmadı. Ledger'ın varlık sebebi tam olarak budur.
+
+---
+
+## Gün 19 · Streamlit doktor paneli (4 Ağustos 2026)
+
+### Bu gün ne yapıldı
+
+Backend'e hiç dokunulmadı — Gün 17+18'in iki ucu sözleşmeyi zaten kuruyordu.
+`frontend/app.py`'ye rol→sekme haritası, `istek_at()` yardımcısı, `hasta_sekmesi()`
+çıkarımı ve doktor paneli (liste + onay formu) eklendi; o sözleşmeyi donduran dört
+backend testi yazıldı.
+
+Tasarım kararları (K1–K12) `docs/superpowers/specs/2026-08-03-gun19-doktor-paneli-design.md`,
+görev adımları `docs/superpowers/plans/2026-08-03-gun19-doktor-paneli.md`.
+
+Dalın commit'leri: `9be69c4` (tasarım), `5ae7d6a` (plan), `577935c` (dört test),
+`8a5dfdb` (sekme haritası + `istek_at`), `fcf41c4` (panel), `6525221` (inceleme
+düzeltmeleri). `main`'e `acf465c` ile `--no-ff` birleşti.
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 86 | **90** |
+| `app/` kapsaması | %75 | **%75** (değişmedi — gün frontend günüydü) |
+| Uç sayısı | 7 | 7 (backend değişmedi) |
+
+Kapsamanın sabit kalması beklenen sonuç: Streamlit otomatik test edilmiyor (K12),
+dört yeni test zaten var olan backend davranışını donduruyor.
+
+### Tarayıcı testi: yedi adımın da kanıtı
+
+Planın yedi adımı gerçek tarayıcıda, gerçek Ollama ve gerçek Postgres ile koşuldu.
+
+| Adım | Kanıt |
+|---|---|
+| 1 · `hasta` yalnızca sohbet | Tek sekme: "Kullanıcı Sohbet Ekranı" |
+| 2 · Analiz döndü | 62/Erkek/nabız 112, göğüs ağrısı → **Kırmızı / Acil Kardiyoloji**, kaynak dokümanlar geldi (eşik kapısı aşıldı) |
+| 3 · `doctor` yalnızca panel | Tek sekme: "Doktor Paneli" |
+| 4 · Vaka kartı | Şikayet, vitaller (`Ateş 38.2 °C · Nabız 96 /dk`), giriş kanalı, yapay zekâ notu, kaynaklar |
+| 5 · Onay | Sarı→**Kırmızı**, `Batın BT` eklendi (K5: AI'ın önermediği tetkik), not yazıldı |
+| 6 · Listeden düştü | Yeşil banner "Vaka onaylandı: Kırmızı", sayaç **9 → 8** |
+| 7 · `admin` üç sekme | Sohbet + Doktor + Yönetici |
+
+**Değişmez kuralın canlı kanıtı** (ziyaret `647c67fc-eb36-4382-8d46-b54893410457`):
+
+| Alan | Değer |
+|---|---|
+| `status` | `bekliyor` → `tamamlandi` |
+| `ai_kodu` | `Sarı` — değişmedi |
+| `doktor_kodu` | `Kırmızı` |
+| `ai_tetkikler` | 4 tetkik — değişmedi |
+| `doktor_tetkikler` | 5 tetkik (`Batın BT` eklenmiş) |
+| `onaylayan` | `doctor` — JWT'den, gövdeden değil |
+
+Yapay zekânın satırına dokunulmadı, doktorunki yanına yazıldı. Gün 23'ün ölçeceği
+denetim izi budur.
+
+### Tarayıcı testinin bulduğu gerçek sorunlar
+
+Hiçbiri Gün 19 kodunun kusuru değil; üçü de **hata bilgisinin operatöre hiç
+ulaşmaması** deseninin ayrı yüzleri. Desen Gün 17+18'in 4. maddesiyle (onay ucu
+hiç log basmıyordu) aynı kökten.
+
+1. **`/auth/login` kullanıcı adındaki boşluğu kırpmıyor.** Kullanıcı adı alanına
+   kaçan tek bir sondaki boşluk (`'doctor '`) `get_user`'ı boş döndürüyor ve uç
+   401 veriyor. Kullanıcı ekranda doğru yazdığını gördüğü için hata anlaşılmaz
+   hâle geliyor. Bu, testin bulduğu en pahalı sorun: teşhisi yaklaşık yarım saat
+   aldı.
+2. **Giriş hata dalı bütün başarısızlıkları tek mesaja indiriyor**
+   (`frontend/app.py:487`). 401, 422, 500 — hepsi "Kullanıcı adı veya şifre
+   hatalı!". "Kullanıcı bulunamadı" ile "parola yanlış" ayrımı da yok. Yukarıdaki
+   1. maddeyi görünmez kılan şey tam olarak buydu.
+3. **`istek_at` istisnayı hiç loglamadan yutuyor** (`frontend/app.py:65`).
+   Kullanıcıya doğru mesajı gösteriyor ama hiçbir iz bırakmıyor.
+
+### Kök nedeni bulunamayan tek olay
+
+Doktor panelinin **ilk** çiziminde bir kez "Sunucuya ulaşılamadı" hatası alındı ve
+bir daha tekrarlamadı. Elenenler, kanıtla: aynı ortamdan aynı çağrı çalışıyordu
+(HTTP 401 döndü), giriş çağrıları o an başarılıydı, hata 3 saniyeden kısa sürede
+oluştu (zaman aşımı değil), tanı kodu eklendikten sonra üç denemede hiç tekrar
+etmedi. `istek_at`'e geçici log konuldu ve tek satır iz kalmadı. Spekülatif
+düzeltme yazılmadı. Yukarıdaki 3. madde uygulanırsa bir dahaki sefere yakalanır.
+
+### Gün 22'ye devredilenler (bu günden)
+
+1. `/auth/login` kullanıcı adını `.strip()` ile kırpsın (yukarıda 1).
+2. Giriş hata dalı durum koduna göre ayrışsın ve loglasın (yukarıda 2).
+3. `istek_at` istisnayı `logging.warning` ile kaydetsin (yukarıda 3).
+4. `seed_users.py` gerçekten idempotent değil: var olan kullanıcının **parolasını**
+   hiç yeniden yazmıyor, yalnızca rolünü düzeltiyor. Bugün bir soruna yol açmadı
+   (parolalar doğruydu) ama script'in adı yaptığından fazlasını vaat ediyor.
+5. Streamlit'in hiç otomatik testi yok (K12). Rol→sekme haritası bugün elle
+   doğrulandı; bir dahaki değişiklikte yine elle doğrulanması gerekecek.
+
+### Süreç notu
+
+Giriş hatasını teşhis ederken iki kez yanlış kök neden ilan ettim: önce "seed
+parolası bozuk", sonra "bayat backend süreci". İkisi de ölçüm yerine tahmindi.
+Birincisi canlı veritabanında gereksiz bir parola yazmasına, ikincisi çalışan
+backend'in gereksiz yere yeniden başlatılmasına yol açtı. Gerçek kök neden ancak
+gönderilen değerler **loglandığında** görüldü — ilk yapılması gereken oydu.
+
+Ders, sistematik hata ayıklamanın birinci fazının tam olarak söylediği şey: çok
+bileşenli bir sistemde önce bileşen sınırlarına kanıt topla, sonra hipotez kur.
+Buradaki sınır arayüz→backend'di ve tek bir `print` onu on dakikada kapatırdı.
