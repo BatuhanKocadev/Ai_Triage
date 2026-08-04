@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Depends, Query
 from datetime import datetime
 import io
 import pdfplumber
@@ -178,3 +178,27 @@ async def dokumanlari_listele(
     # Belirlenimci sıra (K4): ChromaDB get() dönüş sırasını garanti etmiyor.
     liste.sort(key=lambda kayit: kayit["kaynak"])
     return liste
+
+
+@router.delete("")
+async def dokumani_sil(
+    kaynak: str = Query(..., min_length=1, description="Silinecek dosyanın adı"),
+    current_user: User = Depends(require_admin_role)
+):
+    """Bir dosyaya ait bütün chunk'ları bilgi tabanından siler.
+
+    Dosya adı yol parametresi değil sorgu parametresi olarak alınıyor (K2):
+    dosya adlarında nokta, boşluk ve Türkçe karakter var.
+    """
+    koleksiyon = get_collection()
+    mevcut = koleksiyon.get(where={"source": kaynak})
+    silinecek = mevcut.get("ids") or []
+
+    if not silinecek:
+        raise HTTPException(status_code=404, detail="Doküman bulunamadı")
+
+    koleksiyon.delete(where={"source": kaynak})
+    logger.info(
+        f"Dokuman silindi: {kaynak} ({len(silinecek)} chunk) by {current_user.username}"
+    )
+    return {"silinen_chunk": len(silinecek)}

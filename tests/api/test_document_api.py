@@ -96,3 +96,51 @@ def test_user_rolu_listeye_403_alir(istemci, sahte_koleksiyon, yetkili_baslik):
     )
 
     assert yanit.status_code == 403
+
+
+@pytest.mark.entegrasyon
+def test_silme_dosyanin_tum_chunklarini_siler(istemci, sahte_koleksiyon, yetkili_baslik):
+    # Yanlış yüklenen bir dosyayı kaldırmanın tek yolu bu uç.
+    _chunk_ekle(sahte_koleksiyon, "gogus_agrisi.txt", 8)
+    _chunk_ekle(sahte_koleksiyon, "karin_agrisi.txt", 6)
+
+    yanit = istemci.delete(
+        "/document",
+        params={"kaynak": "gogus_agrisi.txt"},
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    assert yanit.status_code == 200
+    assert yanit.json()["silinen_chunk"] == 8
+    # Diğer dosyaya dokunulmadığı da kanıtlanıyor.
+    assert sahte_koleksiyon.sayac() == 6
+
+
+@pytest.mark.entegrasyon
+def test_olmayan_dosya_silinince_404_doner(istemci, sahte_koleksiyon, yetkili_baslik):
+    # Yanlış dosya adı yazan yönetici bunu bilmeli; sessiz başarı yanıltır (K6).
+    _chunk_ekle(sahte_koleksiyon, "gogus_agrisi.txt", 3)
+
+    yanit = istemci.delete(
+        "/document",
+        params={"kaynak": "olmayan.txt"},
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    assert yanit.status_code == 404
+    assert sahte_koleksiyon.sayac() == 3
+
+
+@pytest.mark.entegrasyon
+def test_user_rolu_silmeye_403_alir(istemci, sahte_koleksiyon, yetkili_baslik):
+    _chunk_ekle(sahte_koleksiyon, "gogus_agrisi.txt", 3)
+
+    yanit = istemci.delete(
+        "/document",
+        params={"kaynak": "gogus_agrisi.txt"},
+        headers=yetkili_baslik(kullanici_adi="hasta_ayse", rol="user"),
+    )
+
+    assert yanit.status_code == 403
+    # Yetki reddedilirken hiçbir şey silinmemiş olmalı: kapı gövdeden önce durmalı.
+    assert sahte_koleksiyon.sayac() == 3
