@@ -36,8 +36,8 @@ düzelte ilerleyen bir günde kaçınılmaz.
 
 ## Kapsam
 
-**İçinde:** iki yeni uç, `upload`'ın sil-sonra-yaz düzeltmesi, doküman uçlarının ilk
-test dosyası, bellek içi sahte ChromaDB koleksiyonu.
+**İçinde:** iki yeni uç, `upload`'ın yaz-sonra-artakalanı-sil düzeltmesi, doküman
+uçlarının ilk test dosyası, bellek içi sahte ChromaDB koleksiyonu.
 
 **Dışında:** protokol dosyalarının kendisi (kullanıcı hazırlıyor), toplu yükleme,
 eşik kalibrasyonu (`kalibre_esik.py`), `rerank_threshold` güncellemesi. Bunlar
@@ -65,11 +65,23 @@ bu uçtan okunacak; sıfır da bir ölçümdür.
 öğrenilen ders: belirlenimci olmayan sıralama, ölçüm alınan bir listede sessiz
 karışıklık üretir. ChromaDB `get()` çağrısının dönüş sırası garanti değildir.
 
-**K5 — `upload` yazmadan önce aynı `source`'a ait chunk'ları siler.** Sil-sonra-yaz.
-Hayalet chunk sorunu kökten biter ve kullanıcı hiçbir şey hatırlamak zorunda kalmaz.
-Alternatif — kullanıcının yeniden yüklemeden önce elle `DELETE` çağırması — disiplini
-insana yükler; unutulduğu anda bilgi tabanı sessizce kirlenir ve kirlendiği fark
-edilmez.
+**K5 — `upload` önce yeni sürümü yazar, sonra artakalan eski chunk'ları siler.**
+Yaz-sonra-artakalanı-sil. Sıra şu: aynı `source`'a ait eski chunk id'leri okunur →
+yeni sürüm `upsert` edilir → yeni id kümesinde karşılığı olmayan eski id'ler
+silinir. Hayalet chunk sorunu kökten biter ve kullanıcı hiçbir şey hatırlamak
+zorunda kalmaz.
+
+Gerekçe iki maddedir:
+
+1. Alternatif — kullanıcının yeniden yüklemeden önce elle `DELETE` çağırması —
+   disiplini insana yükler; unutulduğu anda bilgi tabanı sessizce kirlenir ve
+   kirlendiği fark edilmez.
+2. **Yarıda kalan yükleme önceki sürümü kaybettirmemeli.** Sil-sonra-yaz sırasında
+   `delete` başarılı olup `upsert` patlarsa (ChromaDB kopar, embedding hatası,
+   süreç ölür) elde ne eski ne yeni sürüm kalır — düzeltme amaçlı bir yükleme
+   girişimi veri kaybına dönüşür. Yaz-sonra-sil sırasında en kötü ihtimalle birkaç
+   artakalan chunk kalır; bunlar bir sonraki başarılı yüklemede temizlenir ve
+   arada bilgi tabanı hiçbir zaman boş kalmaz.
 
 **K6 — Eşleşen chunk yoksa silme `404` döner.** Var olmayan bir dosyayı silmeye
 çalışmak sessizce başarılı olmamalı; yanlış dosya adı yazan yönetici bunu bilmeli.
@@ -86,12 +98,25 @@ okunur.** K5 sayesinde bir dosyanın tüm chunk'ları tek yüklemeden gelir, yan
 metadata zaten tutarlıdır; yine de belirlenimci bir kural yazılıyor ki tutarsızlık
 oluşursa çıktı rastgele değişmesin.
 
-**K9 — Büyük/küçük harf çakışması bu günün kapsamı dışında.** `upload` id'leri
-`dosya_adı.lower()` ile üretiyor ama `source`'a orijinal adı yazıyor. `Göğüs.txt` ve
-`göğüs.txt` aynı id'lere, farklı `source`'a düşer; K5'in temizliği `source` ile
-çalıştığı için bu ikiliyi ayrıştıramaz. Tetiklenmesi için aynı adın farklı harf
-düzeniyle kasıtlı olarak iki kez yüklenmesi gerekir. Bilinen sınır olarak
-kaydediliyor, Gün 22'ye devrediliyor.
+**K9 — Dosya adı normalizasyonundan doğan id çakışması bu günün kapsamı dışında.**
+`upload` id'leri `dosya_adı.replace(" ", "_").lower()` ile üretiyor ama `source`'a
+orijinal adı yazıyor. Yani id üretimi **iki** normalizasyon yapıyor: harf düzeyini
+küçültüyor **ve** boşlukları alt çizgiye çeviriyor. Normalize edilmiş hâlleri
+eşleşen iki farklı dosya adı aynı id'lere, farklı `source`'a düşer; K5'in temizliği
+`source` sorgusundan gelen id'lerle çalıştığı için bu ikiliyi ayrıştıramaz —
+ikinci dosya birincinin chunk'larının üzerine yazar, birincinin `source` kaydı da
+görünürde kalmaya devam eder.
+
+Çakışan çiftlere iki örnek:
+
+- `Göğüs.txt` / `göğüs.txt` — yalnızca harf düzeni farkı.
+- `Rapor A.txt` / `Rapor_A.txt` — yalnızca boşluk/alt çizgi farkı.
+
+İkinci örnek önemli: bunun için kasıt gerekmez. Aynı dokümanın bir kopyası boşluklu,
+bir kopyası alt çizgili adlandırıldığında (indirme aracı, işletim sistemi ya da elle
+yeniden adlandırma bunu kendiliğinden üretir) çakışma kazara tetiklenir. Yani bu, tek
+başına "kullanıcı bilerek uğraşırsa olur" türü bir sınır değil. Yine de bilinen sınır
+olarak kaydediliyor ve Gün 22'ye devrediliyor.
 
 ## Uç sözleşmeleri
 
@@ -121,8 +146,12 @@ Eşleşme yok: `404`. Yetkisiz: `401`. `admin` dışı rol: `403`.
 ### `POST /document/upload` (değişen davranış)
 
 Sözleşmesi aynı kalır — istek gövdesi, yanıt gövdesi ve durum kodu değişmez.
-Değişen tek şey yan etkisi: yazmadan önce aynı `source`'a ait chunk'lar silinir.
-Bu, dışarıdan yalnızca "yeniden yükleme artık hayalet bırakmıyor" olarak görünür.
+Değişen tek şey yan etkisi: yeni sürüm önce yazılır, ardından aynı `source`'a ait
+eski chunk'lardan yeni sürümde karşılığı olmayanlar silinir (K5). Silme
+`where={"source": ...}` ile toptan değil, hesaplanan artakalan id listesiyle
+yapılır — böylece hem başka dosyalara hem de yeni yazılan chunk'lara dokunulmaz.
+Bu, dışarıdan yalnızca "yeniden yükleme artık hayalet bırakmıyor" olarak görünür;
+ek olarak yarıda kalan bir yükleme artık önceki sürümü silmiş olmaz.
 
 ## Test mimarisi
 
@@ -138,6 +167,7 @@ yetki kapısı sınanıyordu.
 | `test_silme_dosyanin_tum_chunklarini_siler` | silme |
 | `test_olmayan_dosya_silinince_404_doner` | K6 |
 | `test_yeniden_yukleme_eski_chunklari_birakmaz` | K5 — hayalet chunk regresyonu |
+| `test_yeniden_yukleme_baska_dosyanin_chunklarina_dokunmaz` | K5 — temizliğin kapsamı |
 | `test_user_rolu_listeye_403_alir` | K1 |
 | `test_user_rolu_silmeye_403_alir` | K1 |
 
@@ -153,10 +183,12 @@ kaldırılırsa bu test kırmızıya döner.
 
 ## Bitti sayılır
 
-- [ ] Sekiz test yeşil; toplam 90 → 98
+- [ ] Dokuz test yeşil; toplam 90 → 99
 - [ ] Mevcut 90 test hâlâ yeşil
 - [ ] `test_yeniden_yukleme_eski_chunklari_birakmaz` mutasyonla bağlayıcı: K5
       kaldırıldığında kırmızıya düşüyor
+- [ ] `test_yeniden_yukleme_baska_dosyanin_chunklarina_dokunmaz` mutasyonla
+      bağlayıcı: temizlik `source` yerine `category` ile yapıldığında kırmızıya düşüyor
 - [ ] `GET /document/liste` gerçek ChromaDB'ye karşı elle doğrulandı ve mevcut
       2 dosyayı doğru sayıyor
 - [ ] Hiçbir test gerçek `triage_documents` koleksiyonuna yazmıyor

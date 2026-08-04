@@ -67,7 +67,8 @@ imaja kopyalanır. Yapılandırma depo kökündeki `pytest.ini`.
 `entegrasyon` işaretli testler gerçek Postgres ister: `docker compose up -d postgres` ve
 `ai_triage_test` veritabanı. Ollama, faster-whisper, ChromaDB ve cross-encoder
 (reranker) hiçbir testte çağrılmaz — dördü de `tests/yardimcilar/` altındaki sahte
-servislerle değiştirilir (`sahte_llm.py`, `sahte_stt.py`, `sahte_rag.py`) ve **adın
+servislerle değiştirilir (`sahte_llm.py`, `sahte_stt.py`, `sahte_rag.py`,
+`sahte_chroma.py`) ve **adın
 arandığı ad alanında** monkeypatch'lenir; yani adı tanımlayan modülde değil, onu
 `import` edip kullanan modülde. Uç testlerinde bu, uç modülüdür
 (`app.api.ai.get_structured_completion`, `app.api.ai.get_collection` — `ai.py` bu
@@ -94,7 +95,7 @@ Eski bulut tabanlı OpenAI SDK istemcisi (`app/services/openai_client.py`) **art
 
 ### Doküman yükleme (`POST /document/upload`, `app/api/document.py`)
 
-Yalnızca admin. PDF/DOCX/TXT kabul eder, `pdfplumber`/`python-docx` ile metni (ve tabloları, `format_table_to_markdown` ile markdown'a çevirerek) çıkarır, `RecursiveCharacterTextSplitter` ile parçalara ayırır (chunk_size=1000, overlap=200) ve analiz akışının sorguladığı aynı ChromaDB koleksiyonuna upsert eder. Chunk ID'leri deterministiktir (`<dosyaadi>_chunk_<n>`), bu yüzden aynı dosyayı tekrar yüklemek öncekini çoğaltmak yerine üzerine yazar.
+Yalnızca admin. PDF/DOCX/TXT kabul eder, `pdfplumber`/`python-docx` ile metni (ve tabloları, `format_table_to_markdown` ile markdown'a çevirerek) çıkarır, `RecursiveCharacterTextSplitter` ile parçalara ayırır (chunk_size=1000, overlap=200) ve analiz akışının sorguladığı aynı ChromaDB koleksiyonuna upsert eder. Chunk ID'leri deterministiktir (`<dosyaadi>_chunk_<n>`), bu yüzden aynı dosyayı tekrar yüklemek öncekini çoğaltmak yerine üzerine yazar — ama `upsert` yalnızca kendisine verilen id'lere dokunduğu için üzerine yazmak tek başına yetmez. Sıra şudur: önce eski chunk id'leri okunur, sonra yeni sürüm `upsert` edilir, en sonda yeni sürümde karşılığı olmayan eski chunk'lar silinir (hayalet chunk temizliği, `source` metadata'sıyla eşleşenler). Temizlik bilinçli olarak yazmadan **sonra** yapılır: önce silinseydi, `upsert` yarıda patladığında önceki iyi sürüm de kaybolurdu.
 
 ### Yetkilendirme (`app/api/auth.py`, `app/services/auth_service.py`)
 
@@ -104,7 +105,7 @@ Standart OAuth2-password-flow JWT auth (`python-jose`, `passlib` üzerinden bcry
 
 | Bağımlılık | Geçen roller | Koruduğu uçlar |
 |---|---|---|
-| `require_admin_role` | `admin` | `POST /document/upload` |
+| `require_admin_role` | `admin` | `POST /document/upload`, `GET /document/liste`, `DELETE /document` |
 | `require_user_or_admin_role` | `user`, `admin` | `POST /ai/analiz`, `POST /speech/transkript` |
 | `require_doctor_role` | `doctor`, `admin` | `GET /doctor/bekleyen`, `POST /doctor/inceleme` |
 

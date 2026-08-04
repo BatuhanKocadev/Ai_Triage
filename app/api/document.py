@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Depends, Query
 from datetime import datetime
 import io
 import pdfplumber
@@ -122,12 +122,26 @@ async def upload_document(
             })
             id_list.append(f"{safe_filename}_chunk_{index}")
         
-        get_collection().upsert(
+        koleksiyon = get_collection()
+
+        # Eski chunk'ların id'leri ÖNCE okunuyor ama silme SONRAYA bırakılıyor:
+        # önce silseydik, upsert patladığında önceki iyi sürüm de kaybolurdu.
+        eski_kayitlar = koleksiyon.get(where={"source": file.filename})
+        eski_idler = set(eski_kayitlar.get("ids") or [])
+
+        koleksiyon.upsert(
             documents=text_chunks,
             metadatas=metadata_list,
             ids=id_list
         )
-        
+
+        # Yeni sürümde karşılığı olmayan eski chunk'lar siliniyor (hayalet chunk).
+        # upsert yalnızca kendisine verilen id'lere dokunduğu için, daha kısa bir
+        # sürüm yüklendiğinde bunlar aksi hâlde koleksiyonda kalırdı.
+        artakalan = sorted(eski_idler - set(id_list))
+        if artakalan:
+            koleksiyon.delete(ids=artakalan)
+
         logger.info(f"Uploaded and chunked: {file.filename} by {current_user.username}")
         
         return {
@@ -141,3 +155,64 @@ async def upload_document(
     except Exception as e:
         logger.error(f"Upload error: {str(e)}")
         raise HTTPException(status_code=500, detail="Upload error")
+
+
+@router.get("/liste")
+async def dokumanlari_listele(
+    current_user: User = Depends(require_admin_role)
+):
+    """Yüklenen dokümanları kaynak dosya adına göre gruplayıp döndürür.
+
+    Bilgi tabanında ne olduğunu görmenin tek yolu bu uç; yol haritasının
+    "yüklenen doküman sayısı" metriği buradan okunuyor.
+    """
+    kayitlar = get_collection().get(include=["metadatas"])
+    ustveriler = kayitlar.get("metadatas") or []
+
+    # Dosya adı -> o dosyaya ait chunk'ların üstverileri
+    gruplar: dict[str, list[dict]] = {}
+    for ustveri in ustveriler:
+        kaynak = (ustveri or {}).get("source")
+        if kaynak is None:
+            continue  # kaynağı olmayan kayıt listelenemez
+        gruplar.setdefault(kaynak, []).append(ustveri)
+
+    liste = []
+    for kaynak, parcalar in gruplar.items():
+        # Kategori ve tarih, chunk_index'i en küçük olan parçadan okunuyor:
+        # üstveri tutarsız olsa bile çıktı rastgele değişmesin (K8).
+        ilk = min(parcalar, key=lambda u: u.get("chunk_index", 0))
+        liste.append({
+            "kaynak": kaynak,
+            "chunk_sayisi": len(parcalar),
+            "kategori": ilk.get("category"),
+            "yukleme_tarihi": ilk.get("upload_date"),
+        })
+
+    # Belirlenimci sıra (K4): ChromaDB get() dönüş sırasını garanti etmiyor.
+    liste.sort(key=lambda kayit: kayit["kaynak"])
+    return liste
+
+
+@router.delete("")
+async def dokumani_sil(
+    kaynak: str = Query(..., min_length=1, description="Silinecek dosyanın adı"),
+    current_user: User = Depends(require_admin_role)
+):
+    """Bir dosyaya ait bütün chunk'ları bilgi tabanından siler.
+
+    Dosya adı yol parametresi değil sorgu parametresi olarak alınıyor (K2):
+    dosya adlarında nokta, boşluk ve Türkçe karakter var.
+    """
+    koleksiyon = get_collection()
+    mevcut = koleksiyon.get(where={"source": kaynak})
+    silinecek = mevcut.get("ids") or []
+
+    if not silinecek:
+        raise HTTPException(status_code=404, detail="Doküman bulunamadı")
+
+    koleksiyon.delete(where={"source": kaynak})
+    logger.info(
+        f"Dokuman silindi: {kaynak} ({len(silinecek)} chunk) by {current_user.username}"
+    )
+    return {"silinen_chunk": len(silinecek)}

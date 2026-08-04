@@ -783,3 +783,130 @@ gönderilen değerler **loglandığında** görüldü — ilk yapılması gereke
 Ders, sistematik hata ayıklamanın birinci fazının tam olarak söylediği şey: çok
 bileşenli bir sistemde önce bileşen sınırlarına kanıt topla, sonra hipotez kur.
 Buradaki sınır arayüz→backend'di ve tek bir `print` onu on dakikada kapatırdı.
+
+---
+
+## Gün 20 · Bilgi tabanı yönetimi (4 Ağustos 2026)
+
+### Bu gün ne yapıldı
+
+**Gün 20'nin üçte biri.** Yol haritasındaki başlık "bilgi tabanı yönetimi + gerçek
+protokol verisi + eşik kalibrasyonu"; bugün yalnızca **birincisi** bitti. İkincisi
+ve üçüncüsü staj yerinden gelmeyen protokol dokümanlarına bağlı — derleme kamuya
+açık kaynaklardan elle hazırlanıyor (`ornek_dokumanlar/protokoller/`), hazır
+olduğunda toplu yükleme ve `kalibre_esik.py` koşulacak.
+
+Bu sıralama bilinçli: liste ve silme uçları dosyalardan **önce** yazılmalıydı ki
+yanlış yüklenen temizlenebilsin.
+
+Eklenenler: `GET /document/liste`, `DELETE /document?kaynak=`, ve `POST
+/document/upload`'ın hayalet chunk düzeltmesi. `tests/api/test_document_api.py`
+bugün doğdu — doküman uçlarının bugüne kadar kendi test dosyası yoktu.
+
+Tasarım kararları (K1–K9) `docs/superpowers/specs/2026-08-04-gun20-bilgi-tabani-yonetimi-design.md`,
+görev adımları `docs/superpowers/plans/2026-08-04-gun20-bilgi-tabani-yonetimi.md`.
+
+Dalın commit'leri: `d232289` (sahte koleksiyon + liste ucu), `ec4e55f` (silme ucu),
+`314abb1` (hayalet chunk düzeltmesi), `44b3a96` (son inceleme düzeltmeleri).
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 90 | **99** |
+| `app/` kapsaması | %75 | **%80** |
+| Doküman ucu sayısı | 1 | 3 |
+| Bilgi tabanı | 4 chunk / 2 dosya | değişmedi (derleme bekleniyor) |
+
+Kapsamanın %75'ten %80'e çıkması, `POST /document/upload` gövdesinin bugüne kadar
+hiçbir testte çalışmamış olmasından: yetki testleri 403'te duruyordu, uç gövdesine
+hiç girilmiyordu.
+
+### Mevcut kodda bulunan gerçek hata: hayalet chunk
+
+`upload`, chunk id'lerini `{güvenli_dosya_adı}_chunk_{sıra}` diye üretip `upsert`
+ediyordu. `upsert` yalnızca kendisine verilen id'lere dokunur. Bir dosya 10 chunk
+olarak yüklenip sonra kısaltılıp 6 chunk olarak yeniden yüklenince, eski sürümün
+7–10 numaralı chunk'ları bilgi tabanında **kalıyordu**.
+
+Sonucu şu: sistem silinmiş bir metinden alıntı yapabilir ve yanıttaki `sources`
+alanı onu hâlâ o dosyaya bağlar — yani projenin bütün savunması olan izlenebilirlik
+iddiası sessizce yalanlanır. Protokol dosyalarını düzelte düzelte ilerleyecek bir
+günde bu kaçınılmazdı.
+
+### Son incelemenin bulduğu gerçek sorunlar
+
+Görev incelemeleri üçünü de temiz geçirdi; asıl bulgular tüm-dal incelemesinden geldi.
+
+1. **Silmenin kapsamını hiçbir test dondurmuyordu.** Temizlik filtresi
+   `{"source": ...}` yerine `{"category": ...}` olsaydı 98 testin **hepsi yeşil
+   kalırdı** — ama üretimde her yükleme aynı kategorideki bütün bilgi tabanını
+   silerdi. 15 protokol dosyasının hepsi `category="protokol"` ile yükleneceği için
+   bu, tek bir yüklemede derlemenin tamamının yok olması demekti. Mutasyon deneyi
+   ölçtü: filtre `category`'ye çevrildiğinde yeni test `assert 0 == 12` ile kırmızıya
+   düştü — üstelik üç yükleme de `201` dönüyordu, yani hata tamamen sessizdi.
+   Bu, Gün 11–16 ve Gün 17+18'de belgelenen desenin **beşinci** tekrarı: bir kuralı
+   izole sınamak, üretim kodunun onu kullandığını kanıtlamıyor.
+2. **Sil-sonra-yaz, yarıda kalan yüklemeyi veri kaybına çeviriyordu.** `delete`
+   başarılı olup `upsert` patlarsa (Chroma bağlantısı, embedding hesabı) önceki iyi
+   sürüm zaten silinmiş olurdu ve elde hiçbir şey kalmazdı; eskiden başarısız yükleme
+   etkisizdi. Sıra çevrildi: eski id'ler okunur → `upsert` → yalnızca yeni sürümde
+   karşılığı olmayan eski id'ler silinir. K5 bu yönde güncellendi. Kalan risk çok
+   daha hafif: `upsert` başarılı olup `delete` patlarsa veri kaybı olmaz, yalnızca
+   artakalan chunk kalır ve bir sonraki başarılı yükleme onu toplar.
+3. **`dokuman_yazmayi_engelle` fixture'ı körelmişti.** `_YazmayiReddedenKoleksiyon`
+   yalnızca `upsert` tanımlıyordu; `upload` artık `get` ve `delete` de çağırdığı için
+   fixture'ın açıklayıcı `AssertionError`'ı yerine `AttributeError` fırlıyor ve
+   `except Exception` onu 500'e çeviriyordu. Gerçek koleksiyona yazılmama güvencesi
+   duruyordu ama teşhis kaybolmuştu — fixture'ın var oluş sebebi olan uzun uyarı
+   mesajına artık ulaşılamıyordu.
+4. **`CLAUDE.md` üç yerde olgusal olarak yanlışlaşmıştı** — chunk id davranışı, rol
+   tablosundaki korunan uç listesi, ve sahte servis listesi. Gün 19'da da aynı desen
+   çıkmıştı: dal davranışı değiştiriyor, belge eski iddiayı taşımaya devam ediyor.
+
+### Sahte servisin gerçeğe sadakati
+
+Testler bellek içi `tests/yardimcilar/sahte_chroma.py` ile koşuyor. Sahte gerçeği
+yanlış taklit ederse testler yeşil verip üretim patlar — bu dalın en büyük riski
+buydu. Kontrolcü gerçek ChromaDB'ye karşı üç çağrıyı da doğruladı: dolu koleksiyonda
+`get(include=["metadatas"])` iki dosyayı 2'şer chunk'la döndürdü, `get(where=...)`
+olmayan dosyada 0 eşleşme verdi, `delete(where=...)` hatasız kabul edildi ve hiçbir
+şey silmedi. Ayrıca **boş** koleksiyonda `delete` ayrıca sınandı (geçici bir
+koleksiyonla) — `docker compose down -v` sonrası ilk yükleme yolu bu ve orada
+patlasa her temiz kurulum bozulurdu.
+
+### Gün 22'ye devredilenler (bu günden)
+
+1. **K9 — dosya adı normalizasyon çakışması.** `upload` id'leri `.lower()` **ve**
+   boşluk→alt çizgi ile normalize ediyor ama `source` metadata'sına orijinal adı
+   yazıyor. `Rapor A.txt` sonra `Rapor_A.txt` yüklenirse temizlik eşleşmez. İlk
+   sanıldığı gibi "kasıtlı" bir senaryo değil — dosyayı yeniden adlandıran biri
+   kazara düşer.
+2. Silme ucunda `get()` + `delete()` atomik değil; raporlanan `silinen_chunk` sayısı
+   eşzamanlı bir yazmada sapabilir. `delete(where=...)` yerine `delete(ids=...)`
+   yazmak sayıyı fiilen silinen kümeye eşitler.
+3. `entegrasyon` işareti `pytest.ini`'de "gerçek Postgres/ChromaDB gerektirir" diyor
+   ama bu testlerde ChromaDB sahte, yalnızca Postgres gerçek. İşaret yanlış değil,
+   geniş — aynı gevşeklik `esik_alti` kullanan testlerde de var, tek seferde
+   çözülmeli.
+4. `sahte_chroma.py` `include` parametresini yok sayıyor; gerçek Chroma
+   `include=["metadatas"]` ile `documents`'ı `None` döndürür. Bugün zararsız (yalnızca
+   `metadatas` okunuyor) ama sahtenin gerçekten ayrıldığı tek yer burası.
+5. İki yeni uçta `response_model` yok; depodaki diğer router'ların hepsinde var.
+   Sözleşme bugün testlerle tutuluyor ama OpenAPI şeması boş kalıyor.
+6. `GET /document/liste` bütün üstverileri belleğe çekiyor, limit yok. 2 dosyada
+   sorun değil, derleme büyüyünce not.
+7. K8 (kategori/tarih en küçük `chunk_index`'ten okunur) farklı değerli chunk'larla
+   ayrıca sınanmıyor; K5 sayesinde bugün gözlemlenebilir fark üretmiyor.
+
+### Süreç notu
+
+Üç görevin üçü de görev incelemesini ilk seferde temiz geçti, ama tüm-dal incelemesi
+dört Important bulgu çıkardı. İkisi (silme kapsamı, veri kaybı penceresi) tek tek
+görevlere bakarken görünmüyordu — çünkü ikisi de **görevler arası** ilişkiden
+doğuyordu: kapsam sorunu ancak koleksiyonda birden fazla dosya varken ortaya çıkıyor,
+veri kaybı penceresi ise Görev 3'ün Görev 1'den devraldığı sıralamadan geliyor.
+
+Görev bazlı inceleme dar kapsamda doğruluğu ölçüyor; geniş inceleme parçaların
+birlikte doğru olup olmadığını. İkisi birbirinin yerine geçmiyor — bu günün kanıtı
+bu.
