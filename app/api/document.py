@@ -122,7 +122,14 @@ async def upload_document(
             })
             id_list.append(f"{safe_filename}_chunk_{index}")
         
-        get_collection().upsert(
+        koleksiyon = get_collection()
+
+        # Aynı dosyanın eski chunk'ları önce siliniyor (K5). upsert yalnızca
+        # kendisine verilen id'lere dokunduğu için, daha kısa bir sürüm
+        # yüklendiğinde eski sürümün fazla chunk'ları koleksiyonda kalıyordu.
+        koleksiyon.delete(where={"source": file.filename})
+
+        koleksiyon.upsert(
             documents=text_chunks,
             metadatas=metadata_list,
             ids=id_list

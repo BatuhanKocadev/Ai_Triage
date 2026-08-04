@@ -144,3 +144,36 @@ def test_user_rolu_silmeye_403_alir(istemci, sahte_koleksiyon, yetkili_baslik):
     assert yanit.status_code == 403
     # Yetki reddedilirken hiçbir şey silinmemiş olmalı: kapı gövdeden önce durmalı.
     assert sahte_koleksiyon.sayac() == 3
+
+
+@pytest.mark.entegrasyon
+def test_yeniden_yukleme_eski_chunklari_birakmaz(istemci, sahte_koleksiyon, yetkili_baslik):
+    # upsert yalnızca kendisine verilen id'lere dokunur. Daha kısa bir sürüm
+    # yüklendiğinde eski sürümün fazla chunk'ları koleksiyonda kalırsa sistem
+    # silinmiş bir metinden alıntı yapar ve sources onu hâlâ bu dosyaya bağlar —
+    # yani izlenebilirlik iddiası sessizce yalanlanır.
+    baslik = yetkili_baslik(kullanici_adi="yonetici", rol="admin")
+    uzun_metin = ("Gogus agrisi protokolu. " * 400).encode("utf-8")
+    kisa_metin = "Gogus agrisi protokolu kisa surum.".encode("utf-8")
+
+    ilk = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("gogus_agrisi.txt", uzun_metin, "text/plain")},
+        headers=baslik,
+    )
+    assert ilk.status_code == 201
+    # Test anlamlı olsun diye: ilk yükleme gerçekten çok parçaya bölünmeli.
+    assert ilk.json()["total_chunks"] > 1
+
+    ikinci = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("gogus_agrisi.txt", kisa_metin, "text/plain")},
+        headers=baslik,
+    )
+    assert ikinci.status_code == 201
+    ikinci_chunk_sayisi = ikinci.json()["total_chunks"]
+
+    # Koleksiyonda yalnızca ikinci sürümün chunk'ları kalmalı.
+    assert sahte_koleksiyon.sayac() == ikinci_chunk_sayisi
