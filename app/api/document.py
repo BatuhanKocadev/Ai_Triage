@@ -141,3 +141,40 @@ async def upload_document(
     except Exception as e:
         logger.error(f"Upload error: {str(e)}")
         raise HTTPException(status_code=500, detail="Upload error")
+
+
+@router.get("/liste")
+async def dokumanlari_listele(
+    current_user: User = Depends(require_admin_role)
+):
+    """Yüklenen dokümanları kaynak dosya adına göre gruplayıp döndürür.
+
+    Bilgi tabanında ne olduğunu görmenin tek yolu bu uç; yol haritasının
+    "yüklenen doküman sayısı" metriği buradan okunuyor.
+    """
+    kayitlar = get_collection().get(include=["metadatas"])
+    ustveriler = kayitlar.get("metadatas") or []
+
+    # Dosya adı -> o dosyaya ait chunk'ların üstverileri
+    gruplar: dict[str, list[dict]] = {}
+    for ustveri in ustveriler:
+        kaynak = (ustveri or {}).get("source")
+        if kaynak is None:
+            continue  # kaynağı olmayan kayıt listelenemez
+        gruplar.setdefault(kaynak, []).append(ustveri)
+
+    liste = []
+    for kaynak, parcalar in gruplar.items():
+        # Kategori ve tarih, chunk_index'i en küçük olan parçadan okunuyor:
+        # üstveri tutarsız olsa bile çıktı rastgele değişmesin (K8).
+        ilk = min(parcalar, key=lambda u: u.get("chunk_index", 0))
+        liste.append({
+            "kaynak": kaynak,
+            "chunk_sayisi": len(parcalar),
+            "kategori": ilk.get("category"),
+            "yukleme_tarihi": ilk.get("upload_date"),
+        })
+
+    # Belirlenimci sıra (K4): ChromaDB get() dönüş sırasını garanti etmiyor.
+    liste.sort(key=lambda kayit: kayit["kaynak"])
+    return liste
