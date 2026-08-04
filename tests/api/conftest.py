@@ -22,14 +22,25 @@ def esik_alti(monkeypatch):
     monkeypatch.setattr(ai_modulu, "retrieve_and_rerank", lambda **kwargs: [])
 
 
+_YAZMA_UYARISI = (
+    "ChromaDB'ye yazma girişimi: yetki kapısı testi uç gövdesine ilerledi. "
+    "Bu bir regresyondur — gerçek koleksiyona doküman yazılacaktı."
+)
+
+
 class _YazmayiReddedenKoleksiyon:
-    """upsert çağrılırsa testi patlatır — gerçek koleksiyona yazılmadığını kanıtlar."""
+    """upsert/delete çağrılırsa testi patlatır — gerçek koleksiyona yazılmadığını kanıtlar."""
+
+    def get(self, **kwargs):
+        """Okuma zararsız olduğu için boş sonuç döndürür; akış yazma adımına ilerlesin."""
+        return {"ids": [], "metadatas": [], "documents": []}
 
     def upsert(self, **kwargs):
-        raise AssertionError(
-            "ChromaDB'ye yazma girişimi: yetki kapısı testi uç gövdesine ilerledi. "
-            "Bu bir regresyondur — gerçek koleksiyona doküman yazılacaktı."
-        )
+        raise AssertionError(_YAZMA_UYARISI)
+
+    def delete(self, **kwargs):
+        """Silme de bir yazma işlemidir; upsert ile aynı uyarıyı fırlatır."""
+        raise AssertionError(_YAZMA_UYARISI)
 
 
 @pytest.fixture
@@ -39,8 +50,9 @@ def dokuman_yazmayi_engelle(monkeypatch):
     DİKKAT — gereksiz görünse bile SİLMEYİN, `esik_alti` ile aynı sebepten.
     `/document/upload` testleri bugün uç gövdesine hiç girmiyor (401/403 daha
     önce dönüyor), ama tam da korudukları kural gevşerse (require_admin_role)
-    istek gövdeye ilerliyor ve `document.py:125` `get_collection().upsert(...)`
-    çalıştırıyor. `esik_alti`'ndan farkı şu: orada risk gerçek servisten
+    istek gövdeye ilerliyor ve upload'ın yazma adımını, yani
+    `get_collection().upsert(...)`'i çalıştırıyor.
+    `esik_alti`'ndan farkı şu: orada risk gerçek servisten
     OKUMAKTI, burada gerçek `triage_documents` koleksiyonuna YAZMAK — yani her
     hasta sorgusunun tarandığı vektör veritabanının kirlenmesi.
 

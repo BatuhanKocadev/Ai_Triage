@@ -124,17 +124,24 @@ async def upload_document(
         
         koleksiyon = get_collection()
 
-        # Aynı dosyanın eski chunk'ları önce siliniyor (K5). upsert yalnızca
-        # kendisine verilen id'lere dokunduğu için, daha kısa bir sürüm
-        # yüklendiğinde eski sürümün fazla chunk'ları koleksiyonda kalıyordu.
-        koleksiyon.delete(where={"source": file.filename})
+        # Eski chunk'ların id'leri ÖNCE okunuyor ama silme SONRAYA bırakılıyor:
+        # önce silseydik, upsert patladığında önceki iyi sürüm de kaybolurdu.
+        eski_kayitlar = koleksiyon.get(where={"source": file.filename})
+        eski_idler = set(eski_kayitlar.get("ids") or [])
 
         koleksiyon.upsert(
             documents=text_chunks,
             metadatas=metadata_list,
             ids=id_list
         )
-        
+
+        # Yeni sürümde karşılığı olmayan eski chunk'lar siliniyor (hayalet chunk).
+        # upsert yalnızca kendisine verilen id'lere dokunduğu için, daha kısa bir
+        # sürüm yüklendiğinde bunlar aksi hâlde koleksiyonda kalırdı.
+        artakalan = sorted(eski_idler - set(id_list))
+        if artakalan:
+            koleksiyon.delete(ids=artakalan)
+
         logger.info(f"Uploaded and chunked: {file.filename} by {current_user.username}")
         
         return {

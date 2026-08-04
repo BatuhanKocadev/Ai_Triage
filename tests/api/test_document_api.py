@@ -177,3 +177,44 @@ def test_yeniden_yukleme_eski_chunklari_birakmaz(istemci, sahte_koleksiyon, yetk
 
     # Koleksiyonda yalnızca ikinci sürümün chunk'ları kalmalı.
     assert sahte_koleksiyon.sayac() == ikinci_chunk_sayisi
+
+
+@pytest.mark.entegrasyon
+def test_yeniden_yukleme_baska_dosyanin_chunklarina_dokunmaz(istemci, sahte_koleksiyon, yetkili_baslik):
+    # Temizlik filtresinin KAPSAMINI donduruyor. Filtre "source" yerine
+    # "category" olsaydı diğer testler yeşil kalırdı ama üretimde her yükleme
+    # aynı kategorideki bütün bilgi tabanını silerdi — 15 protokol dosyasının
+    # tamamı tek bir yüklemede yok olurdu.
+    baslik = yetkili_baslik(kullanici_adi="yonetici", rol="admin")
+    uzun_metin = ("Protokol metni ornegi. " * 400).encode("utf-8")
+    kisa_metin = "Protokol kisa surum.".encode("utf-8")
+
+    istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("dosya_a.txt", uzun_metin, "text/plain")},
+        headers=baslik,
+    )
+    b_yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("dosya_b.txt", uzun_metin, "text/plain")},
+        headers=baslik,
+    )
+    assert b_yanit.status_code == 201
+    b_chunk_sayisi = b_yanit.json()["total_chunks"]
+
+    # A dosyası aynı kategoriyle, daha kısa bir sürümle yeniden yükleniyor.
+    a_yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("dosya_a.txt", kisa_metin, "text/plain")},
+        headers=baslik,
+    )
+    assert a_yanit.status_code == 201
+    a_chunk_sayisi = a_yanit.json()["total_chunks"]
+
+    # B dosyası hiç dokunulmadan durmalı.
+    kalan_b = sahte_koleksiyon.get(where={"source": "dosya_b.txt"})
+    assert len(kalan_b["ids"]) == b_chunk_sayisi
+    assert sahte_koleksiyon.sayac() == a_chunk_sayisi + b_chunk_sayisi
