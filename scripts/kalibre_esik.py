@@ -18,7 +18,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 from app.config.config import settings
 from app.services.chroma_service import get_collection
-from app.services.rag_service import get_reranker, calculate_sigmoid
+from app.services.rag_service import get_reranker
 
 # Bilgi tabanındaki 15 protokolün her biri için en az bir sorgu; geçmesi beklenir.
 # Sorgular bilerek HASTA AĞZINDAN yazılmıştır, protokol cümlesi kopyalanmamıştır:
@@ -89,8 +89,9 @@ def en_yuksek_skor(sorgu: str) -> float:
     dokumanlar = sonuc["documents"][0]
     if not dokumanlar:
         return 0.0
-    ham_skorlar = get_reranker().predict([[sorgu, d] for d in dokumanlar])
-    return max(calculate_sigmoid(float(s)) for s in ham_skorlar)
+    # predict() olasılık döndürüyor; ek dönüşüm yok.
+    skorlar = get_reranker().predict([[sorgu, d] for d in dokumanlar])
+    return max(float(s) for s in skorlar)
 
 
 def main() -> None:

@@ -15,16 +15,18 @@ def test_koleksiyon_yoksa_bos_liste_doner():
 
 
 def test_esik_altinda_bos_liste_doner(monkeypatch):
-    # Ham -10 skoru sigmoid'den ~0.00005 çıkar; 0.52 eşiğinin çok altında.
-    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([-10.0]))
+    # 0.10 olasılığı 0.52 eşiğinin altında. Değer bilerek seçildi: eski çift
+    # sigmoidli kodda sigmoid(0.10)=0.525 çıkıp eşiği GEÇİYORDU, yani bu test
+    # düzeltmenin bağlayıcı kanıtı.
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.10]))
     koleksiyon = SahteKoleksiyon(["Apandisit protokolü"])
     sonuc = rag_service.retrieve_and_rerank(query="alakasiz sorgu", collection=koleksiyon)
     assert sonuc == []
 
 
 def test_esik_ustunde_dokuman_doner(monkeypatch):
-    # Ham 10.0 skoru sigmoid'den ~0.99995 çıkar; eşiği rahat geçer.
-    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([10.0]))
+    # 0.90 olasılığı 0.52 eşiğini rahatça geçer.
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
     koleksiyon = SahteKoleksiyon(["Apandisit protokolü"])
     sonuc = rag_service.retrieve_and_rerank(query="karın ağrısı", collection=koleksiyon)
     assert len(sonuc) == 1
@@ -32,27 +34,26 @@ def test_esik_ustunde_dokuman_doner(monkeypatch):
 
 
 def test_tam_esik_degeri_dahil_edilir(monkeypatch):
-    # SINIR DAVRANIŞI: ham 0.0 -> sigmoid tam 0.5. Kod "< threshold" ile eleme
-    # yaptığı için tam eşiğe eşit skor ELENMEZ, dokümana dahil edilir.
-    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.0]))
+    # Skor eşiğe tam eşit; karşılaştırma >= olduğu için dahil edilmeli.
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.52]))
     koleksiyon = SahteKoleksiyon(["Sınırdaki doküman"])
     sonuc = rag_service.retrieve_and_rerank(
-        query="sinir", collection=koleksiyon, threshold=0.5
+        query="sinir", collection=koleksiyon, threshold=0.52
     )
     assert len(sonuc) == 1
 
 
 def test_dokuman_kaynagi_ciktiya_eklenir(monkeypatch):
     # Çıktı "[Kaynak: dosya] metin" biçiminde olmalı; doktor kaynağı görebilmeli.
-    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([10.0]))
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
     koleksiyon = SahteKoleksiyon(["Metin"], kaynaklar=["gogus_agrisi.pdf"])
     sonuc = rag_service.retrieve_and_rerank(query="q", collection=koleksiyon)
     assert sonuc[0].startswith("[Kaynak: gogus_agrisi.pdf]")
 
 
 def test_dokumanlar_skora_gore_siralanir(monkeypatch):
-    # En yüksek skorlu doküman başa gelmeli.
-    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([1.0, 9.0]))
+    # İkinci doküman daha yüksek olasılık alıyor; çıktıda önce o gelmeli.
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.60, 0.95]))
     koleksiyon = SahteKoleksiyon(["Dusuk skorlu", "Yuksek skorlu"])
     sonuc = rag_service.retrieve_and_rerank(query="q", collection=koleksiyon)
     assert "Yuksek skorlu" in sonuc[0]
@@ -73,3 +74,18 @@ def test_bos_koleksiyon_sonucu_bos_liste_doner(monkeypatch):
     monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([]))
     koleksiyon = SahteKoleksiyon([])
     assert rag_service.retrieve_and_rerank(query="q", collection=koleksiyon) == []
+
+
+def test_reranker_skoru_ikinci_kez_ezilmez(monkeypatch):
+    # CrossEncoder.predict() modelin Sigmoid aktivasyonunu zaten uyguluyor.
+    # Kod bunu ikinci kez sigmoid'den geçirirse 0.90 skoru 0.711'e düşer ve
+    # 0.80 eşiğini geçemez — dokuman sessizce elenir. Bu test o davranışı
+    # dondurur: skor ne verildiyse o sayılmalı.
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
+    koleksiyon = SahteKoleksiyon(["Yanık protokolü"])
+
+    sonuc = rag_service.retrieve_and_rerank(
+        query="kaynar su döküldü", collection=koleksiyon, threshold=0.80
+    )
+
+    assert len(sonuc) == 1
