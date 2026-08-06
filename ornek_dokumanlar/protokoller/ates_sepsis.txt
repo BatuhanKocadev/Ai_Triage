@@ -1,0 +1,35 @@
+ATEŞ VE SEPSİS TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise ateş, enfeksiyon veya sepsis şüphesi ile başvuran hastaların değerlendirilmesini ve önceliklendirilmesini düzenler.
+
+Ateş ve Sepsis — İlk Değerlendirme
+- Hastalarda ateşten ziyade organ disfonksiyonu göstergelerine (bilinç, solunum sayısı, tansiyon, cilt perfüzyonu) odaklanılır.
+- qSOFA (Solunum sayısı >=22, SKB <=100, bilinç değişikliği) ve laktat ölçümü kullanılarak hızlıca sepsis taraması yapılır.
+- Yaşlılarda, siroz veya immünsüpresif hastalarda ağır sepsisin ateşsiz veya hipotermik seyredebileceği dikkate alınır.
+- Enfeksiyon odağını saptamak için solunum, üriner, cilt ve kalıcı cihazlar (port, kateter) hızla sorgulanır.
+
+Ateş ve Sepsis — Kırmızı Alan Kriterleri
+- Septik şok tablosunda olan, hipotansif (SKB <90 mmHg) ve laktat değeri >=4 mmol/L olan hastalar.
+- qSOFA skoru >=2 olan veya meningokoksemi şüphesi (ateş ve basmakla solmayan döküntü) barındıran vakalar.
+- Nötropenik ateş tablosundaki hastalar ile menenjit bulguları (ense sertliği, bilinç değişikliği) gösteren hastalar.
+
+Ateş ve Sepsis — Sarı Alan Kriterleri
+- İmmünsüpresif durumu olan, nekrotizan yumuşak doku enfeksiyonu veya kolanjit/piyelonefrit şüphesi taşıyan hastalar.
+- Ateşi 38.5°C üzerinde olup taşikardi/takipnesi olan ancak hemodinamisi stabil olan riskli vakalar.
+- Yaşlı (>65 yaş) veya ciddi ek hastalığı bulunup yeni ateş tablosu ile başvuran hastalar.
+
+Ateş ve Sepsis — Yeşil Alan Kriterleri
+- Genel durumu iyi, vital bulguları tamamen normal ve oral alımı açık ambule hastalar.
+- Toksik görünümü olmayan basit üst solunum yolu enfeksiyonu veya viral sendromlar.
+
+Ateş ve Sepsis — Önerilen Tetkikler
+- Kan laktat düzeyi.
+- Antibiyotik öncesi en az iki set Kan Kültürü ve odak kültürleri.
+- Tam kan sayımı ve rutin biyokimya.
+
+Ateş ve Sepsis — Yönlendirme
+Kırmızı kod alan sepsis hastaları hiç bekletilmeden resüsitasyon alanına alınıp 1 Saatlik Paket (Hour-1 Bundle) başlatılır, sarı kod alan riskli hastalar 60 dakika içinde değerlendirilmek üzere sarı alana, yeşil kod alanlar stabil izleme yönlendirilir.

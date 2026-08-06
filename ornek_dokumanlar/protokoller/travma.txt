@@ -1,0 +1,38 @@
+TRAVMA TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise künt veya penetran travma, düşme, trafik kazası veya iş kazası ile başvuran hastaların değerlendirilmesini ve önceliklendirilmesini düzenler.
+
+Travma — İlk Değerlendirme
+- CABCDE yaklaşımı uygulanır; ilk olarak kontrol edilemeyen kanamalara müdahale (turnike/bası) edilir, ardından havayolu ve servikal stabilizasyon sağlanır.
+- Nörolojik durum Glasgow Koma Skalası (GKS) ve pupilla muayenesi ile hızlıca değerlendirilir.
+- Mekanizmanın şiddeti (>6 m düşme, araçtan fırlama) ve hastanın antikoagülan kullanıp kullanmadığı sorgulanır.
+- Hasta tamamen soyularak gözden kaçabilecek distraksiyon yaralanmaları incelenir.
+
+Travma — Kırmızı Alan Kriterleri
+- Havayolu tehdidi, yüz/boyun travması, inhalasyon yanığı veya bilinci kapanmış (GKS <=13) travma hastaları.
+- Hemodinamik instabilitesi olan (SKB <90, Şok İndeksi >1) veya e-FAST ultrasonografisinde serbest sıvı saptanan hastalar.
+- Baş, boyun, gövde veya ekstremite proksimaline penetran (delici/kesici) travma alan hastalar.
+- Multipl uzun kemik kırığı, pelvis kırığı, spinal kord yaralanması (paralizi) veya ampute ekstremitesi olan vakalar.
+
+Travma — Sarı Alan Kriterleri
+- Vitalleri stabil ancak kaza mekanizması (yüksek enerji) nedeniyle BT görüntüleme ve gözlem gerektiren hastalar.
+- Kısa süreli bilinç kaybı öyküsü olan ancak şu an bilinci açık (GKS 15) minör kafa travmaları.
+- İzole uzun kemik kırığı, deplase kırık veya çıkık bulunan, nörovasküler muayenesi sağlam olan hastalar.
+- Yaşlı hastada düşük enerjili düşmeler (antikoagülan kullanımı olan kafa/kalça travmaları).
+
+Travma — Yeşil Alan Kriterleri
+- Sadece yüzeyel laserasyon, sıyrık veya kontüzyonu olan, kanaması durmuş küçük travmalar.
+- Düşük enerjili izole ayak/el bileği burkulmaları (ambule olabilen hastalar).
+- Bilinç kaybı öyküsü olmayan, kusması bulunmayan stabil minör kafa travması hastaları.
+
+Travma — Önerilen Tetkikler
+- e-FAST (Odaklanmış Travma Ultrasonografisi).
+- Tam Kan Sayımı, Laktat, Kan Grubu ve Cross-match.
+- Tüm vücut veya bölgeye yönelik Bilgisayarlı Tomografi (BT) ve travma serisi grafiler.
+
+Travma — Yönlendirme
+Kırmızı kodlu multipl ve instabil travmalar Travma Çağrısı yapılarak anında canlandırma (şok) odasına, sarı kodlu mekanizma yaralanmaları görüntüleme/gözlem için sarı alana, yeşil kodlu basit burkulma/çizikler ise yeşil alan müdahalesine yönlendirilir.

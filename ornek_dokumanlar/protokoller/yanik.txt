@@ -1,0 +1,39 @@
+YANIK TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise termal, kimyasal, elektrik yanığı veya duman inhalasyonuna bağlı yanık yaralanmaları ile başvuran hastaların değerlendirilmesini düzenler.
+
+Yanık — İlk Değerlendirme
+- Öncelikle yanma süreci durdurulur (giysi/takı çıkarılır, yara 20 dakika ılık-serin akan suyla yıkanır, buz uygulanmaz).
+- Hastada stridor, ses kısıklığı, kaş-burun kılı yanması veya kurumlu balgam gibi inhalasyon yanığı (havayolu ödemi) bulguları aranır.
+- Erişkinlerde "Dokuzlar Kuralı" veya çocuklarda "Lund-Browder" tablosu ile Toplam Vücut Yanık Alanı (TVYA) hesaplanır (1. derece yanıklar TVYA hesabına dahil edilmez).
+- Yanık şoku erken saatlerde gelişeceğinden, Parkland formülü ile sıvı resüsitasyonu ihtiyacı hesaplanır.
+
+Yanık — Kırmızı Alan Kriterleri
+- İnhalasyon yanığı bulguları olan, kapalı alan yangınlarında kalmış ve solunum tehlikesi olan hastalar.
+- Karbonmonoksit/siyanür maruziyetine bağlı bilinç değişikliği ve laktat yüksekliği saptananlar.
+- Erişkinde TVYA >%20, çocuk/yaşlıda TVYA >%10 olan 2. veya 3. derece majör yanıklar.
+- Yüksek voltajlı elektrik yanıkları, kimyasal yanıklar veya sirkumferansiyel (çepeçevre) göğüs/ekstremite yanıkları.
+- Yanığa hipotansiyon, şok veya majör travmanın eşlik ettiği durumlar.
+
+Yanık — Sarı Alan Kriterleri
+- Şiddetli ağrısı (NRS 6-8) olan, IV analjezi ve acil pansuman gerektiren stabil hastalar.
+- TVYA %5-20 arası olan (erişkinde) veya bül oluşmuş derin 2. derece yanığa sahip (kritik bölge dışı) hastalar.
+- Yüz, el, ayak veya perine gibi kritik bölge yanığı olup vital bulguları tamamen stabil olanlar.
+- Enfeksiyon gelişmiş kronik yanık yarası veya sosyal endişe/istismar şüphesi olan çocuk yanıkları.
+
+Yanık — Yeşil Alan Kriterleri
+- TVYA <%5 olan ve kritik bölge dışında kalan yüzeyel 2. derece minör yanıklar (oral analjeziyle kontrol edilebilen).
+- Kızarıklık şeklinde olan, bül içermeyen 1. derece epidermal yanıklar (güneş yanığı benzeri).
+- Sadece küçük yüzeyel haşlanma nedeniyle pansuman değişimi veya tetanoz aşısı gerektiren genel durumu iyi hastalar.
+
+Yanık — Önerilen Tetkikler
+- Karboksihemoglobin (CO-oksimetri) ve Kan Gazı (İnhalasyon şüphesinde).
+- Tam Kan Sayımı ve Böbrek Fonksiyon Testleri (Kas yıkımı/Rabdomiyoliz takibi için).
+- Elektrokardiyografi (EKG) (Elektrik yanıklarında).
+
+Yanık — Yönlendirme
+Kırmızı kodlu majör ve inhalasyon yanıkları derhal entübasyon/sıvı resüsitasyonu için şok odasına, sarı kod alan ağrılı orta derece yanıklar müdahale alanına, yeşil kod alan yüzeyel minör yanıklar yara bakımı için polikliniğe yönlendirilir.

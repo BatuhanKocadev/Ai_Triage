@@ -1,0 +1,38 @@
+PEDİATRİK ATEŞ TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise ateş, genel durum bozukluğu, enfeksiyon bulguları veya febril konvülziyon şikayetiyle başvuran çocuk hastaların değerlendirilmesini düzenler.
+
+Pediatrik Ateş — İlk Değerlendirme
+- Çocuğa dokunmadan ilk 30-60 saniyede Pediatrik Değerlendirme Üçgeni (PAT: Görünüm, Solunum İşi, Dolaşım) kontrol edilir.
+- Ateşin derecesinden ziyade çocuğun genel görünümünün (neşeli/oynayan vs. letarjik/inleyen) riski belirlediği dikkate alınır.
+- Çocuklarda hipotansiyonun şok için çok geç bir bulgu olduğu, kompanse şokun taşikardi ve uzamış kapiller dolum ile tanınacağı unutulmamalıdır.
+- Çocuğun tahmini kilosu, tüm ilaç/sıvı dozlarının hesaplanabilmesi için acilen kaydedilir (Broselow bandı kullanılabilir).
+
+Pediatrik Ateş — Kırmızı Alan Kriterleri
+- PAT (Pediatrik Değerlendirme Üçgeni) bozuk olan; uyaranlara yanıtsız, hipotoni, solunum/dolaşım bozukluğu sergileyen toksik bebekler.
+- 28 günden küçük yenidoğan döneminde rektal T >=38°C olan tüm bebekler (mutlak sepsis taraması).
+- Ateşe eşlik eden basmakla solmayan peteşi/purpura döküntüsü (meningokoksemi) veya menenjit bulgusu olanlar.
+- 5 dakikadan uzun süren veya fokal başlayan (kompleks) febril konvülziyon (nöbet) geçirenler.
+
+Pediatrik Ateş — Sarı Alan Kriterleri
+- 3-6 ay arası bebeklerde T >=39°C ateş saptanan ancak genel durumu iyi olup yakın izlem gereken hastalar.
+- Dehidratasyon bulguları olan (ağız kuruluğu, azalmış ıslak bez sayısı) ve oral alamayan/kusan çocuklar.
+- Basit febril konvülziyon geçirip tamamen düzelmiş (ilk atak) hastalar.
+- Hızlı solunumu (takipne) olan, hışıltı ve ateş birlikteliği sergileyen pnömoni şüpheli hastalar.
+
+Pediatrik Ateş — Yeşil Alan Kriterleri
+- PAT değerlendirmesi normal, çevresiyle ilgili, ağlarken teselli edilebilen ve normal cilt rengine sahip stabil çocuklar.
+- 6 aydan büyük, aşıları tam, T <39°C olan belirgin viral üst solunum yolu enfeksiyonları.
+- Antipiretik ilaç sonrası ateşi düşen ve genel durumu belirgin şekilde toparlayan neşeli çocuklar.
+
+Pediatrik Ateş — Önerilen Tetkikler
+- Kapiller kan şekeri ölçümü.
+- Tam kan sayımı ve enfeksiyon belirteçleri (Rutin biyokimya).
+- Gerekli durumlarda (yenidoğan vb.) Kan Kültürü.
+
+Pediatrik Ateş — Yönlendirme
+Kırmızı kod alan toksik bebekler ve yenidoğan ateşleri derhal resüsitasyon/kırmızı alana, sarı kod alan dehidrate veya takipneik hastalar çocuk müdahale alanına, yeşil kod alan viral semptomlar poliklinik takibine yönlendirilir.

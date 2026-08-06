@@ -1,0 +1,37 @@
+GİS KANAMASI TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise gastrointestinal sistem (GİS) kanaması, hematemez, melena veya hematokezya şüphesi ile başvuran hastaların değerlendirilmesini düzenler.
+
+GİS Kanaması — İlk Değerlendirme
+- Nabız ve sistolik kan basıncı oranlanarak "Şok İndeksi" hesaplanır (>1 ise anlamlı kan kaybı, >1.4 ise masif transfüzyon gereksinimi).
+- Hastada antikoagülan (kan sulandırıcı) veya NSAİİ ilaç kullanımı mutlaka sorgulanır.
+- Akut kanamanın ilk saatlerinde hemoglobin değerinin yanıltıcı normal çıkabileceği, kararın hemodinamiye göre verileceği dikkate alınır.
+- Kanamaya bağlı kritik anemi (göğüs ağrısı, dispne) semptomları değerlendirilir.
+
+GİS Kanaması — Kırmızı Alan Kriterleri
+- Aktif veya masif hematemez, kahve telvesi tarzında bol kusma veya ağızdan taze kan gelmesi.
+- Şok bulguları olan (SKB <90 mmHg, Nabız >120), şok indeksi >1 olan veya senkop öyküsü tarifleyen kanama hastaları.
+- Bilinen özofagus varisi, siroz veya portal hipertansiyonu olan hastalarda kanama başlangıcı.
+- Hemoglobin <7 g/dL olan veya antikoagülan kullanan hastada aktif kanama tespiti.
+
+GİS Kanaması — Sarı Alan Kriterleri
+- Melena (siyah dışkılama) tarifleyen ancak hemodinamisi sınırda (ortostatik semptomlu) ve aktif kanaması olmayan hastalar.
+- Orta miktarda hematokezya (taze rektal kanama) tarifleyen, stabil vitallere sahip divertikül/hemoroid kanaması şüpheliler.
+- Yaşlı, ek hastalıkları (kalp, böbrek) bulunan veya solukluk, efor dispnesi ile gelen anemi şüpheli stabil hastalar.
+
+GİS Kanaması — Yeşil Alan Kriterleri
+- Peçeteye bulaşan veya dışkı yüzeyinde minimal taze kanı olan (bilinen anal fissür/hemoroid) ambule hastalar.
+- Kan basıncı ve nabzı tamamen normal, solukluğu olmayan ve antikoagülan kullanmayan risksiz hastalar.
+- Gıdalara (pancar) veya demir ilaçlarına bağlı olduğu anlaşılan yalancı melena vakaları.
+
+GİS Kanaması — Önerilen Tetkikler
+- Tam Kan Sayımı (Hemoglobin seri takibi).
+- Kan grubu, Cross-match ve Koagülasyon (INR) paneli.
+- Böbrek Fonksiyon Testleri (BUN/Kreatinin oranı) ve Laktat.
+
+GİS Kanaması — Yönlendirme
+Kırmızı kod alan aktif ve şoktaki GİS kanamaları sıvı/kan resüsitasyonu için kırmızı alana, sarı kod alan melena ve anemik hastalar ileri tetkik için sarı alana, yeşil kod alan risksiz lokal kanamalar yeşil alan/poliklinik takibine yönlendirilir.

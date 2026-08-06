@@ -1,0 +1,37 @@
+NEFES DARLIĞI TRİYAJ PROTOKOLÜ
+
+Kaynak
+Nefes Darlığına Acil Yaklaşım Makalesi.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise nefes darlığı (dispne) veya solunum sıkıntısı şikayeti ile başvuran hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+Nefes Darlığı — İlk Değerlendirme
+- Solunum sayısındaki artış (takipne), nabız, kan basıncı ve oksijen saturasyonu (SpO2) hızla değerlendirilir.
+- Dudaklarda veya tırnak yataklarında siyanoz (morarma) ve alt ekstremitelerde ödem olup olmadığına bakılır.
+- Akciğer muayenesinde nefes seslerinde azalma, hırıltılı solunum (wheezing), ral ve ronküs varlığı kontrol edilir.
+- Nefes darlığının ani mi yavaş mı geliştiği, eforla veya yatar pozisyonda (ortopne) artıp artmadığı sorgulanır.
+
+Nefes Darlığı — Kırmızı Alan Kriterleri
+- Solunumu durmuş veya durmak üzere olan, yaşamsal fonksiyonları tehlikedeki hastalar (ESI 1. Seviye).
+- SpO2 değerinin %94'ün altında olduğu, acil hava yolu müdahalesi ve oksijen desteği gerektiren ciddi hipoksik hastalar.
+- Tansiyon pnömotoraks, masif pulmoner emboli veya kardiyak tamponad şüphesi taşıyan, hipotansif ve hemodinamisi bozuk vakalar.
+
+Nefes Darlığı — Sarı Alan Kriterleri
+- Ciddi solunum sıkıntısı çeken ancak solunumu henüz durmamış, çok acil (ESI 2. Seviye) kategorisindeki hastalar.
+- Astım veya KOAH atağı geçiren, hırıltılı solunumu olan ve gecikmeden medikal tedavi başlanması gereken vakalar.
+- Göğüs ağrısının nefes darlığına eşlik ettiği, akut koroner sendrom şüphesi barındıran hastalar.
+
+Nefes Darlığı — Yeşil Alan Kriterleri
+- Oksijen saturasyonu normal, vital bulguları tamamen stabil olan hastalar.
+- Sadece hafif solunum yolu enfeksiyonu (soğuk algınlığı vb.) bulguları taşıyan ve kaynak kullanımı gerektirmeyen düşük riskli durumlar.
+
+Nefes Darlığı — Önerilen Tetkikler
+- 12-Derivasyonlu Elektrokardiyografi (EKG).
+- Göğüs Radyografisi (Akciğer Grafisi).
+- Arteriyel/Venöz Kan Gazı Analizi.
+- Biyokimyasal Markörler (Pulmoner emboli için D-dimer, akut koroner sendrom için Troponin ve CK-MB).
+
+Nefes Darlığı — Yönlendirme
+Kırmızı kod alan solunum arresti veya şiddetli hipoksik hastalar derhal resüsitasyon alanına, sarı kod alan ciddi solunum sıkıntılı hastalar acil müdahale (sarı) alanına, yeşil kod alan stabil hastalar ise yeşil alan polikliniğine yönlendirilir.

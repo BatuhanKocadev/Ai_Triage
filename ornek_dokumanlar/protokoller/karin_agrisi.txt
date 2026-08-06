@@ -1,0 +1,37 @@
+KARIN AĞRISI TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Karın Ağrısı Klinik Yaklaşım Makalesi, 2023.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise akut veya kronik karın ağrısı şikayeti ile başvuran hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+Karın Ağrısı — İlk Değerlendirme
+- Hastanın anamnezi (ağrının akut/kronik olması, başlama zamanı, lokalizasyonu ve yayılımı) detaylıca alınır.
+- Tansiyon, nabız, ateş ve SpO2 gibi vital bulgular ölçülür.
+- Batın muayenesinde oskültasyon (bağırsak hareketleri) ve palpasyon (defans, hassasiyet, periton irritasyonu) yapılarak değerlendirilir.
+- Doğurganlık çağındaki (15-49 yaş) kadın hastalarda gebelik (dış gebelik vb.) ihtimali mutlaka sorgulanır.
+- Orta ve ileri yaş hastalarda kardiyak sorunları dışlamak için anamnezden önce EKG çekilir.
+
+Karın Ağrısı — Kırmızı Alan Kriterleri
+- Şok tablosunda olan, hipotansif ve taşikardik akut karın ağrısı vakaları (örneğin dış gebelik rüptürü şüphesi).
+- Yaşamsal fonksiyonları tehdit altında olan, bilinci kapanmaya yatkın hastalar.
+
+Karın Ağrısı — Sarı Alan Kriterleri
+- Akut batın tablosu ile başvuran, bekleyemeyecek durumdaki yüksek riskli hastalar.
+- Yaşlı hastalarda ortaya çıkan akut karın ağrısı vakaları (ESI 2. Seviye olarak kabul edilir).
+- Şiddetli ağrısı olan ve çoklu kaynak (kan, görüntüleme vb.) kullanımı gerektirecek hastalar.
+
+Karın Ağrısı — Yeşil Alan Kriterleri
+- Yaşamsal bulguları tamamen stabil olan genç karın ağrılı hastalar.
+- Sadece ishal veya kusmanın eşlik ettiği, vital bulguları normal olan basit karın ağrısı durumları.
+
+Karın Ağrısı — Önerilen Tetkikler
+- Hemogram (Tam kan sayımı) ve Biyokimya.
+- Tam İdrar Tetkiki (TİT).
+- Beta-hCG (15-49 yaş arası kadın hastalarda kesinlikle istenir).
+- Elektrokardiyografi (EKG) (Özellikle orta-ileri yaş hastalarda).
+
+Karın Ağrısı — Yönlendirme
+Kırmızı kod alan hipotansif/şoktaki hastalar acil resüsitasyona, sarı kod alan akut batın ve yaşlı hastalar doktor takibi için sarı alana, yeşil kod alan stabil genç hastalar ise yeşil alan muayenesine yönlendirilir.

@@ -20,27 +20,66 @@ from app.config.config import settings
 from app.services.chroma_service import get_collection
 from app.services.rag_service import get_reranker, calculate_sigmoid
 
-# Bilgi tabanındaki protokollerle ilgili olan, geçmesi beklenen sorgular.
-# Türkçe karakterli ve karaktersiz yazımlar bilerek birlikte tutuluyor:
-# kullanıcılar sık sık karaktersiz yazıyor ve bu skorları belirgin düşürüyor.
+# Bilgi tabanındaki 15 protokolün her biri için en az bir sorgu; geçmesi beklenir.
+# Sorgular bilerek HASTA AĞZINDAN yazılmıştır, protokol cümlesi kopyalanmamıştır:
+# protokolden cümle kopyalamak retrieval'ı birebir kelime eşleşmesine indirger ve
+# ölçümü yapay olarak yükseltir (veri sızıntısı).
+# Türkçe karakterli ve karaktersiz yazımlar birlikte tutuluyor: kullanıcılar sık
+# sık karaktersiz yazıyor ve bu skorları belirgin düşürüyor.
 ILGILI = [
+    # göğüs ağrısı
     "Yarım saattir göğsümde baskı tarzında şiddetli ağrı var, sol koluma vuruyor.",
     "Yarim saattir gogsumde baski tarzinda siddetli agri var, sol koluma vuruyor.",
-    "Göğsüm sıkışıyor, nefes almakta zorlanıyorum ve terliyorum.",
-    "Gogsum sikisiyor, nefes almakta zorlaniyorum ve terliyorum.",
+    # karın ağrısı
     "İki gündür sağ alt karnımda ağrı var, bugün ateşim çıktı ve bulantım oldu.",
     "Iki gundur sag alt karnimda agri var, bugun atesim cikti ve bulantim oldu.",
-    "Karnımın sağ üst tarafında yemeklerden sonra artan ağrı hissediyorum.",
-    "Göğüs ağrım var ve çenem uyuşuyor.",
+    # nefes darlığı
+    "Nefes almakta zorlanıyorum, dudaklarım morardı ve hırıltılı soluyorum.",
+    # bilinç değişikliği
+    "Babam aniden bayıldı, şimdi kendine geldi ama nerede olduğunu bilmiyor.",
+    # baş ağrısı
+    "Aniden çok şiddetli bir baş ağrısı başladı, hayatımın en kötü ağrısı.",
+    # inme
+    "Annemin yüzünün bir tarafı düştü, kolunu kaldıramıyor ve konuşması bozuldu.",
+    "Annemin yuzunun bir tarafi dustu, kolunu kaldiramiyor ve konusmasi bozuldu.",
+    # ateş ve sepsis
+    "Üç gündür ateşim düşmüyor, titriyorum ve halsizlikten yataktan kalkamıyorum.",
+    # anafilaksi
+    "İlaç içtikten sonra vücudumu kaşıntılı kızarıklık kapladı, dudaklarım şişti.",
+    # zehirlenme
+    "Yanlışlıkla çamaşır suyu içtim, boğazım ve göğsüm yanıyor.",
+    # GİS kanaması
+    "Kahve telvesi gibi kustum ve dışkım simsiyah geliyor.",
+    # travma
+    "Motosikletten düştüm, bacağım şekilsiz duruyor ve üzerine basamıyorum.",
+    # gebelik acilleri
+    "Altı haftalık gebeyim, kasık ağrım ve kanamam başladı, başım dönüyor.",
+    # pediatrik ateş
+    "İki aylık bebeğimin ateşi 38.5 çıktı ve sürekli uyukluyor.",
+    # psikiyatrik aciller
+    "Kendime zarar vermeyi düşünüyorum, artık dayanamıyorum.",
+    # yanık
+    "Kaynar su elimin üstüne döküldü, hemen su toplamaya başladı.",
 ]
 
-# Tıbbi olmayan, elenmesi beklenen sorgular.
+# Elenmesi beklenen sorgular. İKİ SINIF var ve ikincisi asıl zorlayıcı olan:
+# "hava güzel" gibi tamamen alakasız metinler kolayca elenir, ama TIBBİ olup
+# derlemede KARŞILIĞI OLMAYAN sorgular reranker'ı gerçekten sınar. Eşik yalnızca
+# kolay sınıfa göre seçilirse, sistem bilmediği bir konuda da kendinden emin
+# cevap üretir — eşik kapısının varlık sebebi tam olarak bunu önlemek.
 ALAKASIZ = [
+    # tıbbi olmayan
     "Bugün hava çok güzel, parkta yürüyüş yapmayı düşünüyorum.",
     "Yarın akşam sinemaya gitmek için bilet almak istiyorum.",
     "Arabamın motorundan garip bir ses geliyor, tamirciye götürmeliyim.",
     "Bilgisayarımın klavyesi bozuldu, yeni bir tane almam lazım.",
     "Bugun hava cok guzel, parkta yuruyus yapmayi dusunuyorum.",
+    # tıbbi ama derlemede yok (acil triyaj kapsamı dışı)
+    "Sırtımdaki egzama yıllardır geçmiyor, hangi nemlendirici kremi önerirsiniz?",
+    "Diş etim şişti ve diş fırçalarken kanıyor, diş hekimine gitmeli miyim?",
+    "Kulağımda sürekli çınlama var, aylardır artarak devam ediyor.",
+    "Şeker hastasıyım, sabah insülin dozumu nasıl ayarlamam gerekir?",
+    "Gözlük numaram değişti mi diye göz muayenesi olmak istiyorum.",
 ]
 
 
@@ -86,11 +125,13 @@ def main() -> None:
     print("\n=== EŞİK TARAMASI ===")
     print("  eşik     geçen ilgili   geçen alakasız")
     en_iyi = None
-    for adim in range(0, 41):
-        esik = 0.500 + adim * 0.005
+    # Aralık bilerek geniş: doküman seti büyüdükçe skor dağılımı kayıyor ve dar
+    # bir pencere en iyi eşiği aralığın dışında bırakabiliyor.
+    for adim in range(0, 131):
+        esik = 0.300 + adim * 0.005
         dogru = sum(1 for s in ilgili_skorlar if s >= esik)
         yanlis = sum(1 for s in alakasiz_skorlar if s >= esik)
-        if adim % 5 == 0:
+        if adim % 10 == 0:
             print(f"  {esik:.3f}    {dogru}/{len(ILGILI)}            {yanlis}/{len(ALAKASIZ)}")
         # Yanlış kabul yokken en çok ilgiliyi geçiren eşiği seç; eşitlikte
         # güvenlik payı için daha yüksek olanı tercih et.

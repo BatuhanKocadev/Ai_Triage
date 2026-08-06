@@ -1,0 +1,35 @@
+ZEHİRLENME TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise kasti veya kazara zehirlenme, aşırı doz ilaç/madde alımı ve intoksikasyon şüphesiyle başvuran hastaların değerlendirilmesini düzenler.
+
+Zehirlenme — İlk Değerlendirme
+- Havayolu açıklığı, solunum depresyonu ve dolaşım stabilitesi (hipotansiyon, aritmi) hızla değerlendirilir.
+- Alınan maddenin dozu, alım zamanı ve özkıyım amacı olup olmadığı sorgulanır (Kasıtlı alımlarda beyan edilen miktar güvenilmez kabul edilir).
+- Toksidrom tanıma (Opioid, Kolinerjik, Antikolinerjik vb.) amacıyla pupillalar, cilt kuruluğu/nemi ve nörolojik durum muayene edilir.
+- Mutlaka kapiller kan şekeri ölçülür ve Ulusal Zehir Danışma Merkezi (UZEM 114) ile iletişime geçilir.
+
+Zehirlenme — Kırmızı Alan Kriterleri
+- Bilinç değişikliği (GKS <=13) gelişmiş, havayolunu koruyamayan veya solunum depresyonu olan hastalar.
+- Hemodinamik instabilite, kardiyak aritmi, nöbet (status epileptikus) veya şok geçiren intoksikasyonlar.
+- Kostik madde (çamaşır suyu, asit) içen, siyanür/karbonmonoksit maruziyeti yaşayan veya yüksek riskli ajan (TSA, kolşisin) alan vakalar.
+
+Zehirlenme — Sarı Alan Kriterleri
+- Asemptomatik görünse de potansiyel toksik doz almış ve geç toksisite riski (örn. parasetamol) nedeniyle gözlem gereken uyanık hastalar.
+- Gıda veya mantar zehirlenmesi nedeniyle kusma-ishali olan (Geç başlangıçlı mantar semptomu varsa kırmızı) stabil hastalar.
+- Madde veya alkol yoksunluğu çeken (titreme, ajitasyon) hastalar.
+
+Zehirlenme — Yeşil Alan Kriterleri
+- Toksik olmayan madde alımı veya toksik eşiğin çok altında kaldığı net olan asemptomatik hastalar.
+- UZEM onayı ile tıbbi gözlem gerektirmediği teyit edilmiş ve vitalleri tamamen normal olan vakalar.
+
+Zehirlenme — Önerilen Tetkikler
+- Kapiller kan şekeri ölçümü.
+- 12 derivasyonlu EKG (QRS ve QTc ölçümü için).
+- Kan gazı ve gerektiğinde spesifik ilaç/madde düzeyleri (Parasetamol vb.).
+
+Zehirlenme — Yönlendirme
+Kırmızı kod alan ağır zehirlenmeler anında resüsitasyon odasına alınarak antidot (Nalokson, Flumazenil vb.) hazırlığı yapılır, sarı kodlu toksik risk taşıyanlar gözlem için sarı alana, yeşil kodlu asemptomatik temaslar polikliniğe yönlendirilir.

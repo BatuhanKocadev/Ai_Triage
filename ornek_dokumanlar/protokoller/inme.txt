@@ -1,0 +1,30 @@
+İNME TRİYAJ PROTOKOLÜ
+
+Kaynak
+İnme Merkezine Başvuran Hastaların Demografik Analizi, 2025.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise fokal serebral fonksiyon kaybı belirtileri ile başvuran ve inme şüphesi taşıyan hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+İnme — İlk Değerlendirme
+- Hastada fokal serebral fonksiyon kaybı belirtilerinin hızla ortaya çıkıp çıkmadığı değerlendirilir.
+- Sahada İnme Triajı Skoru (FAST-ED) kullanılarak hasta hızla değerlendirilir.
+- Hastalar FAST-ED skoruna göre; düşük (0-1 puan), orta (2-3 puan) ve yüksek (≥4 puan) risk olarak üç gruba ayrılır.
+- İnmenin iskemik (%80-85) mi yoksa hemorajik (%15-20) mi olduğuna yönelik ayırıcı tanı adımları planlanır.
+
+İnme — Kırmızı Alan Kriterleri
+- FAST-ED skoru yüksek (≥4 puan) olan ve büyük damar tıkanıklığı (LVOS) şüphesi barındıran hastalar.
+
+İnme — Sarı Alan Kriterleri
+- Akut inme belirtileri veya ani bilinç değişikliği tablosu ile başvuran vakalar (ESI 2. Seviye).
+- FAST-ED skoru orta (2-3 puan) olan iskemik inme şüpheli hastalar.
+
+İnme — Yeşil Alan Kriterleri
+- FAST-ED skoru düşük (0-1 puan) olarak hesaplanan ve büyük damar tıkanıklığı riski taşımayan stabil durumlar.
+
+İnme — Önerilen Tetkikler
+- Tam Kan Sayımı (Özellikle inme prognozu ve mortalite öngörüsü için NLR - Nötrofil/Lenfosit Oranı değerlendirilir).
+
+İnme — Yönlendirme
+İnme şüphesi olan hastalar, iskemik beyin hasarının erken tanı ve uygun trombolitik tedavi ile önlenebilmesi amacıyla vakit kaybedilmeden acil müdahale alanına (kırmızı/sarı) veya uygun inme merkezine yönlendirilir.

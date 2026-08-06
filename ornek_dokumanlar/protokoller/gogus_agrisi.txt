@@ -1,0 +1,39 @@
+GÖĞÜS AĞRISI TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Tıp El Kitabı, Güneş Tıp Kitabevleri, 2020.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise göğüs ağrısı şikayeti ile başvuran erişkin hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+Göğüs Ağrısı — İlk Değerlendirme
+- Kardiyak kaynaklı göğüs ağrıları genellikle baskı tarzında, geniş ve noktasal olmayan ağrılardır.
+- Hastanın sol kolunun ulnar yüzüne, alt çeneye, interscapular bölgeye veya epigastriuma yayılan ağrısı olup olmadığı değerlendirilir.
+- Ağrıya dispne, terleme, huzursuzluk ve mide bulantısının eşlik edip etmediği kontrol edilir.
+- Hasta göğüs ağrısı ile müşahedeye alındığında hemen Elektrokardiyografi (EKG) çekilir.
+- EKG başlangıçta tamamen normal çıksa bile hasta takip edilir ve 10 dakikada bir EKG tekrarlanarak değişiklik olup olmadığı izlenir.
+
+Göğüs Ağrısı — Kırmızı Alan Kriterleri
+- Kardiyopulmoner arrest tablosunda olan veya yaşamsal fonksiyonları durmak üzere olan hastalar.
+- Hipoperfüzyon bulguları olan, hipotansif ve bilinci kapalı göğüs ağrısı vakaları.
+- Ciddi solunum sıkıntısının eşlik ettiği durumlar.
+- Fizik muayenede sempatik deşarja bağlı olarak terli, soğuk ve soluk (kül renginde) görünüme sahip hastalar.
+
+Göğüs Ağrısı — Sarı Alan Kriterleri
+- Bekleyemeyecek durumda olan, akut göğüs ağrısı şikayeti bulunan hastalar (ESI 2. Seviye).
+- Tıbbi müdahalenin veya hekim değerlendirmesinin en geç 10-15 dakika içinde yapılması gereken vakalar.
+- Hastanın her 15 dakikada bir sağlık personeli tarafından yeniden kontrol edilmesini gerektiren durumlar.
+
+Göğüs Ağrısı — Yeşil Alan Kriterleri
+- Kardiyak kökenli olmadığı tespit edilen, vital bulguları tamamen stabil göğüs ağrıları.
+- Tıbbi müdahalesi 4-6 saat ertelenebilecek ve kontrol aralıkları 30-60 dakikada bir yapılabilecek risk taşımayan hastalar.
+
+Göğüs Ağrısı — Önerilen Tetkikler
+- Elektrokardiyografi (EKG)
+- Tam kan sayımı
+- Rutin biyokimya
+- Direkt grafi (Röntgen)
+
+Göğüs Ağrısı — Yönlendirme
+Kırmızı kod alan hastalar resüsitasyon veya çok acil müdahale bölümüne, sarı kod alan hastalar en geç 10-15 dakika içerisinde değerlendirilmek üzere sarı takibine, yeşil kod alan hastalar ise stabil izlem veya poliklinik değerlendirmesine yönlendirilir.

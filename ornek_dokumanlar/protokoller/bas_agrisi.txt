@@ -1,0 +1,35 @@
+BAŞ AĞRISI TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Tıp El Kitabı, Güneş Tıp Kitabevleri, 2020.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise baş ağrısı şikayeti ile başvuran hastaların ilk değerlendirmesini, hayati risk taşıyan sekonder baş ağrılarının dışlanmasını ve önceliklendirilmesini düzenler.
+
+Baş Ağrısı — İlk Değerlendirme
+- İlk olarak hastanın bilinç durumu hızlıca değerlendirilir; primer baş ağrılarında genellikle bilinç açıkken, sekonder baş ağrılarında bilinç etkilenebilir.
+- Ağrının başlama şekli ayrıntılı anamnezle sorgulanır; saniyeler içinde aniden en yüksek seviyeye ulaşan ağrılar acil kabul edilir.
+- Kapsamlı fizik ve nörolojik muayene yapılarak subaraknoid kanama, menenjit veya intrakranial kitle gibi riskler ekarte edilir.
+
+Baş Ağrısı — Kırmızı Alan Kriterleri
+- Konfüze, letarjik, dezoryante veya bilinç kaybı gelişmiş baş ağrısı hastaları.
+- Saniyeler içinde aniden en yüksek seviyeye ulaşan, subaraknoid kanama veya iskemik inme şüphesi uyandıran şiddetli ve ani baş ağrıları.
+- Vital fonksiyonları bozulan veya kardiyopulmoner aciliyet (örn. masif kanama kaynaklı) gelişen nörolojik hastalar.
+
+Baş Ağrısı — Sarı Alan Kriterleri
+- Vital bulguları stabil ancak şiddetli baş ağrısı olan, çok kaynak (laboratuvar, BT, vb.) kullanımı gerektirecek hastalar.
+- Nörolojik defisit bulunmayan fakat ağrısı ani başlamış, en geç 30 dakika içinde tıbbi değerlendirme gerektiren yüksek riskli hastalar.
+- Ani bilinç değişikliği başlangıcı olan hastalar (ESI 2. Seviye).
+
+Baş Ağrısı — Yeşil Alan Kriterleri
+- Primer baş ağrısı özelliklerinde olan (örneğin gerilim tipi), vital bulguları tamamen normal hastalar.
+- Sadece anamnez ve fizik muayene ile tanı konabilen, kaynak kullanımı gerektirmeyen veya en fazla tek kaynak (örn. basit analjezik reçeteleme) gerektiren hastalar.
+
+Baş Ağrısı — Önerilen Tetkikler
+- Nörolojik değerlendirme ve Anamnez.
+- Bilgisayarlı Tomografi (BT) (Sekonder acil patolojileri dışlamak için).
+- Tam kan sayımı ve rutin biyokimya.
+
+Baş Ağrısı — Yönlendirme
+Kırmızı kod alan hastalar acil müdahale veya resüsitasyon odasına, sarı kod alan şiddetli ve riskli baş ağrısı hastaları doktor muayenesi için sarı alana, yeşil kod alan kronik ve stabil baş ağrısı vakaları yeşil alan polikliniğine yönlendirilir.

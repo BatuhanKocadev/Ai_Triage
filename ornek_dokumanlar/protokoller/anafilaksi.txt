@@ -1,0 +1,34 @@
+ANAFİLAKSİ TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Tıp El Kitabı, Güneş Tıp Kitabevleri, 2020.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise alerjik reaksiyon, ürtiker, anjiyoödem veya anafilaksi şüphesi ile başvuran hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+Anafilaksi — İlk Değerlendirme
+- Hastanın havayolu açıklığı, solunum obstrüksiyonu, takipne, stridor ve wheezing (hırıltı) bulguları değerlendirilir.
+- Dolaşım kollapsı, şok tablosu, taşikardi ve hipotansiyon açısından hemodinamik durum kontrol edilir.
+- Dil ve dudaklarda anjiyoödem (şişlik), deride ürtiker (kaşıntılı plaklar) veya flushing benzeri yaygın eritem varlığı incelenir; ağır anafilakside hiç cilt lezyonu olmayabileceği unutulmamalıdır.
+- Bulantı, şişkinlik, karın ağrısı veya ishal gibi gastrointestinal bulguların eşlik edip etmediği sorgulanır.
+
+Anafilaksi — Kırmızı Alan Kriterleri
+- Anafilaksi gelişen, yaşamsal fonksiyonları tehdit altında olan hastalar hiç bekletilmeden içeri alınır.
+- Solunum yolu obstrüksiyonu (stridor, wheezing, hava açlığı) veya dolaşım kollapsı/şok tablosu (hipotansiyon) mevcut olan hastalar.
+
+Anafilaksi — Sarı Alan Kriterleri
+- Anafilaksi tablosu tam oturmamış ancak bekleyemeyecek durumda olan, sistemik reaksiyon (örn. yaygın ürtiker, dil/dudak ödemi) geliştiren hastalar.
+- Tıbbi müdahalenin ve değerlendirmenin en geç 10-15 dakika içinde yapılması gereken yüksek riskli alerjik reaksiyonlar.
+
+Anafilaksi — Yeşil Alan Kriterleri
+- Sadece basit lokalize ürtiker veya hafif cilt döküntüleri olan, solunum veya dolaşım bulgusu olmayan hastalar.
+- Müdahalesi bir saate kadar bekleyebilecek, vital bulguları tamamen stabil lokal alerjik reaksiyonlar.
+
+Anafilaksi — Önerilen Tetkikler
+- Klinik değerlendirme ve fizik muayene (Spesifik tetkik bekleyecek vakit olmayabilir, tanı öncelikle klinikle konur).
+- Tam kan sayımı (Ayırıcı tanı için).
+- Rutin biyokimya (Gerekli durumlarda elektrolit ve organ fonksiyon takibi için).
+
+Anafilaksi — Yönlendirme
+Kırmızı kod alan anafilaksi ve hava yolu obstrüksiyonu hastaları doğrudan resüsitasyon bölümüne, sarı kod alan hastalar acil gözetim alanına, yeşil kod alan basit alerji hastaları ise yeşil alan polikliniğine yönlendirilir.

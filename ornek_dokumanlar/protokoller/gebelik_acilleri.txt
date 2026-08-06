@@ -1,0 +1,38 @@
+GEBELİK ACİLLERİ TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Servis Triyaj Rehberi ESI/MTS.
+
+Kapsam
+Bu protokol, acil servise obstetrik ve jinekolojik şikayetlerle (gebelik, düşük tehdidi, postpartum aciller vb.) başvuran hastaların değerlendirilmesini düzenler.
+
+Gebelik Acilleri — İlk Değerlendirme
+- Gebelikte hipotansiyonun çok geç bir şok bulgusu olduğu unutulmamalı; %30 kan kaybına kadar tansiyonun normal kalabileceği dikkate alınmalıdır.
+- 20. gebelik haftasından büyük tüm gebelerde vena kava inferior basısını önlemek için sol yan pozisyon uygulanır.
+- Doğurganlık çağındaki tüm kadın hastalarda karın ağrısı veya senkop şikayetinde mutlaka ektopik (dış) gebelik ihtimali dışlanmalıdır.
+- Preeklampsi şüphesinde sadece tansiyona değil, baş ağrısı, görme bulanıklığı ve epigastrik ağrıya dikkat edilir.
+
+Gebelik Acilleri — Kırmızı Alan Kriterleri
+- Gebelikte veya postpartum ilk 6 haftada nöbet (eklampsi) geçiren hastalar.
+- Ağır preeklampsi bulguları (KB >=160/110 mmHg, görme bulanıklığı, oligüri) olan hastalar.
+- Masif vajinal kanaması olan, ablasyo plasenta veya plasenta previa şüphesi taşıyan vakalar.
+- Amenore, karın ağrısı ve hipotansiyon/senkop üçlüsüyle gelen rüptüre ektopik gebelik şüphelileri.
+- Kordon sarkması, fetal hareketlerin tamamen kesilmesi veya gebede sepsis/pulmoner emboli şüphesi.
+
+Gebelik Acilleri — Sarı Alan Kriterleri
+- Az veya orta miktarda vajinal kanaması/lekelenmesi olan, hemodinamisi stabil (düşük tehdidi) hastalar.
+- Şiddetli bulantı-kusma, dehidratasyon ve ketonüri ile seyreden hiperemezis gravidarum vakaları.
+- 37. haftadan önce erken doğum tehdidi (düzenli kontraksiyon, membran rüptürü şüphesi) olanlar.
+- Gebelikte piyelonefrit riski nedeniyle ateş, dizüri veya yan ağrısı şikayeti olan hastalar.
+
+Gebelik Acilleri — Yeşil Alan Kriterleri
+- Fizyolojik gebelik yakınmaları (pirozis, sırt ağrısı, hafif kramplar) olan, kanaması bulunmayan stabil hastalar.
+- Düzensiz ve dinlenmekle geçen Braxton-Hicks kontraksiyonları olan genel durumu iyi gebeler.
+
+Gebelik Acilleri — Önerilen Tetkikler
+- Beta-hCG (Gebelik tespiti için).
+- Yatak başı obstetrik USG (Fetal kalp atımı ve serbest sıvı kontrolü) ve NST.
+- Tam kan sayımı ve Tam İdrar Tetkiki (TİT).
+
+Gebelik Acilleri — Yönlendirme
+Kırmızı kod alan kanama ve preeklampsi/eklampsi olguları kadın-doğum çağrısı yapılarak derhal resüsitasyona, sarı kod alan düşük tehdidi ve dehidratasyonlar sarı alana, yeşil kod alan fizyolojik şikayetler yeşil alana yönlendirilir.

@@ -1,0 +1,36 @@
+PSİKİYATRİK ACİLLER TRİYAJ PROTOKOLÜ
+
+Kaynak
+Acil Tıp El Kitabı, Güneş Tıp Kitabevleri, 2020.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise ajitasyon, intihar riski, psikoz, deliryum veya mental durum değişikliği ile başvuran hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+Psikiyatrik Aciller — İlk Değerlendirme
+- Personel ve hasta güvenliğini sağlamak için görüşmeden önce hastalarda arama yapılır ve mümkünse hastane elbiseleri giydirilerek izlem odasına alınır.
+- Psikiyatrik belirtilerin altında yatabilecek hipoglisemi, zehirlenme veya yapısal beyin anormalliği gibi organik fiziksel hastalıklar hızlıca dışlanır.
+- Hekim serinkanlı, dürüst ve tehdit edici olmayan bir tutumla hastaya güven verir.
+- Hastanın hava yolu, solunum ve dolaşımı değerlendirilir; postiktal durum veya intoksikasyon bulguları gözden geçirilir.
+
+Psikiyatrik Aciller — Kırmızı Alan Kriterleri
+- Çevreye veya kendisine akut zarar verme riski son derece yüksek, kontrol altına alınamayan ajite hastalar (Acil müdahale gerekli durumu).
+- Tıbbi veya toksikolojik nedenlerle (örneğin şiddetli deliryum tremens, yapısal beyin hasarı veya şok) bilinci kapanmış veya solunumu bozulmuş hastalar.
+
+Psikiyatrik Aciller — Sarı Alan Kriterleri
+- Aktif intihar düşüncesi olan hastalar (ESI 2. Seviye - en geç 10 dakika içinde hekim değerlendirmesi gerekir).
+- Akut psikotik hastalar veya konfüze, letarjik, dezoryante mental durum değişikliği yaşayan vakalar.
+- İlaç/madde yoksunluğu veya intoksikasyonuna bağlı şiddetli ajitasyon gösteren, güvenliği sağlandıktan sonra parenteral sedasyon gerektiren durumlar.
+
+Psikiyatrik Aciller — Yeşil Alan Kriterleri
+- Tıbbi bir aciliyeti veya akut kendisine/başkasına zarar verme riski bulunmayan, stabil ruhsal şikayetleri olan hastalar.
+- Sadece rutin psikiyatrik yönlendirme gerektiren ve vital bulguları tamamen normal olan hastalar.
+
+Psikiyatrik Aciller — Önerilen Tetkikler
+- Parmak ucu kan şekeri ölçümü (Hipoglisemiyi dışlamak için).
+- Tam kan sayımı ve rutin biyokimya.
+- Toksikolojik tarama (Madde zehirlenmesi şüphesinde).
+- Beyin Bilgisayarlı Tomografisi (BT) (Yapısal anormallik veya deliryum etyolojisi şüphesinde).
+
+Psikiyatrik Aciller — Yönlendirme
+Kırmızı kod alan ve organik koma tablosundaki hastalar resüsitasyona, sarı kod alan akut psikoz, ajitasyon ve intihar riski taşıyan hastalar güvenlikli acil psikiyatri gözlem odasına, yeşil kod alan risk taşımayan hastalar ise polikliniğe yönlendirilir.

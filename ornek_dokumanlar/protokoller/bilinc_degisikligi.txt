@@ -1,0 +1,45 @@
+BİLİNÇ DEĞİŞİKLİĞİ TRİYAJ PROTOKOLÜ
+
+Kaynak
+Bilinç Bozukluğunun Ani Başlangıcı Makalesi, 2024.
+Acil Servislerde Triaj Yönetimi, Maltepe Üniversitesi Tıp Fakültesi, 2016.
+
+Kapsam
+Bu protokol, acil servise bilinç bulanıklığı, senkop (bayılma), konfüzyon veya koma şikayeti ile başvuran hastaların ilk değerlendirmesini ve önceliklendirilmesini düzenler.
+
+Bilinç Değişikliği — İlk Değerlendirme
+- Hastanın uyanıklık düzeyi Glasgow Koma Skalası (GKS) kullanılarak hızlıca değerlendirilir ve kayıt altına alınır.
+- Vital bulgular (kan basıncı, ateş, solunum hızı) ölçülür ve şok veya sepsis belirtileri (hipotansiyon, takipne) aranır.
+- Pupillomotor disfonksiyon (göz bebeği asimetrisi) ve fokal nörolojik defisit (hareket kısıtlılığı, inme bulguları) olup olmadığı incelenir.
+- Menenjit belirtileri (ense sertliği), kas kasılmaları (miyoklonus) ve cilt anormallikleri (peteşi, enjeksiyon izleri) kontrol edilir.
+- Olası bir hipoglisemiyi dışlamak için parmak ucu kan şekeri hemen ölçülmelidir.
+- Bozukluğun çok hızlı (hiperakut) başlayıp başlamadığı ve hastanın ilaç/madde (toksik sendrom) öyküsü hasta yakınlarından sorgulanır.
+
+Bilinç Değişikliği — Kırmızı Alan Kriterleri
+- Glasgow Koma Skalası 9 ve altında olan (GKS ≤ 9), bilinci ciddi şekilde bozulmuş koma veya şiddetli uyuşukluk halindeki hastalar.
+- Solunumu durmak üzere olan veya yaşamsal fonksiyonları tehlike altında olan hastalar (ESI 1. Seviye).
+- Bilinç kaybına fokal nörolojik defisit (inme belirtisi), pupillomotor bozukluk veya şiddetli ani baş ağrısının eşlik ettiği hiperakut durumlar.
+- Hipotansiyon ve takipnenin eşlik ettiği şok/sepsis tablosundaki hastalar veya durdurulamayan kas kasılmaları (status epileptikus) olan vakalar.
+- Tıbbi veya toksikolojik nedenlerle koruyucu reflekslerini kaybetmiş, hava yolu açıklığı tehlikede olan hastalar hiç bekletilmeden alınır.
+
+Bilinç Değişikliği — Sarı Alan Kriterleri
+- Bilinç durumu tamamen kapanmamış ancak konfüze, letarjik veya dezoryante mental durum değişikliği yaşayan yüksek riskli hastalar.
+- Nedeni henüz açıklanamayan geçici bilinç kaybı (senkop) veya nöbet geçiren, kardiyopulmoner risk taşıyan ve en geç 10 dakika içinde hekimce değerlendirilmesi gereken hastalar (ESI 2. Seviye).
+- Vital bulguları nispeten stabil olsa da, akut enfeksiyon veya metabolik bozukluklara bağlı uyanıklık azalması gösteren yaşlı hastalar.
+- Zehirlenme (intoksikasyon) veya ilaç/madde etkisine bağlı olarak gelişen, ancak henüz solunum veya dolaşım kollapsına girmemiş bilinç bulanıklığı vakaları.
+
+Bilinç Değişikliği — Yeşil Alan Kriterleri
+- Vazovagal veya ortostatik kökenli olduğu net olarak bilinen, vital bulguları ve nörolojik muayenesi tamamen normal olan senkop (bayılma) vakaları.
+- Acil tedavi gerektiren ciddi bir hastalığı bulunmayan, bilinci tamamen açık (GKS 14-15) ve yaşamsal bulguları stabil olan hastalar.
+- Tıbbi aciliyeti olmayan, ayakta poliklinik ortamında değerlendirilebilecek basit fonksiyonel veya disosiyatif nöbet vakaları.
+- Bekleyebilecek durumda olan, çoklu kaynak kullanımı (görüntüleme, kan tahlili vb.) gerektirmeyen düşük riskli durumlar.
+
+Bilinç Değişikliği — Önerilen Tetkikler
+- Parmak ucu kan şekeri ve kan gazı analizi (Glikoz ve ana elektrolitlerin hızlı ölçümü için).
+- Rutin laboratuvar testleri, serum elektrolitleri ve enfeksiyon belirteçleri.
+- Alkol seviyesi ölçümü ve idrar toksikolojik taraması (Zehirlenme şüphesinde).
+- Çok modlu akut beyin görüntülemesi (Kontrastsız Kraniyal BT ve BT Anjiyografi).
+- Menenjit şüphesinde kan kültürleri (Antibiyotik öncesi) ve kontrendikasyon dışlandıktan sonra lomber ponksiyon.
+
+Bilinç Değişikliği — Yönlendirme
+Kırmızı kod alan, GKS ≤ 9 olan koma hastaları ve akut nörolojik defisiti bulunan hiperakut vakalar doğrudan resüsitasyon (şok) odasına alınır. Sarı kod alan açıklanamayan senkop, konfüzyon ve letarji hastaları en geç 10-15 dakika içinde değerlendirilmek üzere sarı alana, yeşil kod alan stabil vazovagal senkop hastaları ise ayaktan izlem veya poliklinik değerlendirmesine yönlendirilir.
