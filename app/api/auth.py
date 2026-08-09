@@ -12,13 +12,19 @@ from app.services.auth_service import (
     get_user,
     verify_password,
 )
+from app.utils.hiz_sinirlayici import giris_sinirlayici, hiz_siniri
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
 
-@router.post("/login", response_model=Token)
+# Parola deneme saldırısına karşı sıkı sınır (Gün 21).
+@router.post(
+    "/login",
+    response_model=Token,
+    dependencies=[Depends(hiz_siniri(giris_sinirlayici))],
+)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),

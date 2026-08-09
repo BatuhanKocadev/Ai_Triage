@@ -118,3 +118,18 @@ def yetkili_baslik(kullanici_uret, jeton_uret):
         return {"Authorization": f"Bearer {jeton}"}
 
     return _uret
+
+
+@pytest.fixture(autouse=True)
+def hiz_sinirlarini_sifirla():
+    """Her testten önce hız sayaçlarını temizler.
+
+    TestClient her istekte aynı IP'yi kullanıyor. Sıfırlanmazsa bir testin
+    tükettiği kota diğerini 429'a düşürür ve hata "güvenlik çalışıyor" değil
+    "test altyapısı bozuldu" biçiminde görünür — teşhisi zor bir sınıf.
+    """
+    from app.utils.hiz_sinirlayici import genel_sinirlayici, giris_sinirlayici
+
+    giris_sinirlayici.sifirla()
+    genel_sinirlayici.sifirla()
+    yield
