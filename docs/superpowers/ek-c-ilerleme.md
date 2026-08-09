@@ -910,3 +910,178 @@ veri kaybı penceresi ise Görev 3'ün Görev 1'den devraldığı sıralamadan g
 Görev bazlı inceleme dar kapsamda doğruluğu ölçüyor; geniş inceleme parçaların
 birlikte doğru olup olmadığını. İkisi birbirinin yerine geçmiyor — bu günün kanıtı
 bu.
+
+---
+
+## Gün 20 · Kapanış — retrieval boru hattı ve eşik kalibrasyonu (6–9 Ağustos 2026)
+
+### Gün 20 nasıl üçe bölündü
+
+Yol haritasındaki başlık "bilgi tabanı yönetimi + gerçek protokol verisi + eşik
+kalibrasyonu". Birinci parça 4 Ağustos'ta bitti (üstteki bölüm). Kalan iki parça,
+ölçüm yapmaya kalkınca ortaya çıkan iki gerçek hata yüzünden ayrı bir mini projeye
+dönüştü.
+
+### Derleme: kurumdan gelmedi, kamuya açık kaynaklardan derlendi
+
+Staj yeri protokol dokümanlarını bulamadı. Derleme Sağlık Bakanlığı tebliği, ATUDER
+materyali ve ESI el kitabı gibi **kamuya açık kaynaklardan** elle hazırlandı: 15
+klinik başlık, `ornek_dokumanlar/protokoller/` altında.
+
+Yüklemeden önce iki temizlik gerekti. Dosyalarda bir yapay zekâ aracının bıraktığı
+**298 adet `[cite: N]` işareti** vardı; bunlar gömme vektörünü kirletir, LLM'e bağlam
+olarak gider ve doktor panelinde ekranda görünürdü. Ayrıca üç yazım hatası
+(`müşadeye`→müşahedeye, `taşipne`→takipne, `desoryante`→dezoryante) ve iki
+tutarsızlık düzeltildi — `taşipne` özellikle dikkat çekiciydi çünkü diğer üç dosya
+aynı terimi doğru yazıyordu.
+
+Aynı konuyu iki kez anlatan iki eski dosya derleme dışı bırakıldı ve yeni `DELETE`
+ucuyla bilgi tabanından silindi.
+
+### Ölçüm yapmaya kalkınca çıkan iki hata
+
+Derleme yüklendikten (47 chunk) ve `kalibre_esik.py` koşulduktan sonra çıkan tablo
+şuydu: **18 ilgili sorgunun 10'u eleniyor**, ve ilgili skorların minimumu (0.5001)
+alakasız skorların maksimumundan (0.5004) **düşük**. İki sınıf iç içe geçmişti.
+Önerilen eşik gerçek acillerin %56'sını "Belirsiz"e düşürüyordu.
+
+Bu, eşik seçimiyle çözülebilecek bir sorun değildi; ölçülen şeyin kendisi bozuktu.
+
+**A — Çift sigmoid.** `CrossEncoder.predict()` modelin kendi `Sigmoid()`
+aktivasyonunu zaten uyguluyor, yani `[0,1]` aralığında olasılık döndürüyor.
+`rag_service` bunu `calculate_sigmoid` ile ikinci kez eziyordu. Sonuç: tüm skor
+uzayı `sigmoid(0)=0.500` ile `sigmoid(1)=0.731` arasına sıkışıyor, ayrım gücünün
+~%77'si atılıyordu. Mevcut `rerank_threshold = 0.52` bu bozuk ölçekte kalibre
+edilmişti.
+
+**B — Birinci aşama İngilizce gömme kullanıyordu.** ChromaDB koleksiyonu
+`DefaultEmbeddingFunction` (`all-MiniLM-L6-v2`) ile kurulmuştu. Türkçe sorguda
+ürettiği vektörler sinyal taşımıyordu: "Kaynar su elimin üstüne döküldü" sorgusunda
+`yanik.txt` ilk **beşe** bile giremiyordu; FAST inme sorgusunda `inme.txt` yoktu.
+`top_k_initial = 10` olduğu için 47 chunk'tan yalnızca 10'u reranker'a ulaşıyor ve
+o 10'u seçen mekanizma buydu — reranker doğru dokümanı hiç görmüyordu.
+
+**Bu hata dün yoktu çünkü ölçülemiyordu.** 4 chunk varken `n_results=10`
+koleksiyonun tamamını getiriyordu; birinci aşamanın kalitesi sonucu hiç
+etkilemiyordu. Derleme büyüyünce ortaya çıktı.
+
+### Testler bunu neden yakalamadı
+
+`test_rag_esik_kapisi.py` sahte reranker'a **logit ölçeğinde** değer veriyordu
+(`-10.0`, `10.0`). Gerçek `predict()` ise olasılık döndürüyor. Sahte, gerçek
+sözleşmenin yanlışını kodlamıştı; `-10 → eşik altı` ve `10 → eşik üstü` testleri
+kodda sigmoid olsa da olmasa da geçiyordu. Ayrıca gerçek modelle Türkçe retrieval'ı
+sınayan hiçbir test yoktu.
+
+Bu, Gün 11–16 ve 17+18'de belgelenen desenin aynısı: **sahte servis gerçeği yanlış
+taklit ederse testler yeşil verir, üretim bozulur.**
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 99 | **102** (+1 `yavas`) |
+| `app/` kapsaması | %80 | **%81** |
+| Bilgi tabanı | 47 chunk, `default`/384 | **48 chunk, `sentence_transformer`/1024** |
+| İlgili skorlar | 0.5001 – 0.6721 | **0.0005 – 0.7381** |
+| Alakasız skorlar | 0.5000 – 0.5004 | **0.0000 – 0.0030** |
+| İki sınıf | **iç içe** | **ayrık** |
+
+Commit'ler: `26b8659` (birleştirme), `44be342` (eşik kalibrasyonu).
+
+### Seçilen eşik ve gerekçesi
+
+`rerank_threshold = 0.005`. Alakasız maksimumun (0.0030) 1.7 katı, bir sonraki net
+ilgili skora (0.0089) kadar olan boşlukta. **16/18 ilgili geçer, 0/10 alakasız
+geçer.**
+
+Script maksimum kapsama noktasını (0.0030, 17/18) öneriyor ama kendi uyarısını da
+basıyor: güvenlik payı yalnızca +0.0001. Triyajda yanlış kabul, kaçırılan bir
+vakadan tehlikelidir — bir basamak yukarısı seçildi.
+
+Sayının küçük olması bir hata değil: reranker olasılık döndürüyor ve bu derlemede
+alakasız eşleşmeler sıfıra yapışıyor. Önemli olan mutlak değer değil, iki sınıf
+arasındaki ayrım.
+
+### Kalibrasyon scriptinin kendi hatası
+
+`kalibre_esik.py` eşik adaylarını sabit bir aralıktan (0.300–0.950) tarıyordu.
+Düzeltme skor ölçeğini tamamen değiştirdiği için tarama asıl ayrım bölgesini
+(0.003 civarı) **hiç görmedi** ve 18 ilgiliden 12'sini eleyen `0.335`'i önerdi.
+Adaylar artık ölçülen skorlardan türetiliyor; çıktı güvenlik payını ve elenen
+sorguların skorlarını da basıyor.
+
+Ders: bir ölçüm aracının sabit varsayımları, ölçtüğü şey değişince sessizce
+yanıltıcı hâle gelir.
+
+### "C maddesi" ölçümle tek dosyaya indi
+
+Tasarımın K8 kararı "derlemenin hasta diline yaklaştırılması ölçümden sonra, yalnızca
+zayıf çıkan başlıklara" diyordu. Ölçüm `inme.txt`'yi işaret etti: dosya yalnızca
+"FAST-ED" kısaltmasını kullanıyor, **yüz düşmesi / kolda güçsüzlük / konuşma
+bozukluğu ifadeleri hiç geçmiyordu**. Hasta ise tam o kelimelerle geliyor, bu yüzden
+sorgu `bilinc_degisikligi.txt`'ye düşüyordu. O dosyaya FAST bulgularının düz Türkçesi
+ve belirti başlangıç saati (trombolitik penceresi için klinik olarak da gerekli)
+eklendi. 15 dosya körlemesine elden geçirilmedi.
+
+### Son incelemenin engellediği iki felaket
+
+1. **Bilgi tabanı boşalacaktı.** `bilgi_tabani_kur.py` `/health/` 200 dönmesine
+   güvenip koleksiyonu düşürecekti; oysa `/auth/me` o sırada **401** veriyordu ve 15
+   dosyanın hepsi hata alacaktı. Ayrıca worktree'de `.env` olmadığı için script
+   ChromaDB yerine backend'in portuna (8000) bağlanıyordu. Artık kimlik ön uçuşu,
+   Chroma `heartbeat()` ve yükleme sonrası gömme doğrulaması (EF adı + 1024 boyut)
+   var; sonda da "backend'in koleksiyon tekili bayat, yeniden başlat" uyarısı basıyor.
+2. **Ölçüm setine sızıntı.** `inme.txt`'ye eklenen FAST cümlesi, kalibrasyondaki inme
+   sorgusunun üç öbeğini de neredeyse birebir tekrarlıyordu — eşik şişirilmiş bir
+   skorla seçilecekti. Sorgu, aynı klinik tabloyu protokolün kelimelerini
+   kullanmadan anlatacak şekilde yeniden yazıldı.
+
+### Doğrulama
+
+Bilgi tabanı bge-m3 ile yeniden kuruldu ve gömme yapılandırması doğrulandı
+(`sentence_transformer` / 1024). Kırık olduğu ölçülerek kanıtlanan sorgular ve üç
+kontrol sorgusu canlı bilgi tabanına karşı denendi: **5/5 sorguda doğru protokol
+reranker'a ulaştı ve reranker doğru olanı seçti.**
+
+Bu ölçümde kendi kriterim de düzeltildi: başta "doğru doküman 1. sırada mı" diye
+bakıyordum, oysa iki aşamalı boru hattında birinci aşamanın görevi doğru dokümanı
+**ilk 10'a sokmak**; kararı reranker veriyor. `inme.txt` Türkçe sorguda 2.,
+karaktersiz sorguda 8. sırada geliyor — ikisinde de reranker'a ulaşıyor.
+
+### Gün 22'ye devredilenler (bu günden)
+
+1. **`yanik.txt` reranker'da çok zayıf.** Doğru doküman seçiliyor ama skoru 0.0005 —
+   eşiğin altında, yani sistem "Belirsiz" diyor. Dosya "TVYA", "Parkland formülü"
+   gibi klinik terimlerle yazılmış; hasta "kaynar su döküldü, su topladı" diyor.
+   `inme.txt`'ye uygulanan C maddesi buraya da uygulanmalı.
+2. **Karaktersiz yazım skorları belirgin düşürüyor.** İnme sorgusu Türkçe yazımda
+   0.0089, karaktersiz yazımda 0.0031. Kullanıcılar sık sık karaktersiz yazıyor;
+   sorgu normalizasyonu (ya da protokollere karaktersiz eş anlamlı eklenmesi)
+   değerlendirilmeli.
+3. **`yavas` test CRLF/LF farkı yüzünden üretimden farklı metin gömüyor.** Test
+   `read_text()` kullanıyor (Windows'ta CRLF→LF çevirir), `/document/upload` ise ham
+   baytı decode ediyor. Chunk sınırları kayıyor: test `inme.txt`'yi 1. sırada
+   buluyor, üretim 2. sırada. Sonucu değiştirmedi ama bu, bugün **üçüncü** kez çıkan
+   "test kurgusu gerçeği tam yansıtmıyor" deseni. Test ham bayt okumalı.
+4. `/health/` ucu ChromaDB bağlantısını sınamıyor, sabit 200 dönüyor.
+5. Silme ucunda `get()` + `delete()` atomik değil.
+6. `sahte_chroma.py` `include` parametresini yok sayıyor.
+7. Doküman uçlarında `response_model` yok; OpenAPI şeması boş kalıyor.
+8. K9 — dosya adı normalizasyon çakışması (`Rapor A.txt` / `Rapor_A.txt`).
+
+### Süreç notu
+
+Bu gün üç kez aynı şeyi öğretti: **bir ölçümün kendisi bozuksa, ölçtüğü şey hakkında
+hiçbir şey söylemez.** Bozuk eşik ölçeği, İngilizce gömme modeli ve sabit tarama
+aralığı — üçü de "ölçüm yapılıyor" görüntüsü altında yanlış sayı üretiyordu.
+
+Üçünü de yakalatan şey, bir sayıya bakıp "bu tuhaf" demek oldu: skorların 0.50
+civarına kümelenmesi, aynı sorgunun yanlış protokolü getirmesi, önerilen eşiğin
+acillerin yarısını elemesi. Sayı tuhafsa önce ölçüm aracına bakmak gerekiyor.
+
+Bir de yürütme notu: `yavas` testi yazan subagent üç kez "bekliyorum" deyip
+ilerlemeden döndü, ama sonunda **doğru olanı yaptı** — brief'in verdiği testin
+mutasyona bağlayıcı olmadığını teşhis edip commit atmayı reddetti ve `BLOCKED`
+döndürdü. Yanlış bir testi yeşil diye teslim etmektense durmak doğrudur; script
+dışına çıkması haklıydı.
