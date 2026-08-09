@@ -4,6 +4,7 @@ Bu kapı bilinçli bir maliyet/güvenlik kontrolüdür (CLAUDE.md); bug değildi
 """
 
 import pytest
+import torch
 
 from app.services import rag_service
 from tests.yardimcilar.sahte_rag import SahteKoleksiyon, sahte_reranker_uret
@@ -61,7 +62,9 @@ def test_dokumanlar_skora_gore_siralanir(monkeypatch):
 
 def test_metadata_filtresi_koleksiyona_gecirilir(monkeypatch):
     # source_document verildiğinde Chroma sorgusuna "where" olarak gitmeli.
-    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([10.0]))
+    # 0.90 olasılık ölçeğinde geçerli bir skor; 10.0 logit ölçeğinden kalmıştı ve
+    # gerçek predict() böyle bir değer asla döndürmez.
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
     koleksiyon = SahteKoleksiyon(["Metin"])
     rag_service.retrieve_and_rerank(
         query="q", collection=koleksiyon, metadata_filter={"source": "a.pdf"}
@@ -89,3 +92,27 @@ def test_reranker_skoru_ikinci_kez_ezilmez(monkeypatch):
     )
 
     assert len(sonuc) == 1
+
+
+def test_reranker_aktivasyonu_acikca_kuruluyor(monkeypatch):
+    # Skor ölçeğinin tamamı predict()'in olasılık döndürmesine bağlı; bu da
+    # CrossEncoder'a açıkça verilen Sigmoid aktivasyonundan geliyor. Argüman
+    # silinirse predict() modelin config dosyasındaki varsayılana düşer ve ham
+    # logit döndürebilir — o an bütün eşikler sessizce anlamsızlaşır. Diğer
+    # testler get_reranker()'ı sahteyle değiştirdiği için yapıcıyı hiç görmüyor;
+    # aktivasyonu donduran tek test budur.
+    yakalanan = {}
+
+    def sahte_cross_encoder(*args, **kwargs):
+        yakalanan["args"] = args
+        yakalanan["kwargs"] = kwargs
+        return object()
+
+    # Modül tekili önceki testlerden dolu kalmış olabilir; None'a çekilmezse
+    # get_reranker() yapıcıyı hiç çağırmaz ve test yanlışlıkla yeşil kalır.
+    monkeypatch.setattr(rag_service, "_reranker", None)
+    monkeypatch.setattr(rag_service, "CrossEncoder", sahte_cross_encoder)
+
+    rag_service.get_reranker()
+
+    assert isinstance(yakalanan["kwargs"].get("activation_fn"), torch.nn.Sigmoid)

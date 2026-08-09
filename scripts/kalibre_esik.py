@@ -39,9 +39,13 @@ ILGILI = [
     "Babam aniden bayıldı, şimdi kendine geldi ama nerede olduğunu bilmiyor.",
     # baş ağrısı
     "Aniden çok şiddetli bir baş ağrısı başladı, hayatımın en kötü ağrısı.",
-    # inme
-    "Annemin yüzünün bir tarafı düştü, kolunu kaldıramıyor ve konuşması bozuldu.",
-    "Annemin yuzunun bir tarafi dustu, kolunu kaldiramiyor ve konusmasi bozuldu.",
+    # inme — eski sorgu ("yüzünün bir tarafı düştü, kolunu kaldıramıyor,
+    # konuşması bozuldu") inme.txt'ye eklenen FAST cümlesinin üç öbeğini de
+    # neredeyse birebir tekrarlıyordu; bu, yukarıda uyarılan veri sızıntısının
+    # ta kendisi: eşik şişirilmiş bir skorla seçiliyordu. Aynı klinik tablo,
+    # protokolün kelimeleri kullanılmadan anlatılıyor.
+    "Dedem yarım saat önce birden yere yığıldı, sağ tarafını hiç oynatamıyor ve ağzından çıkanlar anlaşılmıyor.",
+    "Dedem yarim saat once birden yere yigildi, sag tarafini hic oynatamiyor ve agzindan cikanlar anlasilmiyor.",
     # ateş ve sepsis
     "Üç gündür ateşim düşmüyor, titriyorum ve halsizlikten yataktan kalkamıyorum.",
     # anafilaksi

@@ -8,10 +8,11 @@ Türkçe retrieval'ı sınayan test yoktu.
 
 Test üretim koşullarını taklit eder: derlemenin TAMAMI, `/document/upload` ile
 aynı bölücü ayarlarıyla (chunk_size=1000, overlap=200) parçalanıp gömülür. Bütün
-dosyaları tek parça gömmek testi yapay olarak kolaylaştırırdı — 47 chunk arasından
+dosyaları tek parça gömmek testi yapay olarak kolaylaştırırdı — 48 chunk arasından
 doğruyu bulmak, 15 bütün belge arasından bulmaktan zordur ve üretimde olan budur.
 
-`yavas` işaretli: gerçek bge-m3 modelini (~2.2 GB) yükler ve ChromaDB ister.
+`yavas` + `entegrasyon` işaretli: gerçek bge-m3 modelini (~2.2 GB) yükler ve
+ayakta bir ChromaDB ister.
 """
 
 import uuid
@@ -65,6 +66,7 @@ def derleme_koleksiyonu():
 
 
 @pytest.mark.yavas
+@pytest.mark.entegrasyon  # gerçek ChromaDB gerektiriyor; depodaki diğer Chroma/Postgres testleriyle aynı
 @pytest.mark.parametrize(
     "sorgu, beklenen_kaynak",
     [
