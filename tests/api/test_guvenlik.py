@@ -38,3 +38,48 @@ def test_giris_denemesi_hiz_sinirli(istemci):
         ).status_code
 
     assert son_durum == 429
+
+
+@pytest.mark.entegrasyon
+def test_desteklenmeyen_uzantili_dosya_reddedilir(
+    istemci, yetkili_baslik, dokuman_yazmayi_engelle
+):
+    # Yürütülebilir dosya bilgi tabanına hiç girmemeli.
+    yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("zararli.exe", b"MZ\x90\x00", "application/octet-stream")},
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    assert yanit.status_code == 400
+
+
+@pytest.mark.entegrasyon
+def test_cok_buyuk_dosya_reddedilir(istemci, yetkili_baslik, dokuman_yazmayi_engelle):
+    # Boyut sınırı bellek tüketimini ve chunk patlamasını engelliyor.
+    buyuk = b"a" * (settings.max_upload_mb * 1024 * 1024 + 1)
+    yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("buyuk.txt", buyuk, "text/plain")},
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    assert yanit.status_code == 413
+
+
+@pytest.mark.entegrasyon
+def test_pdf_gibi_gorunen_bozuk_dosya_reddedilir(
+    istemci, yetkili_baslik, dokuman_yazmayi_engelle
+):
+    # Uzantıya güvenmek yetmez: saldırgan .exe dosyasını .pdf diye adlandırabilir.
+    # Gerçek PDF "%PDF-" ile başlar.
+    yanit = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("sahte.pdf", b"MZ\x90\x00 bu bir PDF degil", "application/pdf")},
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    assert yanit.status_code == 400
