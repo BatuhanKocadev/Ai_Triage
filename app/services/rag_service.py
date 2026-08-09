@@ -1,7 +1,5 @@
 """RAG servisi: Chroma'dan aday getirme + cross-encoder ile yeniden sıralama."""
 
-import math
-
 import torch
 from sentence_transformers import CrossEncoder
 
@@ -19,15 +17,15 @@ def get_reranker() -> CrossEncoder:
     global _reranker
     if _reranker is None:
         logger.info(f"Reranker yükleniyor: {settings.reranker_model} ({device})")
-        _reranker = CrossEncoder(settings.reranker_model, device=device)
+        # Aktivasyon açıkça veriliyor: predict()'in olasılık döndürmesi aksi hâlde
+        # modelin config dosyasına bağlı kalır. Model ya da kütüphane varsayılanı
+        # değişirse predict() sessizce ham logit döndürür ve her eşik anlamsızlaşır.
+        _reranker = CrossEncoder(
+            settings.reranker_model,
+            device=device,
+            activation_fn=torch.nn.Sigmoid(),
+        )
     return _reranker
-
-
-def calculate_sigmoid(value: float) -> float:
-    try:
-        return 1 / (1 + math.exp(-value))
-    except OverflowError:
-        return 0.0 if value < 0 else 1.0
 
 
 def retrieve_and_rerank(
@@ -63,10 +61,11 @@ def retrieve_and_rerank(
 
     pairs = [[query, doc] for doc in documents]
 
-    raw_scores = get_reranker().predict(pairs)
-    normalized_scores = [calculate_sigmoid(float(score)) for score in raw_scores]
+    # predict() olasılık döndürüyor (aktivasyon yukarıda açıkça kuruldu);
+    # ikinci bir dönüşüm uygulanmıyor.
+    skorlar = [float(skor) for skor in get_reranker().predict(pairs)]
 
-    scored_docs = list(zip(normalized_scores, documents, metadatas))
+    scored_docs = list(zip(skorlar, documents, metadatas))
     scored_docs.sort(key=lambda x: x[0], reverse=True)
 
     if scored_docs and scored_docs[0][0] < threshold:

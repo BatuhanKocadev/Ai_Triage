@@ -609,7 +609,7 @@ Eski süreç bayat kodu çalıştırıyor; yeni gömme modeli devreye girmez.
 ```
 .venv\Scripts\python.exe scripts/bilgi_tabani_kur.py
 ```
-Beklenen: 15 dosya, 47 chunk, 0 hata. İlk koşuda bge-m3 indirilir.
+Beklenen: 15 dosya, 48 chunk, 0 hata. İlk koşuda bge-m3 indirilir.
 
 - [ ] **Retrieval'ın gerçekten düzeldiğini elle gör**
 
@@ -637,7 +637,7 @@ değilse eşiği DEĞİŞTİRME, bulguyu kaydet (K7).
 - [ ] `test_reranker_skoru_ikinci_kez_ezilmez` ve `test_esik_altinda_bos_liste_doner`
       eski kodda kırmızı olduğu ÇALIŞTIRILARAK görüldü
 - [ ] `test_turkce_sorgu_dogru_protokolu_getirir` mutasyonla bağlayıcı kanıtlandı
-- [ ] Bilgi tabanı bge-m3 ile yeniden kuruldu: 15 dosya, 47 chunk
+- [ ] Bilgi tabanı bge-m3 ile yeniden kuruldu: 15 dosya, 48 chunk
 - [ ] İki kırık sorgu artık doğru protokolü getiriyor
 - [ ] Kalibrasyon koşuldu; eşik ya yazıldı ya da yazılmama gerekçesi kaydedildi
 - [ ] Her yeni fonksiyon/blok yanında tek cümlelik Türkçe açıklama

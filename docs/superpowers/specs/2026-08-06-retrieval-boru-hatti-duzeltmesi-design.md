@@ -174,7 +174,9 @@ taşınır. `test_tam_esik_degeri_dahil_edilir` düzeltmeyle birlikte kırmızı
 - [ ] Mevcut 99 test hâlâ yeşil (`-m "not yavas"`)
 - [ ] `calculate_sigmoid` depoda hiç geçmiyor
 - [ ] `scripts/bilgi_tabani_kur.py` çalıştırıldı; koleksiyon bge-m3 ile yeniden kuruldu
-- [ ] `GET /document/liste` 15 dosya / 47 chunk gösteriyor
+- [ ] `GET /document/liste` 15 dosya / 48 chunk gösteriyor (`inme.txt`'ye FAST
+      bulguları eklenince derleme 47'den 48 chunk'a çıktı; yukarıdaki metinde
+      geçen 47 rakamları bu düzenlemeden önceki ölçümlerdir)
 - [ ] "Kaynar su" ve FAST inme sorguları elle denendiğinde doğru protokolü getiriyor
 - [ ] `kalibre_esik.py` yeniden koşuldu ve yeni skor dağılımı kaydedildi
 - [ ] Ölçüm temiz ayrım veriyorsa yeni `rerank_threshold` `config.py`'ye yazıldı;

@@ -9,6 +9,8 @@ Bu protokol, acil servise fokal serebral fonksiyon kaybı belirtileri ile başvu
 
 İnme — İlk Değerlendirme
 - Hastada fokal serebral fonksiyon kaybı belirtilerinin hızla ortaya çıkıp çıkmadığı değerlendirilir.
+- FAST bulguları sorgulanır: yüzün bir tarafında düşme veya kayma, kolda ani güçsüzlük ya da kolu kaldıramama, konuşmada bozulma (kelime bulamama, peltekleşme, anlaşılmaz konuşma).
+- Belirtilerin başlangıç saati mutlaka kayda geçirilir; trombolitik tedavi penceresi bu saate göre hesaplanır.
 - Sahada İnme Triajı Skoru (FAST-ED) kullanılarak hasta hızla değerlendirilir.
 - Hastalar FAST-ED skoruna göre; düşük (0-1 puan), orta (2-3 puan) ve yüksek (≥4 puan) risk olarak üç gruba ayrılır.
 - İnmenin iskemik (%80-85) mi yoksa hemorajik (%15-20) mi olduğuna yönelik ayırıcı tanı adımları planlanır.

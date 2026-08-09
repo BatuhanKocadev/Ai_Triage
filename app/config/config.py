@@ -28,9 +28,18 @@ class Settings(BaseSettings):
     # bge-reranker-base yalnızca İngilizce+Çince eğitimli olduğu için Türkçe
     # sorgularda hiç ayrım üretmiyordu (tüm skorlar ~0.50). v2-m3 çok dillidir.
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
-    # Eşik scripts/kalibre_esik.py ile ölçülerek seçildi: alakasız sorgular
-    # tam 0.5000 alıyor, ilgili sorgular 0.502-0.664 aralığında. 0.52 eşiği
-    # ilgili sorguların 7/8'ini geçiriyor, alakasızların hiçbirini geçirmiyor.
+    # Gömme modeli çok dilli olmalı: ChromaDB'nin varsayılanı (all-MiniLM-L6-v2)
+    # yalnızca İngilizce üzerinde eğitilmiştir ve Türkçe sorguda anlamsız
+    # vektör üretiyor.
+    embedding_model: str = "BAAI/bge-m3"
+    # GEÇİCİ DEĞER — GÜVENİLMEZ. Bu 0.52, reranker skorlarının ikinci kez
+    # sigmoid'den geçirildiği BOZUK ölçekte ölçülmüştü: o ölçekte tüm skorlar
+    # 0.500-0.731 aralığına sıkışıyordu. Çift sigmoid kaldırıldığı için ölçek
+    # tamamen değişti ve bu sayıyı gerekçelendiren ölçüm artık geçersiz.
+    # Değer, gömme modeli de değiştiği için bilgi tabanı bge-m3 ile yeniden
+    # kurulduktan SONRA scripts/kalibre_esik.py yeniden koşulup ondan
+    # türetilecek. O ana kadar buradaki sayı bir kalibrasyon sonucu değil,
+    # yalnızca yer tutucudur.
     rerank_threshold: float = 0.52
 
     # Ses tanıma (STT) — faster-whisper

@@ -18,7 +18,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 from app.config.config import settings
 from app.services.chroma_service import get_collection
-from app.services.rag_service import get_reranker, calculate_sigmoid
+from app.services.rag_service import get_reranker
 
 # Bilgi tabanındaki 15 protokolün her biri için en az bir sorgu; geçmesi beklenir.
 # Sorgular bilerek HASTA AĞZINDAN yazılmıştır, protokol cümlesi kopyalanmamıştır:
@@ -39,9 +39,13 @@ ILGILI = [
     "Babam aniden bayıldı, şimdi kendine geldi ama nerede olduğunu bilmiyor.",
     # baş ağrısı
     "Aniden çok şiddetli bir baş ağrısı başladı, hayatımın en kötü ağrısı.",
-    # inme
-    "Annemin yüzünün bir tarafı düştü, kolunu kaldıramıyor ve konuşması bozuldu.",
-    "Annemin yuzunun bir tarafi dustu, kolunu kaldiramiyor ve konusmasi bozuldu.",
+    # inme — eski sorgu ("yüzünün bir tarafı düştü, kolunu kaldıramıyor,
+    # konuşması bozuldu") inme.txt'ye eklenen FAST cümlesinin üç öbeğini de
+    # neredeyse birebir tekrarlıyordu; bu, yukarıda uyarılan veri sızıntısının
+    # ta kendisi: eşik şişirilmiş bir skorla seçiliyordu. Aynı klinik tablo,
+    # protokolün kelimeleri kullanılmadan anlatılıyor.
+    "Dedem yarım saat önce birden yere yığıldı, sağ tarafını hiç oynatamıyor ve ağzından çıkanlar anlaşılmıyor.",
+    "Dedem yarim saat once birden yere yigildi, sag tarafini hic oynatamiyor ve agzindan cikanlar anlasilmiyor.",
     # ateş ve sepsis
     "Üç gündür ateşim düşmüyor, titriyorum ve halsizlikten yataktan kalkamıyorum.",
     # anafilaksi
@@ -89,8 +93,9 @@ def en_yuksek_skor(sorgu: str) -> float:
     dokumanlar = sonuc["documents"][0]
     if not dokumanlar:
         return 0.0
-    ham_skorlar = get_reranker().predict([[sorgu, d] for d in dokumanlar])
-    return max(calculate_sigmoid(float(s)) for s in ham_skorlar)
+    # predict() olasılık döndürüyor; ek dönüşüm yok.
+    skorlar = get_reranker().predict([[sorgu, d] for d in dokumanlar])
+    return max(float(s) for s in skorlar)
 
 
 def main() -> None:
