@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # bge-reranker-base yalnızca İngilizce+Çince eğitimli olduğu için Türkçe
     # sorgularda hiç ayrım üretmiyordu (tüm skorlar ~0.50). v2-m3 çok dillidir.
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    # Gömme modeli çok dilli olmalı: ChromaDB'nin varsayılanı (all-MiniLM-L6-v2)
+    # yalnızca İngilizce ve Türkçe sorguda anlamsız vektör üretiyor.
+    embedding_model: str = "BAAI/bge-m3"
     # Eşik scripts/kalibre_esik.py ile ölçülerek seçildi: alakasız sorgular
     # tam 0.5000 alıyor, ilgili sorgular 0.502-0.664 aralığında. 0.52 eşiği
     # ilgili sorguların 7/8'ini geçiriyor, alakasızların hiçbirini geçirmiyor.
