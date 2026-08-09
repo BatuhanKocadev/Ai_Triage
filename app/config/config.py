@@ -20,6 +20,19 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
 
+    # --- Güvenlik (Gün 21) ---
+    # Hız sınırı: aynı IP'den `rate_limit_pencere_sn` saniyede kaç istek kabul edilir.
+    # Giriş ucu bilerek daha sıkı: kimlik doğrulaması olmadan çağrılabilen tek
+    # yazma ucu ve parola deneme saldırısının hedefi.
+    rate_limit_genel: int = 30
+    rate_limit_giris: int = 5
+    rate_limit_pencere_sn: int = 60
+    # Dosya yükleme sınırları; uzantı listesi virgülle ayrılır.
+    max_upload_mb: int = 10
+    izinli_uzantilar: str = "pdf,docx,txt"
+    # CORS: varsayılan yalnızca yerel Streamlit. "*" bırakmak savunulamaz.
+    cors_origins: str = "http://localhost:8501"
+
     # Vektör veritabanı
     chroma_host: str = "localhost"
     chroma_port: int = 8000
