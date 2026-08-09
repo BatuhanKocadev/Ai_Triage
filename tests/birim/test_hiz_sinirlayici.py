@@ -73,3 +73,22 @@ def test_sifirla_sayaclari_temizler():
     sinirlayici.sifirla()
 
     assert sinirlayici.izin_ver("1.2.3.4") is True
+
+
+def test_bayat_anahtarlar_temizlenir():
+    # Pencere dışına düşmüş anahtarların sözlükten silindiğini doğrular; aksi
+    # halde her görülen IP kalıcı bir kayıt bırakır ve sözlük sınırsız büyür.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=5, pencere_sn=60, saat=saat, temizlik_esigi=2)
+
+    sinirlayici.izin_ver("1.1.1.1")
+    sinirlayici.izin_ver("2.2.2.2")
+    assert len(sinirlayici._kayitlar) == 2
+
+    saat.ilerlet(61)
+
+    # Eşik (2) 3. farklı anahtarla aşılınca temizlik tetiklenmeli.
+    sinirlayici.izin_ver("3.3.3.3")
+
+    # Pencere dışına düşen eski anahtarlar silinmiş, yalnızca aktif anahtar kalmış olmalı.
+    assert list(sinirlayici._kayitlar.keys()) == ["3.3.3.3"]
