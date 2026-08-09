@@ -33,6 +33,23 @@ def yonetici_basligi():
     return {"Authorization": f"Bearer {create_access_token({'sub': 'admin', 'role': 'admin'})}"}
 
 
+def backend_saglik_kontrolu():
+    """Koleksiyonu düşürmeden önce backend'in ayakta olduğunu doğrular.
+
+    Backend kapalıyken düşürme yapılırsa bilgi tabanı boş kalır ve geri dönüş
+    olmaz; bu yüzden ulaşılamıyorsa ya da 200 dönmüyorsa koleksiyona hiç
+    dokunmadan anlaşılır bir mesajla çıkılır.
+    """
+    try:
+        yanit = requests.get(f"{BACKEND}/health/", timeout=5)
+    except requests.exceptions.RequestException as baglanti_hatasi:
+        print(f"Backend'e ulasilamiyor ({BACKEND}/health/): {type(baglanti_hatasi).__name__}")
+        sys.exit(1)
+    if yanit.status_code != 200:
+        print(f"Backend saglik ucu {yanit.status_code} dondu, kurulum durduruldu.")
+        sys.exit(1)
+
+
 def koleksiyonu_dusur():
     """Eski vektörleri tamamen siler; yeni model farklı bir anlam uzayı kullanıyor."""
     istemci = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
@@ -52,6 +69,7 @@ def main() -> None:
     print(f"Gomme modeli: {settings.embedding_model}")
     print(f"Derleme      : {len(dosyalar)} dosya\n")
 
+    backend_saglik_kontrolu()  # Once backend ayakta mi bak; degilse koleksiyona hic dokunma.
     koleksiyonu_dusur()
 
     baslik = yonetici_basligi()
@@ -59,13 +77,19 @@ def main() -> None:
     hata = 0
     for yol in dosyalar:
         with yol.open("rb") as f:
-            yanit = requests.post(
-                f"{BACKEND}/document/upload",
-                data={"category": KATEGORI},
-                files={"file": (yol.name, f, "text/plain")},
-                headers=baslik,
-                timeout=300,
-            )
+            try:
+                yanit = requests.post(
+                    f"{BACKEND}/document/upload",
+                    data={"category": KATEGORI},
+                    files={"file": (yol.name, f, "text/plain")},
+                    headers=baslik,
+                    timeout=300,
+                )
+            except requests.exceptions.RequestException as istek_hatasi:
+                # Tek dosyanin baglanti hatasi butun yuklemeyi cokertmesin; kaydedip devam et.
+                hata += 1
+                print(f"  HATA {yol.name:<30} istek basarisiz: {type(istek_hatasi).__name__}")
+                continue
         if yanit.status_code == 201:
             n = yanit.json()["total_chunks"]
             toplam += n

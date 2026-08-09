@@ -50,10 +50,14 @@ def sahte_chromadb(monkeypatch):
     return olusan
 
 
-def test_gomme_modeli_ayarlardan_okunur(sahte_chromadb):
+def test_gomme_modeli_ayarlardan_okunur(sahte_chromadb, monkeypatch):
+    # Varsayılandan FARKLI bir değer zorlanıyor: kod sabit yazılmış olsaydı
+    # (örn. "BAAI/bge-m3") bu mutasyon testi kırmızıya çevirirdi.
+    monkeypatch.setattr(settings, "embedding_model", "test-gomme-modeli-xyz")
+
     chroma_service.get_collection()
 
     kwargs = sahte_chromadb["istemci"].koleksiyon_kwargs
     gomme = kwargs["embedding_function"]
     assert isinstance(gomme, _SahteGomme)
-    assert gomme.model_name == settings.embedding_model
+    assert gomme.model_name == "test-gomme-modeli-xyz"
