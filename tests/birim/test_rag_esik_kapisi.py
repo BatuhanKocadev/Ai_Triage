@@ -19,9 +19,14 @@ def test_esik_altinda_bos_liste_doner(monkeypatch):
     # 0.10 olasılığı 0.52 eşiğinin altında. Değer bilerek seçildi: eski çift
     # sigmoidli kodda sigmoid(0.10)=0.525 çıkıp eşiği GEÇİYORDU, yani bu test
     # düzeltmenin bağlayıcı kanıtı.
+    # Eşik AÇIKÇA veriliyor: settings.rerank_threshold ölçümle değişen bir değer
+    # (kalibrasyon sonrası 0.005 oldu) ve teste varsayılanı miras bıraktığımızda
+    # test, ölçtüğü şeyden bağımsız sebeplerle kırılıp yeşile dönüyor.
     monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.10]))
     koleksiyon = SahteKoleksiyon(["Apandisit protokolü"])
-    sonuc = rag_service.retrieve_and_rerank(query="alakasiz sorgu", collection=koleksiyon)
+    sonuc = rag_service.retrieve_and_rerank(
+        query="alakasiz sorgu", collection=koleksiyon, threshold=0.52
+    )
     assert sonuc == []
 
 

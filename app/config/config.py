@@ -32,15 +32,21 @@ class Settings(BaseSettings):
     # yalnızca İngilizce üzerinde eğitilmiştir ve Türkçe sorguda anlamsız
     # vektör üretiyor.
     embedding_model: str = "BAAI/bge-m3"
-    # GEÇİCİ DEĞER — GÜVENİLMEZ. Bu 0.52, reranker skorlarının ikinci kez
-    # sigmoid'den geçirildiği BOZUK ölçekte ölçülmüştü: o ölçekte tüm skorlar
-    # 0.500-0.731 aralığına sıkışıyordu. Çift sigmoid kaldırıldığı için ölçek
-    # tamamen değişti ve bu sayıyı gerekçelendiren ölçüm artık geçersiz.
-    # Değer, gömme modeli de değiştiği için bilgi tabanı bge-m3 ile yeniden
-    # kurulduktan SONRA scripts/kalibre_esik.py yeniden koşulup ondan
-    # türetilecek. O ana kadar buradaki sayı bir kalibrasyon sonucu değil,
-    # yalnızca yer tutucudur.
-    rerank_threshold: float = 0.52
+    # 9 Ağustos 2026'da ölçüldü (scripts/kalibre_esik.py, 15 protokol / 48 chunk,
+    # 18 ilgili + 10 alakasız sorgu). Ölçülen dağılım:
+    #   ilgili   -> 0.0005 ... 0.7381
+    #   alakasız -> 0.0000 ... 0.0030
+    # 0.005 seçildi: alakasız sorguların en yükseğinin 1.7 katı, bir sonraki net
+    # ilgili skora (0.0089) kadar olan boşlukta duruyor. 18 ilgiliden 16'sı
+    # geçiyor, 10 alakasızın hiçbiri geçmiyor.
+    # Sayının küçük olması bir hata değil: reranker olasılık döndürüyor ve bu
+    # derlemede alakasız eşleşmeler sıfıra yapışıyor. Önemli olan mutlak değer
+    # değil, iki sınıf arasındaki ayrım — düzeltmeden önce sınıflar iç içeydi
+    # (ilgili min 0.5001 < alakasız max 0.5004) ve hiçbir eşik işe yaramıyordu.
+    # Eşiğin altında kalan iki ilgili sorgu (yanık 0.0005, karaktersiz inme
+    # 0.0031) Ek C'de Gün 22 borcu olarak kayıtlı.
+    # Reranker modeli, gömme modeli ya da derleme değişirse YENİDEN ÖLÇÜLMELİ.
+    rerank_threshold: float = 0.005
 
     # Ses tanıma (STT) — faster-whisper
     whisper_model_size: str = "medium"
