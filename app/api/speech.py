@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.speech import TranskriptYaniti
 from app.services.auth_service import require_user_or_admin_role
 from app.services.stt_service import transcribe, STTError
+from app.utils.hiz_sinirlayici import genel_sinirlayici, hiz_siniri
 from app.utils.logger import logger
 
 router = APIRouter(
@@ -37,7 +38,15 @@ async def ses_metnini_kaydet(istek: SpeechRequest):
     }
 
 
-@router.post("/transkript", response_model=TranskriptYaniti, status_code=status.HTTP_200_OK)
+# /ai/analiz ile aynı pahalı sınıf: whisper "medium" modelini yükleyip 25 MB'a
+# kadar dosyayı işliyor, yani kötüye kullanım CPU'yu ve belleği tüketir —
+# kimlik doğrulaması tek başına hız sınırı değildir (10 Ağustos 2026).
+@router.post(
+    "/transkript",
+    response_model=TranskriptYaniti,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(hiz_siniri(genel_sinirlayici))],
+)
 async def ses_dosyasini_transkript_et(
     file: UploadFile = File(...),
     current_user: User = Depends(require_user_or_admin_role),

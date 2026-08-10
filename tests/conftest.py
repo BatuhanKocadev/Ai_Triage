@@ -75,7 +75,10 @@ def istemci(db_oturum):
         yield db_oturum
 
     app.dependency_overrides[get_db] = _test_oturumu
-    with TestClient(app) as c:
+    # raise_server_exceptions=False: global exception handler'ın ürettiği 500
+    # yanıtı test edilebilsin diye. Varsayılan davranış istisnayı yeniden
+    # fırlatır ve handler'ın çıktısı hiç görülmez.
+    with TestClient(app, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
 
@@ -118,3 +121,26 @@ def yetkili_baslik(kullanici_uret, jeton_uret):
         return {"Authorization": f"Bearer {jeton}"}
 
     return _uret
+
+
+@pytest.fixture(autouse=True)
+def hiz_sinirlarini_sifirla():
+    """Her testten önce hız sayaçlarını temizler.
+
+    TestClient her istekte aynı IP'yi kullanıyor. Sıfırlanmazsa bir testin
+    tükettiği kota diğerini 429'a düşürür ve hata "güvenlik çalışıyor" değil
+    "test altyapısı bozuldu" biçiminde görünür — teşhisi zor bir sınıf.
+    """
+    from app.utils.hiz_sinirlayici import (
+        genel_sinirlayici,
+        giris_ip_sinirlayici,
+        giris_sinirlayici,
+    )
+
+    giris_sinirlayici.sifirla()
+    # Giriş ucunun IP katmanı da sıfırlanmalı: unutulursa bir testin harcadığı
+    # hacim diğerini 429'a düşürür ve hata tam da yukarıda anlatılan
+    # "test altyapısı bozuldu" biçiminde görünür.
+    giris_ip_sinirlayici.sifirla()
+    genel_sinirlayici.sifirla()
+    yield

@@ -1085,3 +1085,373 @@ ilerlemeden döndü, ama sonunda **doğru olanı yaptı** — brief'in verdiği 
 mutasyona bağlayıcı olmadığını teşhis edip commit atmayı reddetti ve `BLOCKED`
 döndürdü. Yanlış bir testi yeşil diye teslim etmektense durmak doğrudur; script
 dışına çıkması haklıydı.
+
+---
+
+## Gün 21 · Güvenlik sıkılaştırma — hız sınırı, dosya doğrulama, hata sözleşmesi (9–10 Ağustos 2026)
+
+### Bu gün ne yapıldı
+
+Sistemin o güne kadar **hiç** güvenlik katmanı yoktu: CORS middleware'i eklenmemiş,
+beklenmeyen hatada FastAPI'nin varsayılan yanıtı (yığın izi dahil) dönüyor, hız
+sınırı bulunmuyor ve dosya yükleme yalnızca uzantıya bakıyordu. Dört katman
+eklendi. Tasarım kararlarının tamamı (K1–K10)
+`docs/superpowers/specs/2026-08-09-gun21-guvenlik-sikilastirma-design.md`'de.
+
+**1 — Hız sınırı (`app/utils/hiz_sinirlayici.py`).** Kayan pencere sayacı elle
+yazıldı, kütüphane eklenmedi (K1): `slowapi` yeni bir bağımlılığı hem
+`requirements.txt`'e hem Docker imajına yayardı, buna karşılık sayaç kırk satır.
+Asıl belirleyici test izolasyonu oldu — kendi sınıfımızda `sifirla()` bir metot,
+kütüphanede kütüphanenin iç depolamasına elle müdahale demek. Saat enjekte
+edilebilir (`saat=time.monotonic`), böylece pencere kayması gerçek zamana
+bağlanmadan sınanabiliyor. Middleware değil **FastAPI bağımlılığı** olarak
+uygulandı (K2): yol haritası uç bazında farklı sınır istiyor ve bağımlılık, hangi
+ucun korunduğunu kodda görünür kılıyor. Bugün üç sayaç var:
+
+| Sayaç | Anahtar | Sınır | Koruduğu |
+|---|---|---|---|
+| `genel_sinirlayici` | bağlanan uç noktanın IP'si | `rate_limit_genel` = 30/dk | `POST /ai/analiz`, `POST /speech/transkript` |
+| `giris_ip_sinirlayici` | bağlanan uç noktanın IP'si | `rate_limit_giris_ip` = 30/dk | `POST /auth/login` — toplam **hacim**, başarı/başarısızlık ayırmadan |
+| `giris_sinirlayici` | kullanıcı adı (`strip().casefold()`) | `rate_limit_giris` = 5/dk | `POST /auth/login` — yalnızca **başarısız** denemeler |
+
+Giriş ucundaki iki katman birbirinin yerine geçmiyor, ikisi de geçilmek zorunda;
+neden böyle olduğu aşağıdaki "gerçek sorunlar" bölümünde.
+
+**2 — Dosya yükleme doğrulaması (`app/utils/dosya_dogrula.py`).** `/document/upload`
+artık uzantıya, boyuta **ve gerçek içerik imzasına** bakıyor: PDF `%PDF-`, DOCX
+`PK\x03\x04` (DOCX bir ZIP arşividir), TXT ise UTF-8 çözülebiliyorsa geçerli.
+Kütüphane yine kullanılmadı (K4): yalnızca üç biçim destekleniyor ve
+`python-magic` Windows'ta ayrıca `libmagic` ikilisini kurmayı gerektiriyor —
+Windows'ta çalışan bir projede bu, kurulum talimatına eklenen yeni bir kırılma
+noktası olurdu. Uzantı `IMZALAR` sözlüğünde kayıtlı değilse dosya **fail-closed**
+reddediliyor (aşağıya bakınız). Ret mesajı tek ve genel ("Desteklenmeyen dosya",
+K5): saldırgana hangi kontrolü aştığını söylemek, kontrolü aşmasını kolaylaştırır.
+Ayrım yalnızca sunucu log'unda — beş ret dalının beşi de hangi kontrolün
+tetiklendiğini, dosya adını ve boyutu `logger.warning` ile yazıyor. Boyut aşımı
+`413` ile ayrılıyor çünkü bu bir saldırı ipucu değil: istemcinin dosyayı
+küçültmesi gerektiğini bilmesi gerekiyor.
+
+**3 — Global hata sözleşmesi (`app/main.py`).** Beklenmeyen istisnada istemciye
+yalnızca `{"detail": "Sunucu hatası", "izleme_kodu": "<8 hex>"}` dönüyor; tam
+yığın izi aynı kodla log'a yazılıyor (K6). İzleme kodu olmadan "hata aldım" ile
+log'daki satırı eşleştirmenin yolu yok; kod, sızıntı yaratmadan teşhisi mümkün
+kılıyor.
+
+**4 — CORS ve ayar hijyeni (`app/main.py`, `app/config/config.py`,
+`.env.example`).** `allow_origins` artık `"*"` değil, `settings.cors_origins`'den
+geliyor; `allow_credentials=False`. Dürüst not (K7): Streamlit backend'i **sunucu
+tarafından** `requests` ile çağırıyor, yani tarayıcı araya girmiyor ve CORS bugün
+fiilen hiçbir saldırıyı engellemiyor. Yine de eklendi çünkü API tarayıcıdan da
+çağrılabilir ve varsayılanı açık bırakmak savunulamaz. Güvenlik ayarları
+`config.py`'de tek grupta toplandı (K8) — dağınık güvenlik ayarı, hangi kuralın
+yürürlükte olduğunu okunamaz hâle getirir.
+
+Commit'ler: dört görev için altı (`da21281`, `a494dfb`, `29f7219`, `295774c`,
+`3ae49f3`, `4c90fe0`), tüm-dal incelemesinden sonraki düzeltme dalgası için beş
+(`8272f71`, `ad1b557`, `f7acb81`, `bfb0d4a`, `0e44335`), dokümantasyon turunda
+kalan üç minor için bir (`99815a2`).
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 102 | **137** (136 dal kapanışında, +1 dokümantasyon turunda) |
+| `app/` kapsaması | %81 | **%85** (`TOTAL 757 115 85%`) |
+| `app/api/auth.py` kapsaması | %65 | **%100** |
+| `app/utils/hiz_sinirlayici.py` kapsaması | — (dosya yoktu) | **%100** |
+| `app/utils/dosya_dogrula.py` kapsaması | — (dosya yoktu) | %90 (81–86 açık, aşağıda) |
+| Yeni bağımlılık | — | **yok** (`requirements.txt` bu dalda hiç değişmedi) |
+| Değiştirilen mevcut test | — | **yok** (mevcut 102 testin hiçbirine dokunulmadı) |
+
+Dalın eklediği testlerin hiçbiri sonradan yeniden adlandırılmadı ya da
+zayıflatılmadı; düzeltme dalgalarında `tests/` altındaki diff yalnızca ekleme
+gösteriyor.
+
+### Son incelemelerin bulduğu gerçek sorunlar
+
+Dört görev incelemesi, bir tüm-dal incelemesi ve iki yeniden inceleme yapıldı.
+Aşağıdakiler kozmetik değil; her biri kodun iddia ettiği şeyi yapmadığını
+gösteriyordu.
+
+**1 — İki dosya doğrulama testi YANLIŞ SEBEPLE geçiyordu.** Görev 3'ün ilk hâlinde
+`test_desteklenmeyen_uzantili_dosya_reddedilir` ve
+`test_pdf_gibi_gorunen_bozuk_dosya_reddedilir` yalnızca durum kodunu (`400`)
+kontrol ediyordu. Ama `.exe` zaten uçtaki **eski uzantı zinciri** yüzünden 400
+alıyordu, sahte `.pdf` ise **pdfplumber'ın kendi istisnası** yüzünden. Yani imza
+kontrolü tamamen silinse paket yeşil kalırdı — testler yeni doğrulayıcıyı değil,
+pdfplumber'ın davranışını donduruyordu. Düzeltme, testleri mesaj iddiasıyla
+bağlamak oldu: doğrulayıcının genel mesajı `"Desteklenmeyen dosya"`, eski
+yolların mesajları `"Unsupported file format"` ve `"PDF processing error"`. Artık
+farklı bir yoldan gelen 400 testi geçiremiyor. Mutasyonla ölçüldü — doğrulayıcı
+çağrısı eski uzantı satırıyla değiştirildiğinde:
+
+```
+AssertionError: assert 'Unsupported file format' == 'Desteklenmeyen dosya'
+AssertionError: assert 'PDF processing error' == 'Desteklenmeyen dosya'
+3 failed, 2 passed
+```
+
+Mesaj iddiasından önce bu mutasyonda yalnızca **bir** test kırmızıya dönüyordu.
+Ders eski: **bir testin geçmesi, geçtiğini sandığınız sebepten geçtiği anlamına
+gelmez** — durum kodu tek başına hangi kontrolün çalıştığını kanıtlamıyor.
+
+**2 — `IMZALAR` sözlüğü sessizce fail-open'dı.** İlk hâl `IMZALAR.get(uzanti)`
+kullanıyordu: kayıtlı olmayan bir uzantı `None` döndürüyor, `None` de "imza
+kontrolü yok" anlamına geliyordu. Yani `izinli_uzantilar` ayarına yeni bir uzantı
+eklenip `IMZALAR`'a eklenmesi unutulsa, o biçim **hiç doğrulanmadan** geçecekti.
+Güvenlik kodunda unutmanın varsayılan sonucu "kapalı" olmalı, "açık" değil.
+`uzanti not in IMZALAR` kontrolüne çevrildi; `"txt"` bilerek `None` değeriyle
+**kayıtlı** duruyor (imzası yok ama tanınıyor).
+
+**3 — Giriş sınırlayıcısı Docker dağıtımında tek kovaya çöküyordu.** Tüm-dal
+incelemesinin karar gerektiren bulgusu buydu. Sınırlayıcı IP ile anahtarlanıyordu
+ve gerekçe "aynı IP'den gelen denemeler" diyordu — ama Streamlit backend'e
+**sunucu tarafından** gidiyor (`BACKEND_URL=http://backend:8000`), yani tüm
+girişler frontend konteynerinin IP'sinden geliyor. Sonuç: `/auth/login`
+"kullanıcı başına 5/dk" değil, **tüm sistem için** 5/dk. Bir hemşirenin parolasını
+üç kez yanlış yazması + bir doktorun girmesi herkesi 60 saniye kilitliyordu ve
+triyaj sisteminde kimlik doğrulama erişilebilirliği klinik bir meseledir. Bu bir
+**delik değil**, erişilebilirlik + doğruluk kusuruydu: backend portuna doğrudan
+giden saldırgan kendi kovasını alıyor ve `X-Forwarded-For` hiç okunmadığı için
+sahte başlıkla kaçamıyor. Proje sahibinin kararıyla sınır kullanıcı adına
+bağlandı, yalnızca **başarısız** denemeler sayılır oldu ve anahtar
+`strip().casefold()` ile normalize edildi (aksi hâlde `"yok"`, `"YOK"` ve
+`" yok "` üç ayrı kova olurdu, saldırgan yalnızca yazımı değiştirerek sınırı
+katlardı).
+
+**4 — Düzeltmenin kendisi bir gerileme getirdi.** Sınırı kullanıcı adına bağlamak
+için `dependencies=[...]` dekoratörü uçtan çıkarıldı — ve onunla birlikte ucun
+**hacim sınırı da tamamen kalktı**. Geriye yalnızca kullanıcı adı başına
+başarısızlık sayacı kaldı; her istekte farklı bir kullanıcı adı denendiğinde
+hiçbir kova dolmuyor. Backend portuna doğrudan vuran bir saldırgan için sonuçlar:
+(a) sınırsız parola serpme — düzeltmeden önce toplam 5 deneme/dk vardı; (b)
+`auth.py`'deki mevcut zamanlama sızıntısıyla sınırsız kullanıcı adı
+numaralandırma (sızıntı eskiydi, ama onu pratikte kullanılamaz kılan hız kapağını
+bu düzeltme kaldırmıştı); (c) `_kayitlar` sözlüğünde **saldırgan kontrollü**
+sınırsız büyüme — anahtar uzayı "IP'ler, her biri 5/dk ile kapalı"dan
+"saldırganın seçtiği rastgele dizeler, kapaksız"a geçmişti. İnceleyenin notu
+kayda değer: *"bu, tarif edilen değişiklikten mekanik olarak çıkıyor, yani
+itaatsizlik değil"* — brief anahtarı değiştirmeyi söylemişti, hacim sınırını
+bırakmayı değil. Çözüm katmanlı oldu: IP anahtarlı hacim kontrolü dekoratör
+olarak geri kondu (30/dk), kullanıcı adı katmanı aynen korundu, ikisi de
+geçilmek zorunda. Dekoratör bağımlılığı sıraya 0. indeksten girdiği için IP
+kontrolü form ayrıştırmasından, DB oturumundan ve bcrypt'ten **önce** çalışıyor:
+aşırı istek `422` değil `429` alıyor, ki hacim kapağı için doğru olan bu.
+
+**5 — Sınırlayıcının kendisi bir kaynak tüketim vektörüydü.** Görev 1'in ilk hâli
+`defaultdict(deque)` kullanıyordu: görülen her anahtar için kalıcı bir giriş
+yaratıyor, kuyruk boşalsa bile silmiyordu. Uçlara bağlandığında sınırlayıcının
+**kendisi** saldırı yüzeyi olurdu. Düz `dict` + eşik aşıldığında bayat anahtar
+temizliğine çevrildi. Temizliğin aktif bir kaydı silememesi ayrıca doğrulandı:
+silme koşulu `kuyruk[-1]`'e bakıyor ve tetikleyen çağrının kendi kaydı hemen önce
+eklendiği için aktif anahtarda `şimdi - kuyruk[-1] = 0`. Yani saldırgan sözlüğü
+şişirerek kendi sınırını sıfırlatamıyor.
+
+Ayrıca kayda geçen üç küçük düzeltme: tasarım K2'nin gerekçesi **fiilen yanlıştı**
+("diğer uçların hepsi kimlik doğrulaması arkasında" diyordu, oysa
+`POST /speech/kaydet` hiçbir yetki bağımlılığı taşımıyor) ve tarihli bir notla
+düzeltildi; `POST /speech/transkript` sınıra bağlandı (`/ai/analiz` ile aynı
+sınıfta — whisper `medium` yüklüyor, 25 MB okuyor, CPU'yu doyuruyor ve sıradan
+bir `user` hesabı erişebiliyordu); izleme kodunun **log yarısı** `caplog` ile
+bağlandı (istemci yarısını dondurmak yetmiyordu — `logger.exception` sessizce
+`logger.error` yapılsa yığın izi kaybolur ve bütün testler yeşil kalırdı).
+
+### Elle doğrulama (planın "atlanmaz" işaretli adımları)
+
+Otomatik paketin yakalayamayacağı üç şey elle koşuldu.
+
+**(1) İki hız sınırı katmanı ayrı ayrı kanıtlandı.**
+
+- *Kullanıcı adı katmanı:* aynı adla 7 başarısız giriş →
+  `401, 401, 401, 401, 401, 429, 429`. Tam sınırda (5 geçti, 6. reddedildi).
+  İzolasyon kanıtı: tam o anda `hasta` **doğru** parolayla `200` aldı. Yani
+  kilitlenen saldırgan meşru kullanıcıyı kilitlemiyor ve başarılı giriş kullanıcı
+  adı kotasını tüketmiyor.
+- *IP katmanı:* 26 istek, **her biri farklı** kullanıcı adıyla (böylece her
+  kullanıcı kovası 1'de kalıyor, sınır 5, yani kullanıcı adı katmanı asla
+  tetiklenemez). Kova test başlamadan önce 8 istek taşıyordu ve `429` tam
+  **#23'te** başladı: 8 + 22 = 30 dolmuş, 23. istek 31. olmuş. Aritmetik birebir
+  tuttu. Bu 429 kullanıcı adı katmanından **gelemez**; kaynağı IP katmanı.
+  Ölçümü bağlayıcı yapan şey buydu — sayı tahmin edilmedi, önceden hesaplanıp
+  doğrulandı.
+
+**(2) Gün 19'un uçtan uca döngüsü (K10) tam geçti.** `hasta` girişi `200` →
+`/ai/analiz` **gerçek** Ollama + bge-m3 + reranker ile koşuldu. Retrieval doğru
+protokolü getirdi (`gogus_agrisi.txt`), eşiği geçti, LLM "Kırmızı" / Kardiyoloji /
+`["EKG", "Kan basıncı kontrolü"]` döndü (`visit_id`
+`b558b79a-54a0-44c3-9444-2da7515e8333`). `doctor` girişi → `/doctor/bekleyen`
+ziyareti gördü → `/doctor/inceleme` `201`; `doctor_id` gövdeden değil JWT'den
+geldi. **Değişmez kural doğrudan Postgres sorgusuyla doğrulandı:**
+
+```
+status=tamamlandi | AI     : Kırmızı / [EKG, Kan basıncı kontrolü]
+                  | DOKTOR : Sarı    / [EKG, Troponin, Akciğer grafisi]
+```
+
+AI satırı **değişmedi**, doktor satırı yanına yazıldı — denetim izi sağlam ve Gün
+23'ün değerlendirmesi tam bu farkı ölçecek. İkinci onay `409` aldı, ziyaret
+bekleyen listesinden düştü.
+
+**(3) Doğrulayıcı meşru dosyayı reddetmiyor.**
+`ornek_dokumanlar/protokoller/gogus_agrisi.txt` → `201`, 3 chunk. Karşıt kontrol:
+`.exe` → `400`, MZ başlıklı sahte `.pdf` → `400`, **ikisi de** genel
+`"Desteklenmeyen dosya"` mesajıyla (K5 korunuyor, hangi kontrolün tetiklendiği
+sızmıyor). Bilgi tabanı zarar görmedi: `/document/liste` → 15 dosya / 48 chunk,
+Gün 20 kapanışındaki değerlerin aynısı.
+
+### Ortam notu — Docker yığını 7 gündür kırık
+
+Elle doğrulama sırasında ortaya çıktı: backend ve frontend konteynerleri **yedi
+gündür crash loop'ta**. Sebep kodda değil: compose yığını
+`C:\Users\batuh\Desktop\Ai_Triage` dizininden başlatılmış — artık kullanılmayan
+eski yol, içinde yalnızca Docker'ın mount ederken yarattığı **boş** `app/` ve
+`frontend/` dizinleri var. Postgres ve ChromaDB adlandırılmış volume kullandığı
+için etkilenmedi, o yüzden veri kaybı yok ve bilgi tabanı yerinde duruyor.
+
+Doğrulama bu yüzden **yerel** backend ile yapıldı: worktree'ye `.env` kopyalandı
+(`.gitignore`'da olduğu `git check-ignore` ile doğrulandı, commit riski yok) ve
+uvicorn `127.0.0.1:8000`'de koşuldu. Bir sonraki kişi aynı teşhisi baştan
+yapmasın diye buraya yazılıyor: **konteynerler ölüyse önce compose'un hangi
+dizinden başlatıldığına bakın.** Öksüz yığın hâlâ duruyor, temizlenmesi gerekiyor.
+
+Ayrıca gerçek `ai_triage` veritabanında bu doğrulamadan bir demo ziyaret kaldı
+(`b558b79a…`) — AI "Kırmızı", doktor "Sarı" farkıyla, mentor sunumunda denetim
+izini göstermek için kullanılabilir. İstenmezse silinebilir.
+
+### Gün 22'ye devredilenler (bu günden)
+
+İki grup ayrı tutuluyor, çünkü ikisi farklı sebeple ertelendi ve farklı sebeple
+yeniden değerlendirilmeli.
+
+**A — Ucuz ama bugün değeri düşük** (etkisi ölçülü olduğu için ertelendi; hızlı
+bir turda toplu kapatılabilirler)
+
+1. **Boyut kontrolü `await file.read()`'ten SONRA çalışıyor**
+   (`app/api/document.py:72-75`). Yani 2 GB'lık bir yükleme `413` görmeden önce
+   2 GB RAM tahsis ediyor. Şiddeti sınırlı çünkü uç `admin` rolüne kapalı — yani
+   bunu yapabilen kişi zaten bilgi tabanını silebiliyor. Buna karşılık
+   **düzeltmesi ~3 satır**: Starlette `UploadFile.size`'ı uç gövdesi hiç
+   çalışmadan önce dolduruyor, dolayısıyla `read()`'ten önce bakılabilir. Ucuz
+   olduğu için değil, bugün az riskli olduğu için ertelendi; Gün 22'de ilk
+   kapatılacak madde bu olmalı.
+2. **`document.py:82/88/93`'teki ayrıntılı mesajlar K5'i deliyor.**
+   `"PDF processing error"`, `"DOCX processing error"`, `"Encoding error"`
+   istemciye gidiyor ve hangi **aşamanın** patladığını söylüyor. K5 tam olarak
+   bunu yasaklıyor. Gerilim gerçek ama hafif: bunlar statik dizeler, iç yapıyı ya
+   da yığın izini sızdırmıyorlar; saldırganın öğrendiği şey "dosya PDF ayrıştırma
+   aşamasına kadar geldi" bilgisi. Doğrulayıcı devreye girdikten sonra bu dallara
+   ulaşmak da zorlaştı (imza kontrolünü geçmesi gerekiyor).
+3. **`429` yanıtında `Retry-After` başlığı yok.** İstemci ne kadar bekleyeceğini
+   bilmiyor, bu yüzden ya hemen tekrar deniyor ya da gereğinden uzun bekliyor.
+   Sunucu tarafında koruma çalışıyor; eksik olan istemci nezaketi. Pencere sabit
+   (60 sn) olduğu için sabit bir başlık bile bugünkünden iyi olur.
+4. **`dosyayi_dogrula` `dosya_adi`'nın `str` olduğunu varsayıyor.**
+   `file.filename` `None` gelirse `.lower()` patlıyor ve istemci `400` yerine
+   `500` alıyor — yani doğrulanabilir bir ret, beklenmeyen bir sunucu hatası gibi
+   görünüyor. Tek satırlık bir koruma yeterli.
+5. **`500` yanıtı CORS başlığı taşımıyor** (`app/main.py:53-68`). Handler'ın
+   ürettiği yanıt `ServerErrorMiddleware` içinde doğuyor ve o middleware CORS'un
+   **dışında**, yani tarayıcı istemcisi `izleme_kodu`'nu okuyamaz. Bugün etkisi
+   **sıfır**: Streamlit backend'e sunucu tarafından `requests` ile gidiyor,
+   tarayıcı araya hiç girmiyor. API gerçekten bir tarayıcı istemcisi kazanırsa
+   bu madde aniden değer kazanır — o zamana kadar ertelenmesi doğru.
+
+**B — Pahalı ya da karar gerektiriyor** (bir sonraki gün "hızlıca" kapatılamaz)
+
+6. **Uçtan uca PDF/DOCX yükleme testi yok.** Yeşil yol yalnızca **birim**
+   seviyesinde kapalı (`tests/birim/test_dosya_dogrula.py`); `/document/upload`
+   ucundan gerçek bir PDF/DOCX geçiren test yok. `IMZALAR["pdf"]` yanlış yazılsa
+   her gerçek PDF yüklemesi kırılır ve paket yeşil kalır. Not: bu sorun ilk
+   yazıldığından **daha zayıf** — `.txt` yeşil yolu `test_document_api.py:150-179`
+   içinde uçtan uca zaten kapalı, yani "hiçbir yeşil yol test edilmiyor" doğru
+   değil. Pahalı olan kısım: depoya küçük ama gerçek bir PDF ve DOCX fixture'ı
+   eklemek ve bunların Windows/Docker'da aynı davranmasını sağlamak.
+7. **DOCX imzası herhangi bir ZIP'i kabul ediyor ve `MAX_UPLOAD_MB` SIKIŞTIRILMIŞ
+   baytı sınırlıyor.** `PK\x03\x04` her ZIP'in başlangıcı; 10 MB'lık bir zip
+   bombası `python-docx` içinde gigabaytlara açılabilir. Ayrıca boyut sınırı
+   chunk maliyetini bağlamıyor: 10 MB düz metin ~13.000 chunk üretebilir ve
+   gömme maliyeti oradan patlar. İkisi de `admin`'e kapalı olduğu için bugün
+   kabul edildi. Gerçek düzeltme imza kontrolüyle çözülmüyor — açılmış boyutun
+   ya da chunk sayısının ayrıca sınırlanması gerekiyor, yani yeni bir karar.
+8. **`raise_server_exceptions=False` paylaşılan fixture'a, yani TÜM pakete
+   uygulandı** (`tests/conftest.py:81`). İnceleyen riski tek tek kontrol etti:
+   dört `pytest.raises` bölgesinin hiçbiri istemciyi kullanmıyor ve 53 durum
+   karşılaştırmasının hepsi `==` (yani `< 500` gibi gevşek bir iddia yok).
+   Maliyet davranışsal değil **teşhis kalitesi**: bundan sonra bir kırılma
+   traceback yerine `assert 500 == 200` olarak görünecek. Doğru düzeltme, ayarı
+   yalnızca 500 gövdesini sınayan iki teste vermek — ama bu ayrı bir fixture ve
+   mevcut testlerin hangisinin hangi istemciyi aldığına karar vermek demek.
+9. **`auth.py`'deki zamanlama oracle'ı duruyor.** Var olmayan kullanıcı için
+   `get_user` `None` dönüyor ve `verify_password` **hiç çağrılmıyor**; var olan
+   kullanıcı için bcrypt çalışıyor (bu makinede tek doğrulama ~0,43 sn; 10 Ağustos'ta
+dokümantasyon turunda ölçüldü, projenin resmî bir ölçümü değil). Yanıt süresi farkı,
+   geçerli kullanıcı adlarını numaralandırmaya yetecek kadar büyük. Sızıntı bu
+   daldan önce de vardı ve kapsam dışıydı; iki hız katmanı sömürülmesini pratik
+   olmaktan çıkardı ama **kapatmadı**. Standart düzeltme (kullanıcı yoksa da sahte
+   bir hash'i doğrulamak) her başarısız girişe 0,43 sn ekler — yani bu bir
+   güvenlik/gecikme takası ve karar gerektiriyor.
+10. **Erişilebilirlik: 30/dk'lık giriş kovasını tüm klinik paylaşıyor.** Streamlit
+    sunucu tarafından çağırdığı için üretimde tüm personelin girişi tek IP'de
+    toplanıyor ve IP katmanı **başarılı** girişleri de sayıyor. Sonuç: bir
+    saldırgan dakikada 30 istekle tüm kliniğin girişini `429`'a düşürebilir; aynı
+    şekilde bir vardiya değişiminde 30'dan fazla meşru giriş olursa personel
+    kapıda kalır. Bu bir **gerileme değil** — dal öncesinde aynı kovada daha
+    **sıkı** bir 5/dk vardı, yani durum düzeldi. Ama sayı klinik büyüklüğüne
+    bağlı ve bugün ölçülmedi. Gün 22'de yapılacak şey kod değişikliği değil
+    **ölçüm**: aynı dakikada kaç giriş oluyor? Değer ondan sonra ayarlanmalı.
+    (Uyarı: IP katmanını "yalnızca başarısızları say" biçimine çevirmek bu
+    sorunu çözer **görünür** ama hacim sınırını tamamen açar — geçerli tek bir
+    hesabı olan saldırgan sınırsız istek atabilir. Bu refleksi
+    `test_ip_katmani_basarili_girisleri_de_sayar` bloke ediyor.)
+
+11. **`dosya_dogrula.py:81-86` hiç koşulmuyor** — geçersiz UTF-8 içeren bir `.txt`
+    dosyasının reddedilme dalı. Dokümantasyon turunda kapsam raporundan okundu
+    (`app/utils/dosya_dogrula.py 29 3 90%`), yani modülün açık kalan tek yeri bu.
+    Ucuz görünüyor (bir bayt dizisi yeterli) ama grubu B: dalın kendi kuralı
+    "önce kırmızı gör" ve bu test yazılırken doğrulanması gereken şey mesajın
+    `GENEL_RET` olduğu — yoksa `test_document_api.py`'deki `"Encoding error"`
+    yoluyla karışır ve madde 2'deki hatanın aynısı tekrarlanır.
+
+**Ayrıca kayda geçenler (bugün eylem gerektirmiyor):** bayat anahtar süzmesi
+>10.000 aktif anahtarda her istekte O(n) (teorik, tek süreçte ulaşılması zor);
+sayaçlar süreç belleğinde, yani `--workers > 1` dağıtımında her süreç ayrı sayar
+(K1'in bilinen sınırı, Redis vb. gerektirir); `allow_credentials=False` hiçbir
+testle bağlı değil (yarın sessizce `True`'ya dönse 137 test de yeşil kalır, tek
+satırlık bir iddia yeter); `/ai/analiz` ile `/speech/transkript` **aynı** kovayı
+paylaşıyor, yani 30/dk ikisinin toplamı için geçerli; tasarım dokümanının "Bitti
+sayılır" listesi hâlâ 115 test diyor ve K2'nin tablosu "yalnızca iki uç" derken
+üçüncü uç hemen altındaki tarihli düzeltmede yazıyor.
+
+### Süreç notu
+
+Bu günün asıl dersi kodda değil, sürecin kendisinde. İnceleyenin tüm-dal
+raporundaki cümlesi:
+
+> *"Dört ayrı görev incelemesi sekiz bulgu üretti, hepsi doğru triyaj edildi,
+> hiçbiri kalıcı bir yere yazılmadı. Görev inceleme döngüsü çalışıyor; eksik olan
+> adım `progress.md`'den `ek-c-ilerleme.md`'ye devir — ve o adım bu analizin
+> haftayı atlatıp atlatmayacağını belirliyor."*
+
+Dal on bir commit boyunca on dört dosya değiştirdi ve **hiçbiri doküman değildi**.
+D1–D8 yalnızca `.superpowers/sdd/…/progress.md` içinde yaşıyordu; o dizin
+git-ignore'lu ve birleşmeden sonra silinecek. Erteleme kararlarının hepsi
+doğruydu — yanlış olan, kaydedilmeden ertelenmeleriydi. **Kaydedilmeden ertelemek
+unutmaktır.** Bu bölüm o devrin kendisi.
+
+İkinci ders, aynı hatanın iki kez çıkmasından: dal, yanlış olduğu için
+**yapılandırma yorumu düzeltmek** zorunda kaldı. Önce K2'nin gerekçesi ("diğer
+uçların hepsi kimlik doğrulaması arkasında" — `POST /speech/kaydet` değildi),
+sonra `config.py` ve `.env.example`'daki "iki sayaç da" (üç sayaç vardı) ve
+`auth.py`'deki "meşru kullanım sınıra hiç yaklaşmıyor" (kullanıcı adı kovası için
+doğru, uç seviyesinde yanlış). İkincisinde inceleyen bunu **"aynı kusur sınıfı"**
+diye adlandırdı ve haklıydı: kodun işlediğinden başka bir tehdit modelini anlatan
+bir yorum, sessizce yanlış değil — ona dokunan bir sonraki kişiyi yanlış yöne
+ayarlatır. Sayı ya da gerekçe içeren yorumlar, kod değiştiğinde kodla aynı
+turda güncellenmeli.
+
+Üçüncüsü, bu dalın en pahalı bulgusu: **bir düzeltme kendi gerilemesini
+getirebilir.** Giriş sınırını kullanıcı adına bağlamak doğru karardı, ama
+dekoratörü çıkarmak hacim sınırını sessizce yok etti ve bunu ancak bir sonraki
+yeniden inceleme yakaladı. Otomatik paket bu boşlukta yeşildi — çünkü hiçbir test
+"hacim sınırı var" iddiasını dondurmuyordu. Bir davranış silindiğinde hiçbir
+testin kırılmaması, o davranışın hiç test edilmediğinin kanıtıdır.

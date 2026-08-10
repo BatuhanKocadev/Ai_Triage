@@ -1,7 +1,14 @@
+import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from app.api import health, speech, ai, document, auth, doctor
+from app.config.config import settings
 from app.utils.logger import logger
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,8 +32,41 @@ app = FastAPI(
     license_info={
         "name": "MIT License",
     },
-    lifespan=lifespan 
+    lifespan=lifespan
 )
+
+# İzinli origin'ler ayardan okunuyor; "*" bırakmak herhangi bir siteden tarayıcı
+# üzerinden çağrı yapılmasına izin verirdi (Gün 21).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[k.strip() for k in settings.cors_origins.split(",") if k.strip()],
+    # False: kimlik doğrulama Bearer başlığıyla yapılıyor, projede hiç çerez yok —
+    # yani açık olmasının hiçbir faydası yok, buna karşılık ayar "*" yapıldığında
+    # Starlette her origin'i "credentials: true" ile yankılar ve elde edilebilecek
+    # en kötü CORS yapılandırması ortaya çıkardı (10 Ağustos 2026).
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(Exception)
+async def beklenmeyen_hata_yakalayici(request: Request, hata: Exception):
+    """Beklenmeyen istisnada tam izi log'a yazar, istemciye yalnızca kod döner.
+
+    Yığın izi ve dosya yolları istemciye sızarsa saldırgan iç yapıyı öğrenir.
+    İzleme kodu, sızıntı yaratmadan log'daki satırla eşleşmeyi mümkün kılıyor:
+    kullanıcı "şu kodu aldım" der, operatör log'da o kodu arar.
+    """
+    izleme_kodu = uuid.uuid4().hex[:8]
+    logger.exception(
+        f"[{izleme_kodu}] Beklenmeyen hata: {request.method} {request.url.path}"
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Sunucu hatası", "izleme_kodu": izleme_kodu},
+    )
+
 
 app.include_router(health.router)
 app.include_router(speech.router)

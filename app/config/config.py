@@ -20,6 +20,43 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
 
+    # --- Güvenlik (Gün 21) ---
+    # Hız sınırı: ÜÇ sayacın üçü de `rate_limit_pencere_sn` saniyelik kayan
+    # pencerede sayılır ama AYRI kovalardır — ikisi bağlanan uç noktanın IP'sine
+    # (`rate_limit_genel`, `rate_limit_giris_ip`), biri kullanıcı adına
+    # (`rate_limit_giris`) anahtarlanır. Aynı kovayı paylaşan hiçbir çift yok.
+    #
+    # rate_limit_genel — bağlanan uç noktanın IP'si başına kabul edilen istek
+    # sayısı (`/ai/analiz`, `/speech/transkript`). DÜRÜST NOT: Streamlit
+    # backend'i sunucu tarafından `requests` ile çağırıyor, yani Docker
+    # dağıtımında TÜM arayüz trafiği tek kovada — frontend konteynerinin
+    # IP'sinde — toplanır; bu sınır pratikte kullanıcı başına değil, arayüzün
+    # tamamı için geçerlidir.
+    rate_limit_genel: int = 30
+    # rate_limit_giris — KULLANICI ADI başına ve yalnızca BAŞARISIZ giriş
+    # denemeleri sayılır (`/auth/login`); başarılı giriş kota tüketmez. Giriş
+    # ucu bilerek daha sıkı: kimlik doğrulaması olmadan çağrılabilen tek yazma
+    # ucu ve parola deneme saldırısının hedefi. IP anahtarı, tek IP'den gelen
+    # tüm girişleri aynı kovaya düşürüp bir kullanıcının hatalı denemesiyle
+    # herkesi kilitliyordu.
+    rate_limit_giris: int = 5
+    # rate_limit_giris_ip — `/auth/login`'in İKİNCİ katmanı: bağlanan uç nokta
+    # (IP) başına toplam istek hacmi, başarılı/başarısız ayrımı yapmadan.
+    # Kullanıcı adı katmanı tek başına hacim sınırı değildir: her istekte farklı
+    # bir kullanıcı adı denenirse hiçbir kova dolmaz ve parola serpme sınırsız
+    # hızda sürer. Değer, giriş sınırından (5) bilerek gevşek: Streamlit
+    # backend'i sunucu tarafından çağırdığı için tüm kliniğin girişleri bu tek
+    # kovayı paylaşıyor, sıkı bir değer meşru kullanıcıları dışarıda bırakırdı.
+    # Backend portuna doğrudan vuran saldırgan ise kendi IP'sinde sayıldığı için
+    # 30/dk ile bağlanmış oluyor.
+    rate_limit_giris_ip: int = 30
+    rate_limit_pencere_sn: int = 60
+    # Dosya yükleme sınırları; uzantı listesi virgülle ayrılır.
+    max_upload_mb: int = 10
+    izinli_uzantilar: str = "pdf,docx,txt"
+    # CORS: varsayılan yalnızca yerel Streamlit. "*" bırakmak savunulamaz.
+    cors_origins: str = "http://localhost:8501"
+
     # Vektör veritabanı
     chroma_host: str = "localhost"
     chroma_port: int = 8000

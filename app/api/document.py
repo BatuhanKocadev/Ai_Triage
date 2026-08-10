@@ -8,6 +8,7 @@ from app.utils.logger import logger
 from app.models.user import User
 from app.services.chroma_service import get_collection
 from app.services.auth_service import require_admin_role
+from app.utils.dosya_dogrula import dosyayi_dogrula
 
 router = APIRouter(
     prefix="/document",
@@ -70,7 +71,8 @@ async def upload_document(
     try:
         file_content = await file.read()
         extracted_text = ""
-        file_extension = file.filename.lower().split('.')[-1]
+        # Uzantı, boyut ve gerçek içerik imzası burada doğrulanıyor (Gün 21).
+        file_extension = dosyayi_dogrula(file.filename, file_content)
         
         if file_extension == "pdf":
             try:

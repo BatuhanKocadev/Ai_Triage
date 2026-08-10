@@ -12,19 +12,61 @@ from app.services.auth_service import (
     get_user,
     verify_password,
 )
+from app.utils.hiz_sinirlayici import giris_ip_sinirlayici, giris_sinirlayici, hiz_siniri
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
 
-@router.post("/login", response_model=Token)
+
+def _giris_hiz_anahtari(kullanici_adi: str) -> str:
+    """Hız sınırı anahtarını normalize eder; "yok", "YOK" ve " yok " aynı kovaya düşer.
+
+    Ham kullanıcı adı anahtar olsaydı saldırgan yalnızca yazımı değiştirerek
+    sınırı istediği kadar katlardı. DİKKAT: burası SADECE sayaç anahtarı;
+    kullanıcının veritabanında aranma biçimi bilerek değiştirilmiyor
+    (boşluk kırpma Gün 22 borcu olarak kayıtlı).
+    """
+    return kullanici_adi.strip().casefold()
+
+
+# Parola deneme saldırısına karşı İKİ KATMANLI sınır (Gün 21). İkisi de geçilmek
+# zorunda; biri diğerinin yerine geçmiyor:
+#   1) Aşağıdaki `dependencies` — IP başına toplam HACİM (`rate_limit_giris_ip`).
+#      Uç gövdesinden önce çalışır. Bu katman olmadan saldırgan her istekte farklı
+#      bir kullanıcı adı deneyerek (parola serpme, kullanıcı adı numaralandırma)
+#      hiçbir kovayı doldurmadan sınırsız hızda vurabilirdi.
+#   2) Gövdedeki kontrol — KULLANICI ADI başına ve yalnızca BAŞARISIZ denemeler
+#      (`rate_limit_giris`). Sayaç IP'ye bağlansaydı, Streamlit backend'i sunucu
+#      tarafından çağırdığı için tüm girişler tek IP'den gelir ve bir hemşirenin
+#      üç kez parolasını yanlış girmesi tüm sistemi kilitlerdi.
+# `X-Forwarded-For` hiç okunmuyor — sahte başlıkla sınır aşılabildiği için o
+# başlığa güvenmemek bilinçli bir tercih.
+@router.post(
+    "/login",
+    response_model=Token,
+    dependencies=[Depends(hiz_siniri(giris_ip_sinirlayici))],
+)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    hiz_anahtari = _giris_hiz_anahtari(form_data.username)
+    if not giris_sinirlayici.izin_var_mi(hiz_anahtari):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Çok fazla istek. Lütfen biraz bekleyin.",
+        )
+
     user = get_user(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
+        # Yalnızca başarısızlıkta sayılıyor: KULLANICI ADI kovasında doğru
+        # parolayla giren kullanıcı kota tüketmiyor, yani kendi hesabını
+        # kilitlemesi mümkün değil. Bu, UÇ seviyesinde "meşru kullanım sınıra
+        # hiç yaklaşmaz" demek DEĞİLDİR — yukarıdaki IP katmanı başarılı
+        # girişleri de sayıyor ve o kovayı tüm klinik paylaşıyor.
+        giris_sinirlayici.istegi_kaydet(hiz_anahtari)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

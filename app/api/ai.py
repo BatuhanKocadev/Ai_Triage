@@ -12,6 +12,7 @@ from app.services.rag_service import retrieve_and_rerank
 from app.utils.logger import logger
 from app.services.chroma_service import get_collection
 from app.services.auth_service import require_user_or_admin_role
+from app.utils.hiz_sinirlayici import genel_sinirlayici, hiz_siniri
 
 router = APIRouter(
     prefix="/ai",
@@ -122,7 +123,13 @@ def _kaydet(db: Session, request_data: "AnalysisRequest", sonuc: AnalysisRespons
     return ziyaret.id
 
 
-@router.post("/analiz", response_model=AnalysisResponse, status_code=status.HTTP_200_OK)
+# En pahalı uç: yerel LLM'i çalıştırıyor, kötüye kullanım servisi tüketir (Gün 21).
+@router.post(
+    "/analiz",
+    response_model=AnalysisResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(hiz_siniri(genel_sinirlayici))],
+)
 def analyze_symptoms(
     request_data: AnalysisRequest,
     current_user: User = Depends(require_user_or_admin_role),
