@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     # tüm girişleri aynı kovaya düşürüp bir kullanıcının hatalı denemesiyle
     # herkesi kilitliyordu.
     rate_limit_giris: int = 5
+    # rate_limit_giris_ip — `/auth/login`'in İKİNCİ katmanı: bağlanan uç nokta
+    # (IP) başına toplam istek hacmi, başarılı/başarısız ayrımı yapmadan.
+    # Kullanıcı adı katmanı tek başına hacim sınırı değildir: her istekte farklı
+    # bir kullanıcı adı denenirse hiçbir kova dolmaz ve parola serpme sınırsız
+    # hızda sürer. Değer, giriş sınırından (5) bilerek gevşek: Streamlit
+    # backend'i sunucu tarafından çağırdığı için tüm kliniğin girişleri bu tek
+    # kovayı paylaşıyor, sıkı bir değer meşru kullanıcıları dışarıda bırakırdı.
+    # Backend portuna doğrudan vuran saldırgan ise kendi IP'sinde sayıldığı için
+    # 30/dk ile bağlanmış oluyor.
+    rate_limit_giris_ip: int = 30
     rate_limit_pencere_sn: int = 60
     # Dosya yükleme sınırları; uzantı listesi virgülle ayrılır.
     max_upload_mb: int = 10

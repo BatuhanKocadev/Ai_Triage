@@ -69,6 +69,24 @@ def test_giris_denemesi_hiz_sinirli(istemci):
 
 
 @pytest.mark.entegrasyon
+def test_giris_ucu_ip_basina_hacim_sinirli(istemci):
+    # Kullanıcı adına bağlı sayaç TEK BAŞINA yetmiyor: her istekte FARKLI bir
+    # kullanıcı adı denenirse hiçbir kullanıcı kovası dolmaz ve parola serpme
+    # (password spraying) ile kullanıcı adı numaralandırma sınırsız hızda sürer.
+    # Backend portuna doğrudan vuran saldırgan kendi IP'sinden geldiği için
+    # "tüm arayüz tek IP'de toplanıyor" gerekçesi onun için geçerli değil.
+    # Bu yüzden IP katmanı, kullanıcı adı katmanının YERİNE değil YANINDA duruyor.
+    son_durum = None
+    for sira in range(settings.rate_limit_giris_ip + 1):
+        son_durum = istemci.post(
+            "/auth/login",
+            data={"username": f"kurban{sira}", "password": "yanlis"},
+        ).status_code
+
+    assert son_durum == 429
+
+
+@pytest.mark.entegrasyon
 def test_giris_hiz_siniri_kullanici_adina_bagli(istemci, kullanici_uret):
     # Anahtar IP olsaydı bir kullanıcının hatalı denemeleri HERKESİ kilitlerdi:
     # Streamlit backend'i sunucu tarafından (`requests` ile) çağırıyor, yani

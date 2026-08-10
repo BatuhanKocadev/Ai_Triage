@@ -12,7 +12,7 @@ from app.services.auth_service import (
     get_user,
     verify_password,
 )
-from app.utils.hiz_sinirlayici import giris_sinirlayici
+from app.utils.hiz_sinirlayici import giris_ip_sinirlayici, giris_sinirlayici, hiz_siniri
 
 router = APIRouter(
     prefix="/auth",
@@ -31,14 +31,23 @@ def _giris_hiz_anahtari(kullanici_adi: str) -> str:
     return kullanici_adi.strip().casefold()
 
 
-# Parola deneme saldırısına karşı sıkı sınır (Gün 21). Sayaç IP'ye değil
-# KULLANICI ADINA bağlı ve yalnızca BAŞARISIZ denemeleri sayıyor: Streamlit
-# backend'i sunucu tarafından çağırdığı için tüm girişler tek IP'den geliyor ve
-# IP anahtarı, bir hemşirenin üç kez parolasını yanlış girmesiyle tüm sistemi
-# kilitlerdi (10 Ağustos 2026 düzeltmesi). Kural bu haliyle proxy topolojisinden
-# bağımsız çalışıyor ve `X-Forwarded-For` yine hiç okunmuyor — sahte başlıkla
-# sınır aşılabildiği için o başlığa güvenmemek bilinçli bir tercih.
-@router.post("/login", response_model=Token)
+# Parola deneme saldırısına karşı İKİ KATMANLI sınır (Gün 21). İkisi de geçilmek
+# zorunda; biri diğerinin yerine geçmiyor:
+#   1) Aşağıdaki `dependencies` — IP başına toplam HACİM (`rate_limit_giris_ip`).
+#      Uç gövdesinden önce çalışır. Bu katman olmadan saldırgan her istekte farklı
+#      bir kullanıcı adı deneyerek (parola serpme, kullanıcı adı numaralandırma)
+#      hiçbir kovayı doldurmadan sınırsız hızda vurabilirdi.
+#   2) Gövdedeki kontrol — KULLANICI ADI başına ve yalnızca BAŞARISIZ denemeler
+#      (`rate_limit_giris`). Sayaç IP'ye bağlansaydı, Streamlit backend'i sunucu
+#      tarafından çağırdığı için tüm girişler tek IP'den gelir ve bir hemşirenin
+#      üç kez parolasını yanlış girmesi tüm sistemi kilitlerdi.
+# `X-Forwarded-For` hiç okunmuyor — sahte başlıkla sınır aşılabildiği için o
+# başlığa güvenmemek bilinçli bir tercih.
+@router.post(
+    "/login",
+    response_model=Token,
+    dependencies=[Depends(hiz_siniri(giris_ip_sinirlayici))],
+)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),

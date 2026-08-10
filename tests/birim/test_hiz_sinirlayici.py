@@ -165,6 +165,28 @@ def test_istegi_kaydet_bayat_kayitlari_kuyruktan_dusurur():
     assert len(sinirlayici._kayitlar["ayse"]) == 1
 
 
+def test_izin_var_mi_supurmeyi_tetikler():
+    # Kontrol yolu bir anahtarın kuyruğunu BOŞALTABİLİYOR. Süpürme yalnızca
+    # kaydetme yolunda kalsaydı, boşalan kayıt başka bir çağrı eşiği aşana kadar
+    # sözlükte asılı kalırdı. Anahtar uzayı saldırganın seçtiği kullanıcı
+    # adlarından oluştuğu için bu birikim doğrudan bellek baskısına dönüşür.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=5, pencere_sn=60, saat=saat, temizlik_esigi=2)
+    sinirlayici.istegi_kaydet("ayse")
+    sinirlayici.istegi_kaydet("veli")
+    # Eşik burada aşılıyor ama üç kayıt da taze: hiçbiri silinmemeli.
+    sinirlayici.istegi_kaydet("zeynep")
+    assert len(sinirlayici._kayitlar) == 3
+
+    saat.ilerlet(61)
+
+    # SALT KONTROL: hiçbir şey kaydedilmiyor, yalnızca bakılıyor.
+    sinirlayici.izin_var_mi("ayse")
+
+    # Hepsi pencere dışında kaldığı için süpürme sözlüğü boşaltmalı.
+    assert sinirlayici._kayitlar == {}
+
+
 def test_kaydetme_yolunda_da_bayat_anahtarlar_temizlenir():
     # Giriş ucu artık izin_ver() değil istegi_kaydet() çağırıyor; temizlik bu
     # yola taşınmazsa sözlük denenen her kullanıcı adıyla sınırsız büyür.

@@ -73,6 +73,11 @@ class HizSinirlayici:
         # temizlenmezse kotasını dolduran kullanıcı bir daha hiç giremezdi.
         while kuyruk and simdi - kuyruk[0] >= self.pencere_sn:
             kuyruk.popleft()
+        # Süpürme bu yolda da tetikleniyor: kontrol yolu bir anahtarın kuyruğunu
+        # boşaltabiliyor ve temizlik yalnızca kaydetme yolunda kalsaydı o boş
+        # kayıt, başka bir çağrı eşiği aşana kadar sözlükte asılı kalırdı.
+        if len(self._kayitlar) > self.temizlik_esigi:
+            self._bayat_anahtarlari_temizle(simdi)
         return len(kuyruk) < self.limit
 
     def istegi_kaydet(self, anahtar: str) -> None:
@@ -117,6 +122,11 @@ giris_sinirlayici = HizSinirlayici(
 )
 genel_sinirlayici = HizSinirlayici(
     limit=settings.rate_limit_genel, pencere_sn=settings.rate_limit_pencere_sn
+)
+# Giriş ucunun ikinci katmanı: kullanıcı adı kovaları dolmasa bile (her istekte
+# farklı ad denenirse dolmaz) IP başına toplam hacmi bağlar.
+giris_ip_sinirlayici = HizSinirlayici(
+    limit=settings.rate_limit_giris_ip, pencere_sn=settings.rate_limit_pencere_sn
 )
 
 

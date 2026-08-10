@@ -131,8 +131,16 @@ def hiz_sinirlarini_sifirla():
     tükettiği kota diğerini 429'a düşürür ve hata "güvenlik çalışıyor" değil
     "test altyapısı bozuldu" biçiminde görünür — teşhisi zor bir sınıf.
     """
-    from app.utils.hiz_sinirlayici import genel_sinirlayici, giris_sinirlayici
+    from app.utils.hiz_sinirlayici import (
+        genel_sinirlayici,
+        giris_ip_sinirlayici,
+        giris_sinirlayici,
+    )
 
     giris_sinirlayici.sifirla()
+    # Giriş ucunun IP katmanı da sıfırlanmalı: unutulursa bir testin harcadığı
+    # hacim diğerini 429'a düşürür ve hata tam da yukarıda anlatılan
+    # "test altyapısı bozuldu" biçiminde görünür.
+    giris_ip_sinirlayici.sifirla()
     genel_sinirlayici.sifirla()
     yield
