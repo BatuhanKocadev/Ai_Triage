@@ -61,8 +61,11 @@ async def login_for_access_token(
 
     user = get_user(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
-        # Yalnızca başarısızlıkta sayılıyor; doğru parolayla giren kullanıcı kota
-        # tüketmiyor, yani meşru kullanım sınıra hiç yaklaşmıyor.
+        # Yalnızca başarısızlıkta sayılıyor: KULLANICI ADI kovasında doğru
+        # parolayla giren kullanıcı kota tüketmiyor, yani kendi hesabını
+        # kilitlemesi mümkün değil. Bu, UÇ seviyesinde "meşru kullanım sınıra
+        # hiç yaklaşmaz" demek DEĞİLDİR — yukarıdaki IP katmanı başarılı
+        # girişleri de sayıyor ve o kovayı tüm klinik paylaşıyor.
         giris_sinirlayici.istegi_kaydet(hiz_anahtari)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

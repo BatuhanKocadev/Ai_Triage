@@ -21,8 +21,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 120
 
     # --- Güvenlik (Gün 21) ---
-    # Hız sınırı: her iki sayaç da `rate_limit_pencere_sn` saniyelik kayan
-    # pencerede sayılır, ama ANAHTARLARI farklıdır (10 Ağustos 2026 düzeltmesi).
+    # Hız sınırı: ÜÇ sayacın üçü de `rate_limit_pencere_sn` saniyelik kayan
+    # pencerede sayılır ama AYRI kovalardır — ikisi bağlanan uç noktanın IP'sine
+    # (`rate_limit_genel`, `rate_limit_giris_ip`), biri kullanıcı adına
+    # (`rate_limit_giris`) anahtarlanır. Aynı kovayı paylaşan hiçbir çift yok.
     #
     # rate_limit_genel — bağlanan uç noktanın IP'si başına kabul edilen istek
     # sayısı (`/ai/analiz`, `/speech/transkript`). DÜRÜST NOT: Streamlit

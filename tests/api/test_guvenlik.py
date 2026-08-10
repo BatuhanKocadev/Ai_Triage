@@ -87,6 +87,38 @@ def test_giris_ucu_ip_basina_hacim_sinirli(istemci):
 
 
 @pytest.mark.entegrasyon
+def test_ip_katmani_basarili_girisleri_de_sayar(istemci, kullanici_uret):
+    # IP katmanı bir HACİM sınırıdır: başarılı/başarısız ayrımı YAPMAZ. Üstteki
+    # test bunu bağlamıyor — orada zaten hepsi başarısız, yani katman "yalnızca
+    # başarısızları say" biçimine çevrilse de yeşil kalır. Oysa vardiya
+    # değişiminde meşru kullanıcılar 429 görünce ilk refleks tam olarak o
+    # olacak; o değişiklik geçerli tek bir hesabı olan saldırgana sınırsız
+    # istek hakkı verir (parola serpme ve sözlük büyütme yeniden açılır).
+    kullanici_uret(kullanici_adi="ayse", parola="dogru-parola")
+    # Kova bilerek limitin BİR ALTINA kadar ucuz denemelerle dolduruluyor:
+    # kullanıcı adları yok, bu yüzden bcrypt hiç çalışmıyor. Her deneme FARKLI
+    # bir ada gittiği için kullanıcı adı katmanı (5 başarısızlık) tetiklenmiyor
+    # ve aşağıdaki 429'un tek olası kaynağı IP katmanı kalıyor.
+    for sira in range(settings.rate_limit_giris_ip - 1):
+        istemci.post(
+            "/auth/login", data={"username": f"dolgu{sira}", "password": "yanlis"}
+        )
+
+    # Kotanın son birimini BAŞARILI bir giriş harcıyor.
+    ilk = istemci.post(
+        "/auth/login", data={"username": "ayse", "password": "dogru-parola"}
+    )
+    # Bu ikinci başarılı giriş yalnızca ve yalnızca öncekinin kotayı tükettiği
+    # durumda 429 alır; başarılar sayılmasaydı kova 29'da kalır ve 200 dönerdi.
+    ikinci = istemci.post(
+        "/auth/login", data={"username": "ayse", "password": "dogru-parola"}
+    )
+
+    assert ilk.status_code == 200
+    assert ikinci.status_code == 429
+
+
+@pytest.mark.entegrasyon
 def test_giris_hiz_siniri_kullanici_adina_bagli(istemci, kullanici_uret):
     # Anahtar IP olsaydı bir kullanıcının hatalı denemeleri HERKESİ kilitlerdi:
     # Streamlit backend'i sunucu tarafından (`requests` ile) çağırıyor, yani
