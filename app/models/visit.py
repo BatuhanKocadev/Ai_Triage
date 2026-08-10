@@ -62,7 +62,10 @@ class AIRecommendation(Base):
         UUID(as_uuid=True),
         ForeignKey("visits.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
+        # unique: bir ziyaretin en fazla bir önerisi olur. Visit.recommendation
+        # ilişkisi zaten uselist=False diyordu; kısıt onu veritabanında da
+        # dayatıyor (Gün 22). unique zaten index oluşturur, ayrıca index=True gerekmez.
+        unique=True,
     )
     triage_code = Column(String(20), nullable=False)
     department = Column(String(100), nullable=False)
