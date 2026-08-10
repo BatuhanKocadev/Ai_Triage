@@ -212,7 +212,6 @@ def hedef_guvenli_mi(url_metni: str) -> tuple[bool, str]:
 > `postgresql:///ai_triage_test` kilitten geçiyor ve `drop_all` üretimde koşuyordu —
 > kilidin var oluş sebebi olan senaryonun, hiçbir testin kapsamadığı tek daldan
 > gerçekleşmesi. Yukarıdaki hâli bağlayan test: `test_hostsuz_url_reddedilir`.
-```
 
 - [ ] **Step 4: Testleri çalıştır, yeşil olduğunu gör**
 
