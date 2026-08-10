@@ -83,6 +83,7 @@ def transkript_engelle(monkeypatch):
     """
 
     def _asla_cagrilmamali(dosya_yolu: str) -> str:
+        """Gerçek `transcribe`'ın yerine geçer; çağrılırsa modeli yüklemek yerine testi patlatır."""
         raise AssertionError(
             "Gerçek transcribe çağrıldı — uçtaki koruma gevşemiş demektir. "
             "Bu testin gerçek modeli yüklemesi beklenmiyor."

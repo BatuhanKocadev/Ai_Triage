@@ -32,9 +32,12 @@ def hedef_guvenli_mi(url_metni: str) -> tuple[bool, str]:
     if url.database != TEST_VERITABANI:
         return False, f"veritabanı adı {TEST_VERITABANI!r} değil: {url.database!r}"
 
-    # Host boşsa (Unix soketi) yerel kabul edilir; uzak bir sokete bağlanılamaz.
-    host = url.host or "localhost"
-    if host not in IZINLI_HOSTLAR:
-        return False, f"host beyaz listede değil: {host!r}"
+    # Host yoksa hedefi doğrulayamayız: libpq PGHOST'a düşer ve uzak sunucuya
+    # bağlanabilir, yani "boş host = yerel" varsayımı kilidi delerdi.
+    if not url.host:
+        return False, "host belirtilmemiş"
+
+    if url.host not in IZINLI_HOSTLAR:
+        return False, f"host beyaz listede değil: {url.host!r}"
 
     return True, ""

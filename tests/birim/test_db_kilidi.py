@@ -28,6 +28,15 @@ def test_uzak_host_ayni_ad_olsa_bile_reddedilir():
     assert "host" in sebep
 
 
+def test_hostsuz_url_reddedilir():
+    # Host yoksa libpq PGHOST'a düşer; "boş host = yerel" varsaymak, uzak bir
+    # sunucuda drop_all çalıştırmanın önündeki tek engeli kaldırırdı.
+    guvenli, sebep = hedef_guvenli_mi("postgresql:///ai_triage_test")
+
+    assert guvenli is False
+    assert "host" in sebep
+
+
 def test_yanlis_veritabani_adi_reddedilir():
     guvenli, sebep = hedef_guvenli_mi(
         "postgresql://triage:triage@localhost:5432/ai_triage"
@@ -51,6 +60,24 @@ def test_docker_servis_adi_kabul_edilir():
     # docker compose ve CI servis konteynerinin host adı "postgres".
     guvenli, _ = hedef_guvenli_mi(
         "postgresql://triage:triage@postgres:5432/ai_triage_test"
+    )
+
+    assert guvenli is True
+
+
+def test_ipv4_loopback_kabul_edilir():
+    # "127.0.0.1" beyaz listeden düşerse yerelde adı yerine IP'siyle bağlanan koşu durur.
+    guvenli, _ = hedef_guvenli_mi(
+        "postgresql://triage:triage@127.0.0.1:5432/ai_triage_test"
+    )
+
+    assert guvenli is True
+
+
+def test_ipv6_loopback_kabul_edilir():
+    # "::1" beyaz listeden düşerse IPv6 loopback ile bağlanan koşu durur; make_url köşeli parantezi ayıklar.
+    guvenli, _ = hedef_guvenli_mi(
+        "postgresql://triage:triage@[::1]:5432/ai_triage_test"
     )
 
     assert guvenli is True
