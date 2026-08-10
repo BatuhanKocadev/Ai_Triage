@@ -8,8 +8,8 @@ Bu protokol, acil servise termal, kimyasal, elektrik yanığı veya duman inhala
 
 Yanık — Hastanın Anlattığı Belirtiler
 - Hastalar yanığı genellikle şöyle tarif eder: sıcak su, kaynar su veya çay/çorba döküldü; ocakta, sobada, ütüde veya fırında yandım; elimi/kolumu yaktım.
-- Ciltte kabarma, su toplama, kabarcık, deri soyulması, kızarma ve şiddetli yanma hissi tarif edilir; bu tabloların klinik karşılığı bül ve epidermal ayrışmadır.
-- Haşlanma (sıcak sıvı teması) en sık görülen yanık biçimidir ve çoğunlukla el, kol, göğüs ve bacak yüzeyini tutar.
+- Ciltte kabarma, su toplama, kabarcık, deri soyulması, kızarma ve şiddetli yanma hissi tarif edilir; kabarma ve su toplamanın klinik karşılığı bül, deri soyulmasının karşılığı epidermal ayrışma, tek başına kızarmanın karşılığı ise eritemdir.
+- Haşlanma (sıcak sıvı teması) yanıkları çoğunlukla el, kol, göğüs ve bacak yüzeyini tutar.
 - Elektrik çarpması, kimyasal madde teması ve alev/duman ile temas da bu protokol kapsamındadır.
 
 Yanık — İlk Değerlendirme
@@ -19,27 +19,27 @@ Yanık — İlk Değerlendirme
 - Yanık şoku erken saatlerde gelişeceğinden, Parkland formülü ile sıvı resüsitasyonu ihtiyacı hesaplanır.
 
 Yanık — Kırmızı Alan Kriterleri
-- İnhalasyon yanığı bulguları olan, kapalı alan yangınlarında kalmış ve solunum tehlikesi olan hastalar.
-- Karbonmonoksit/siyanür maruziyetine bağlı bilinç değişikliği ve laktat yüksekliği saptananlar.
-- Erişkinde TVYA >%20, çocuk/yaşlıda TVYA >%10 olan 2. veya 3. derece majör yanıklar.
-- Yüksek voltajlı elektrik yanıkları, kimyasal yanıklar veya sirkumferansiyel (çepeçevre) göğüs/ekstremite yanıkları.
+- İnhalasyon yanığı bulguları olan, kapalı alan yangınlarında kalmış (yangında dumanın içinde kalmış, sesi kısılmış, öksürüğü kurumlu) ve solunum tehlikesi olan hastalar.
+- Karbonmonoksit/siyanür maruziyetine bağlı bilinç değişikliği (dumandan etkilendikten sonra baygınlık, sersemlik, kendini bilmeme) ve laktat yüksekliği saptananlar.
+- Erişkinde TVYA >%20, çocuk/yaşlıda TVYA >%10 olan 2. veya 3. derece majör yanıklar; hastanın anlatımında vücudun geniş bir bölümü haşlanmış, geniş alanda kabarmış veya derisi soyulmuş olanlar.
+- Yüksek voltajlı elektrik yanıkları (elektrik çarpması), kimyasal yanıklar (cilde asit, kireç veya benzeri kimyasal madde dökülmesi) veya sirkumferansiyel (çepeçevre) göğüs/ekstremite yanıkları.
 - Yanığa hipotansiyon, şok veya majör travmanın eşlik ettiği durumlar.
 
 Yanık — Sarı Alan Kriterleri
-- Şiddetli ağrısı (NRS 6-8) olan, IV analjezi ve acil pansuman gerektiren stabil hastalar.
-- TVYA %5-20 arası olan (erişkinde) veya bül oluşmuş derin 2. derece yanığa sahip (kritik bölge dışı) hastalar.
-- Yüz, el, ayak veya perine gibi kritik bölge yanığı olup vital bulguları tamamen stabil olanlar.
-- Enfeksiyon gelişmiş kronik yanık yarası veya sosyal endişe/istismar şüphesi olan çocuk yanıkları.
+- Şiddetli ağrısı (NRS 6-8) olan, yanmanın ve acının dayanılmaz olduğunu tarif eden, IV analjezi ve acil pansuman gerektiren stabil hastalar.
+- TVYA %5-20 arası olan (erişkinde) veya bül oluşmuş, yani cildi kabarmış ve su toplamış derin 2. derece yanığa sahip (kritik bölge dışı) hastalar.
+- Yüz, el, ayak veya perine gibi kritik bölge yanığı olup (elini, kolunu veya yüzünü haşlamış, bu bölgede su toplamış ya da derisi soyulmuş) vital bulguları tamamen stabil olanlar.
+- Enfeksiyon gelişmiş (yanık yeri akıntılı, çevresi giderek kızaran) kronik yanık yarası veya sosyal endişe/istismar şüphesi olan çocuk yanıkları.
 
 Yanık — Yeşil Alan Kriterleri
-- TVYA <%5 olan ve kritik bölge dışında kalan yüzeyel 2. derece minör yanıklar (oral analjeziyle kontrol edilebilen).
-- Kızarıklık şeklinde olan, bül içermeyen 1. derece epidermal yanıklar (güneş yanığı benzeri).
-- Sadece küçük yüzeyel haşlanma nedeniyle pansuman değişimi veya tetanoz aşısı gerektiren genel durumu iyi hastalar.
+- TVYA <%5 olan ve kritik bölge dışında kalan yüzeyel 2. derece minör yanıklar; küçük bir alana sıcak su dökülüp birkaç kabarcık oluşmuş, oral analjeziyle kontrol edilebilen hastalar.
+- Kızarıklık şeklinde olan, bül içermeyen (cilt yalnızca kızarmış, kabarcık oluşmamış) 1. derece epidermal yanıklar (güneş yanığı benzeri).
+- Sadece küçük yüzeyel haşlanma (elinin ucuna sıcak çay veya su dökülmesi gibi) nedeniyle pansuman değişimi veya tetanoz aşısı gerektiren genel durumu iyi hastalar.
 
 Yanık — Önerilen Tetkikler
-- Karboksihemoglobin (CO-oksimetri) ve Kan Gazı (İnhalasyon şüphesinde).
+- Karboksihemoglobin (CO-oksimetri) ve Kan Gazı (İnhalasyon şüphesinde; yangın dumanı solumuş hastalarda).
 - Tam Kan Sayımı ve Böbrek Fonksiyon Testleri (Kas yıkımı/Rabdomiyoliz takibi için).
-- Elektrokardiyografi (EKG) (Elektrik yanıklarında).
+- Elektrokardiyografi (EKG) (Elektrik yanıklarında; elektrik çarpması sonrası).
 
 Yanık — Yönlendirme
 Kırmızı kodlu majör ve inhalasyon yanıkları derhal entübasyon/sıvı resüsitasyonu için şok odasına, sarı kod alan ağrılı orta derece yanıklar müdahale alanına, yeşil kod alan yüzeyel minör yanıklar yara bakımı için polikliniğe yönlendirilir.
