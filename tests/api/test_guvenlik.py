@@ -5,6 +5,7 @@ yanıtlar. Kuralın kendi davranışı tests/birim/ altında ayrıca sınanıyor
 """
 
 import io
+import logging
 
 import pytest
 
@@ -195,6 +196,38 @@ def test_hata_mesajinda_yigin_izi_yok(istemci, yetkili_baslik, monkeypatch):
     assert "RuntimeError" not in govde
     # İzleme kodu, sızıntı yaratmadan log'daki satırla eşleşmeyi sağlıyor.
     assert yanit.json()["izleme_kodu"]
+
+
+@pytest.mark.entegrasyon
+def test_izleme_kodu_ve_hata_detayi_loga_yaziliyor(
+    istemci, yetkili_baslik, monkeypatch, caplog
+):
+    # İzleme kodunun TEK amacı, kullanıcının ekranda okuduğu kodu operatörün
+    # log'da bulabilmesi. Yukarıdaki test yalnızca istemci yarısını donduruyor;
+    # log yarısı bağlanmazsa `logger.exception` -> `logger.error` değişimi
+    # (yığın izinin kaybı) ya da kodun format dizesinden düşmesi bütün testler
+    # yeşilken izleme kodunu işe yaramaz hale getirir.
+    from app.api import document as document_modulu
+
+    def _patlat():
+        raise RuntimeError("gizli-ic-detay-sizmamali")
+
+    monkeypatch.setattr(document_modulu, "get_collection", _patlat)
+    # Handler ERROR seviyesinde yazıyor; caplog'un o seviyeyi kapsadığı açıkça
+    # sabitleniyor ki testin yakalaması kök logger ayarına bağlı kalmasın.
+    caplog.set_level(logging.ERROR, logger="ai_triage")
+
+    yanit = istemci.get(
+        "/document/liste",
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    izleme_kodu = yanit.json()["izleme_kodu"]
+    # İstemciye dönen kod log satırında AYNEN geçmeli; yoksa eşleştirme imkânsız.
+    assert izleme_kodu in caplog.text
+    # İstemciden gizlenen ayrıntı log'da DURMALI: yığın izi olmadan operatörün
+    # elinde yalnızca "Sunucu hatası" kalır ve kod hiçbir şeye götürmez.
+    assert "gizli-ic-detay-sizmamali" in caplog.text
 
 
 @pytest.mark.entegrasyon

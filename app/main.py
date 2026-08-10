@@ -40,7 +40,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[k.strip() for k in settings.cors_origins.split(",") if k.strip()],
-    allow_credentials=True,
+    # False: kimlik doğrulama Bearer başlığıyla yapılıyor, projede hiç çerez yok —
+    # yani açık olmasının hiçbir faydası yok, buna karşılık ayar "*" yapıldığında
+    # Starlette her origin'i "credentials: true" ile yankılar ve elde edilebilecek
+    # en kötü CORS yapılandırması ortaya çıkardı (10 Ağustos 2026).
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
