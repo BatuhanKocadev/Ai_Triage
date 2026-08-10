@@ -21,10 +21,22 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 120
 
     # --- Güvenlik (Gün 21) ---
-    # Hız sınırı: aynı IP'den `rate_limit_pencere_sn` saniyede kaç istek kabul edilir.
-    # Giriş ucu bilerek daha sıkı: kimlik doğrulaması olmadan çağrılabilen tek
-    # yazma ucu ve parola deneme saldırısının hedefi.
+    # Hız sınırı: her iki sayaç da `rate_limit_pencere_sn` saniyelik kayan
+    # pencerede sayılır, ama ANAHTARLARI farklıdır (10 Ağustos 2026 düzeltmesi).
+    #
+    # rate_limit_genel — bağlanan uç noktanın IP'si başına kabul edilen istek
+    # sayısı (`/ai/analiz`, `/speech/transkript`). DÜRÜST NOT: Streamlit
+    # backend'i sunucu tarafından `requests` ile çağırıyor, yani Docker
+    # dağıtımında TÜM arayüz trafiği tek kovada — frontend konteynerinin
+    # IP'sinde — toplanır; bu sınır pratikte kullanıcı başına değil, arayüzün
+    # tamamı için geçerlidir.
     rate_limit_genel: int = 30
+    # rate_limit_giris — KULLANICI ADI başına ve yalnızca BAŞARISIZ giriş
+    # denemeleri sayılır (`/auth/login`); başarılı giriş kota tüketmez. Giriş
+    # ucu bilerek daha sıkı: kimlik doğrulaması olmadan çağrılabilen tek yazma
+    # ucu ve parola deneme saldırısının hedefi. IP anahtarı, tek IP'den gelen
+    # tüm girişleri aynı kovaya düşürüp bir kullanıcının hatalı denemesiyle
+    # herkesi kilitliyordu.
     rate_limit_giris: int = 5
     rate_limit_pencere_sn: int = 60
     # Dosya yükleme sınırları; uzantı listesi virgülle ayrılır.

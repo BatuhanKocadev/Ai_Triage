@@ -92,3 +92,77 @@ def test_bayat_anahtarlar_temizlenir():
 
     # Pencere dışına düşen eski anahtarlar silinmiş, yalnızca aktif anahtar kalmış olmalı.
     assert list(sinirlayici._kayitlar.keys()) == ["3.3.3.3"]
+
+
+# --- Kontrol ile kaydetmenin ayrıldığı yol (giriş ucu, 10 Ağustos 2026) ---
+# /auth/login "yalnızca başarısız denemeyi say" diyebilmek için tek çağrıda
+# hem bakıp hem sayan izin_ver()'i kullanamıyor; aşağıdaki testler o ayrımı dondurur.
+
+
+def test_izin_var_mi_kota_tuketmez():
+    # Salt kontrol metodu: bakmak saymaya dönüşürse başarılı girişler de kota
+    # tüketir ve kararın bütün dayanağı çöker.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=2, pencere_sn=60, saat=saat)
+
+    for _ in range(10):
+        assert sinirlayici.izin_var_mi("ayse") is True
+
+    # Kota hiç harcanmadığı için gerçek bir istek hâlâ kabul edilmeli.
+    assert sinirlayici.izin_ver("ayse") is True
+
+
+def test_basarili_giris_kota_tuketmez():
+    # Kararın dayandığı özellik: yalnızca BAŞARISIZ deneme kaydediliyor, doğru
+    # parolayla giren kullanıcı istediği kadar giriş yapabilmeli.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=3, pencere_sn=60, saat=saat)
+    sinirlayici.istegi_kaydet("ayse")  # bir kez parolayı yanlış girdi
+
+    # Sonrasında hep doğru parola: kaydetme yok, yalnızca kontrol var.
+    for _ in range(20):
+        assert sinirlayici.izin_var_mi("ayse") is True
+
+
+def test_istegi_kaydet_kotayi_tuketir():
+    # Kaydetme gerçekten sayıyor mu; boş bir metot olsaydı yukarıdaki iki test
+    # de yeşil kalır ve sınır hiç uygulanmazdı.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=2, pencere_sn=60, saat=saat)
+
+    sinirlayici.istegi_kaydet("ayse")
+    sinirlayici.istegi_kaydet("ayse")
+
+    assert sinirlayici.izin_var_mi("ayse") is False
+
+
+def test_izin_var_mi_pencere_kayinca_yeniden_izin_verir():
+    # Kritik: kontrol yolu bayat kayıtları düşürmezse kotasını dolduran kullanıcı
+    # BİR DAHA HİÇ giremez — kaydetme yolu artık yalnızca başarısızlıkta
+    # çalıştığı için kuyruğu temizleyecek başka çağrı kalmıyor.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=1, pencere_sn=60, saat=saat)
+    sinirlayici.istegi_kaydet("ayse")
+    assert sinirlayici.izin_var_mi("ayse") is False
+
+    saat.ilerlet(61)
+
+    assert sinirlayici.izin_var_mi("ayse") is True
+
+
+def test_kaydetme_yolunda_da_bayat_anahtarlar_temizlenir():
+    # Giriş ucu artık izin_ver() değil istegi_kaydet() çağırıyor; temizlik bu
+    # yola taşınmazsa sözlük denenen her kullanıcı adıyla sınırsız büyür.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=5, pencere_sn=60, saat=saat, temizlik_esigi=2)
+
+    sinirlayici.istegi_kaydet("ayse")
+    sinirlayici.istegi_kaydet("veli")
+    assert len(sinirlayici._kayitlar) == 2
+
+    saat.ilerlet(61)
+
+    # Eşik (2) 3. farklı anahtarla aşılınca temizlik tetiklenmeli.
+    sinirlayici.istegi_kaydet("zeynep")
+
+    assert list(sinirlayici._kayitlar.keys()) == ["zeynep"]

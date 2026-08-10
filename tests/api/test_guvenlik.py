@@ -41,6 +41,58 @@ def test_giris_denemesi_hiz_sinirli(istemci):
 
 
 @pytest.mark.entegrasyon
+def test_giris_hiz_siniri_kullanici_adina_bagli(istemci, kullanici_uret):
+    # Anahtar IP olsaydı bir kullanıcının hatalı denemeleri HERKESİ kilitlerdi:
+    # Streamlit backend'i sunucu tarafından (`requests` ile) çağırıyor, yani
+    # Docker dağıtımında tüm girişler tek IP'den — frontend konteynerinin
+    # IP'sinden — geliyor. Triyaj sisteminde bu klinik bir erişilebilirlik sorunu.
+    kullanici_uret(kullanici_adi="ayse", parola="dogru-parola")
+    for _ in range(settings.rate_limit_giris + 1):
+        istemci.post("/auth/login", data={"username": "mehmet", "password": "yanlis"})
+
+    yanit = istemci.post(
+        "/auth/login", data={"username": "ayse", "password": "dogru-parola"}
+    )
+
+    assert yanit.status_code == 200
+
+
+@pytest.mark.entegrasyon
+def test_giris_hiz_siniri_harf_durumuyla_asilamaz(istemci):
+    # Anahtar HAM kullanıcı adı olsaydı "yok", "YOK" ve " yok " üç ayrı kova
+    # olurdu; saldırgan yalnızca yazımı değiştirerek sınırı katlardı.
+    # Denemeler bilerek iki farklı yazımla gönderiliyor: anahtar normalize
+    # edilmezse hiçbir kova limite ulaşmaz ve son yanıt 429 yerine 401 olur.
+    varyantlar = [
+        "YOK" if sira % 2 else "  yok  "
+        for sira in range(settings.rate_limit_giris + 1)
+    ]
+
+    son_durum = None
+    for ad in varyantlar:
+        son_durum = istemci.post(
+            "/auth/login", data={"username": ad, "password": "yanlis"}
+        ).status_code
+
+    assert son_durum == 429
+
+
+@pytest.mark.entegrasyon
+def test_basarili_giris_hiz_kotasi_tuketmez(istemci, kullanici_uret):
+    # Kararın dayandığı özellik: yalnızca BAŞARISIZ deneme sayılıyor. Uç gövdesine
+    # başarı yolunda kalmış tek bir kayıt çağrısı bu testi kırar.
+    kullanici_uret(kullanici_adi="ayse", parola="dogru-parola")
+
+    son_durum = None
+    for _ in range(settings.rate_limit_giris + 1):
+        son_durum = istemci.post(
+            "/auth/login", data={"username": "ayse", "password": "dogru-parola"}
+        ).status_code
+
+    assert son_durum == 200
+
+
+@pytest.mark.entegrasyon
 def test_desteklenmeyen_uzantili_dosya_reddedilir(
     istemci, yetkili_baslik, dokuman_yazmayi_engelle
 ):

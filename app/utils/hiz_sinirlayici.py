@@ -55,6 +55,44 @@ class HizSinirlayici:
             self._bayat_anahtarlari_temizle(simdi)
         return True
 
+    def izin_var_mi(self, anahtar: str) -> bool:
+        """Kota dolmuş mu diye SALT BAKAR; hiçbir şey kaydetmez.
+
+        `izin_ver()` bakmakla saymayı tek çağrıda birleştirdiği için "yalnızca
+        başarısız denemeyi say" kuralı onunla ifade edilemiyor; giriş ucu bu
+        yüzden önce buraya bakıp sonra ayrıca `istegi_kaydet()` çağırıyor.
+        """
+        simdi = self._saat()
+        # get(): olmayan anahtar için kayıt AÇMIYOR — salt kontrol sözlüğü
+        # şişirmemeli, yoksa her denenen kullanıcı adı kalıcı iz bırakırdı.
+        kuyruk = self._kayitlar.get(anahtar)
+        if not kuyruk:
+            return True
+        # Bayat kayıtlar burada da düşürülmeli: kaydetme yolu artık yalnızca
+        # başarısızlıkta çalıştığı için kuyruğu kaydıracak başka çağrı yok ve
+        # temizlenmezse kotasını dolduran kullanıcı bir daha hiç giremezdi.
+        while kuyruk and simdi - kuyruk[0] >= self.pencere_sn:
+            kuyruk.popleft()
+        return len(kuyruk) < self.limit
+
+    def istegi_kaydet(self, anahtar: str) -> None:
+        """Bir denemeyi kotaya SALT YAZAR; kabul edilir mi diye bakmaz.
+
+        Limit kontrolü çağırana ait (bkz. `izin_var_mi`); burada koşulsuz
+        yazılıyor ki giriş ucu yalnızca başarısız denemeleri sayabilsin.
+        """
+        simdi = self._saat()
+        kuyruk = self._kayitlar.setdefault(anahtar, deque())
+        # Kuyruk zaman sırasında olduğu için pencereden çıkanları baştan atmak yeter.
+        while kuyruk and simdi - kuyruk[0] >= self.pencere_sn:
+            kuyruk.popleft()
+        kuyruk.append(simdi)
+        # Bayat anahtar temizliği bu yolda da yapılmalı: giriş ucu artık
+        # `izin_ver()` çağırmıyor, temizlik yalnızca orada kalsaydı sözlük
+        # denenen her kullanıcı adıyla sınırsız büyürdü.
+        if len(self._kayitlar) > self.temizlik_esigi:
+            self._bayat_anahtarlari_temizle(simdi)
+
     def _bayat_anahtarlari_temizle(self, simdi: float) -> None:
         """Kuyruğu boş ya da son kaydı pencere dışında kalan anahtarları siler."""
         # Kuyruk zaman sırasıyla dolduğu için en yeni kayıt (kuyruk[-1]) bile
