@@ -6,6 +6,12 @@ Acil Servis Triyaj Rehberi ESI/MTS.
 Kapsam
 Bu protokol, acil servise termal, kimyasal, elektrik yanığı veya duman inhalasyonuna bağlı yanık yaralanmaları ile başvuran hastaların değerlendirilmesini düzenler.
 
+Yanık — Hastanın Anlattığı Belirtiler
+- Hastalar yanığı genellikle şöyle tarif eder: sıcak su, kaynar su veya çay/çorba döküldü; ocakta, sobada, ütüde veya fırında yandım; elimi/kolumu yaktım.
+- Ciltte kabarma, su toplama, kabarcık, deri soyulması, kızarma ve şiddetli yanma hissi tarif edilir; bu tabloların klinik karşılığı bül ve epidermal ayrışmadır.
+- Haşlanma (sıcak sıvı teması) en sık görülen yanık biçimidir ve çoğunlukla el, kol, göğüs ve bacak yüzeyini tutar.
+- Elektrik çarpması, kimyasal madde teması ve alev/duman ile temas da bu protokol kapsamındadır.
+
 Yanık — İlk Değerlendirme
 - Öncelikle yanma süreci durdurulur (giysi/takı çıkarılır, yara 20 dakika ılık-serin akan suyla yıkanır, buz uygulanmaz).
 - Hastada stridor, ses kısıklığı, kaş-burun kılı yanması veya kurumlu balgam gibi inhalasyon yanığı (havayolu ödemi) bulguları aranır.

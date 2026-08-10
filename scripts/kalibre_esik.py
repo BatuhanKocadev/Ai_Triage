@@ -62,8 +62,17 @@ ILGILI = [
     "İki aylık bebeğimin ateşi 38.5 çıktı ve sürekli uyukluyor.",
     # psikiyatrik aciller
     "Kendime zarar vermeyi düşünüyorum, artık dayanamıyorum.",
-    # yanık
-    "Kaynar su elimin üstüne döküldü, hemen su toplamaya başladı.",
+    # yanık — birinci sorgu: protokolün kelimelerini kullanmadan, hasta ağzından.
+    # ESKİ sorgu ("Kaynar su elimin üstüne döküldü, hemen su toplamaya başladı.")
+    # yerine yazıldı: yanik.txt'ye hasta dili eklenirken o cümlenin öbekleri
+    # belgeye girecekti ve ölçüm kendi kendini doğrulayan bir sızıntıya dönüşecekti
+    # — Gün 20'de inme.txt'de tam bu olmuştu (tasarım K4).
+    "Çaydanlığı devirdim, kolum fena halde haşlandı ve derim kabardı.",
+    # yanık — İKİNCİ, TUTULAN sorgu (tasarım K5). Bu satır yanik.txt'ye
+    # dokunulmadan ÖNCE yazıldı ve belge düzenlenirken buna BAKILMADI. Amacı,
+    # düzeltmenin tek bir cümleye ezberlenmediğini kanıtlamak: yalnızca birinci
+    # sorgu geçip bu geçmezse düzeltme yetersizdir.
+    "Ütü elimin üstüne düştü, deri soyuldu ve çok acıyor.",
 ]
 
 # Elenmesi beklenen sorgular. İKİ SINIF var ve ikincisi asıl zorlayıcı olan:
