@@ -188,12 +188,30 @@ def hedef_guvenli_mi(url_metni: str) -> tuple[bool, str]:
     if url.database != TEST_VERITABANI:
         return False, f"veritabanı adı {TEST_VERITABANI!r} değil: {url.database!r}"
 
-    # Host boşsa (Unix soketi) yerel kabul edilir; uzak bir sokete bağlanılamaz.
-    host = url.host or "localhost"
-    if host not in IZINLI_HOSTLAR:
-        return False, f"host beyaz listede değil: {host!r}"
+    # Host yoksa hedefi doğrulayamayız: libpq PGHOST'a düşer ve uzak sunucuya
+    # bağlanabilir, yani "boş host = yerel" varsayımı kilidi delerdi.
+    if not url.host:
+        return False, "host belirtilmemiş"
+
+    if url.host not in IZINLI_HOSTLAR:
+        return False, f"host beyaz listede değil: {url.host!r}"
 
     return True, ""
+```
+
+> **Düzeltme (10 Ağustos 2026, Görev 1 inceleme turu).** Bu blok ilk yazıldığında
+> şöyleydi ve **yanlıştı** — kayda geçiriliyor ki aynı hata geri kopyalanmasın:
+>
+> ```python
+> # Host boşsa (Unix soketi) yerel kabul edilir; uzak bir sokete bağlanılamaz.
+> host = url.host or "localhost"
+> ```
+>
+> Boş host "Unix soketi" demek değil: SQLAlchemy host'u bağlantı argümanlarından
+> çıkarır, libpq da `PGHOST` ortam değişkenine düşer. `PGHOST=prod-host` iken
+> `postgresql:///ai_triage_test` kilitten geçiyor ve `drop_all` üretimde koşuyordu —
+> kilidin var oluş sebebi olan senaryonun, hiçbir testin kapsamadığı tek daldan
+> gerçekleşmesi. Yukarıdaki hâli bağlayan test: `test_hostsuz_url_reddedilir`.
 ```
 
 - [ ] **Step 4: Testleri çalıştır, yeşil olduğunu gör**
