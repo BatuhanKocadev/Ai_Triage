@@ -54,10 +54,30 @@ Bu günün kapsamında **yalnızca iki uç** sınırlanır:
 | `POST /auth/login` | `rate_limit_giris` (sıkı) | Kimlik doğrulaması olmadan çağrılabilen tek yazma ucu; parola deneme saldırısının hedefi |
 | `POST /ai/analiz` | `rate_limit_genel` (orta) | Yerel LLM'i çalıştırıyor, en pahalı uç; kötüye kullanım servisi tüketir |
 
-Diğer uçlar bilerek dışarıda: hepsi kimlik doğrulaması ve rol kapısının arkasında,
-yani anonim bir saldırgan onlara zaten ulaşamıyor. Her uca sınır koymak, koruduğu
-şeyi netleştirmeden yüzey genişletmek olurdu (YAGNI). `/document/upload` pahalı ama
-`admin` rolüne kapalı; ihtiyaç görülürse aynı bağımlılık tek satırla eklenir.
+> **Gerekçe düzeltmesi — 10 Ağustos 2026.** Bu paragraf önce şöyleydi: *"Diğer uçlar
+> bilerek dışarıda: hepsi kimlik doğrulaması ve rol kapısının arkasında, yani anonim
+> bir saldırgan onlara zaten ulaşamıyor."* Bu önerme **fiilen yanlıştı**:
+> `POST /speech/kaydet` (`app/api/speech.py:32-37`) hiçbir yetki bağımlılığı
+> taşımıyor, yani anonim olarak çağrılabiliyor. Dayanağın ikinci yarısı da zayıftı:
+> kimlik doğrulaması bir hız sınırı değildir — `hasta`/`hasta123` gibi sıradan bir
+> hesapla ulaşılan pahalı bir uç, kapıdan geçildiği anda korumasızdır. Kararın
+> kendisi (middleware değil uç bazında bağımlılık, seçici kapsam) geçerliliğini
+> koruyor; düzeltilen yalnızca gerekçesi.
+
+Bugün geçerli olan gerekçe şudur:
+
+- `POST /speech/transkript` **10 Ağustos 2026'da kapsama alındı**; yukarıdaki
+  tablodaki iki uca ek olarak `rate_limit_genel` ile sınırlanan üçüncü uçtur.
+  Gerekçesi `/ai/analiz` ile birebir aynı: whisper `medium` modelini yükleyen,
+  25 MB'a kadar dosyayı belleğe alan, CPU'yu doyuran pahalı bir uç.
+- `POST /speech/kaydet` bilerek sınırsız bırakıldı: bir pydantic modelini geri
+  yankılayan doğrulama demosu, pahalı hiçbir kaynağa dokunmuyor. Yetki
+  bağımlılığının hiç olmaması ayrı bir konudur ve bu günün kapsamında değildir.
+- `/document/upload`, `/doctor/*` ve `/auth/me` sınırsız: sırasıyla `admin` ve
+  `doctor` rollerine kapalılar ve hiçbiri model çalıştırmıyor. Rol kapısı saldırı
+  yüzeyini daraltır ama hız sınırının yerine geçmez; her uca sınır koymak koruduğu
+  şeyi netleştirmeden yüzey genişletmek olurdu (YAGNI). İhtiyaç görülürse aynı
+  bağımlılık tek satırla eklenir.
 
 **K3 — Test izolasyonu tasarımın parçasıdır, sonradan eklenecek bir detay değil.**
 `TestClient` her istekte aynı IP'yi kullanır. Sınırlayıcı sıfırlanmazsa bir testin

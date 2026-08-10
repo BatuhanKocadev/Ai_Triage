@@ -4,9 +4,13 @@ Bu dosyadaki testler "kural var mı" değil "kural UCU koruyor mu" sorusunu
 yanıtlar. Kuralın kendi davranışı tests/birim/ altında ayrıca sınanıyor.
 """
 
+import io
+
 import pytest
 
+from app.api import speech as speech_modulu
 from app.config.config import settings
+from tests.yardimcilar.sahte_stt import sahte_transkript_uret
 from tests.yardimcilar.veri_uretici import ziyaret_verisi
 
 
@@ -22,6 +26,29 @@ def test_ardarda_istek_hiz_sinirina_takilir(istemci, yetkili_baslik, esik_alti):
     for _ in range(settings.rate_limit_genel + 1):
         son_durum = istemci.post(
             "/ai/analiz", json=ziyaret_verisi(), headers=baslik
+        ).status_code
+
+    assert son_durum == 429
+
+
+@pytest.mark.entegrasyon
+def test_transkript_ucu_hiz_sinirina_takilir(istemci, yetkili_baslik, monkeypatch):
+    # /speech/transkript, /ai/analiz ile aynı pahalı sınıfta: faster-whisper
+    # "medium" modelini yüklüyor, 25 MB'a kadar dosyayı belleğe alıyor, geçici
+    # dosya yazıp CPU'yu doyuruyor. Kimlik doğrulaması hız sınırı DEĞİLDİR —
+    # `user` rolündeki herhangi bir hesap ucu sınırsız çağırabiliyordu.
+    # Gövde bilerek GEÇERLİ gönderiliyor (yukarıdaki /ai/analiz testiyle aynı
+    # gerekçe): geçersiz gövdeyle 400'ün 429'dan önce dönmesi testi yanlış
+    # sebeple kırardı. transcribe yamalı, gerçek model hiç yüklenmiyor.
+    monkeypatch.setattr(speech_modulu, "transcribe", sahte_transkript_uret("metin"))
+    baslik = yetkili_baslik(kullanici_adi="hasta_ayse", rol="user")
+
+    son_durum = None
+    for _ in range(settings.rate_limit_genel + 1):
+        son_durum = istemci.post(
+            "/speech/transkript",
+            files={"file": ("kayit.wav", io.BytesIO(b"sahte-ses-baytlari"), "audio/wav")},
+            headers=baslik,
         ).status_code
 
     assert son_durum == 429
