@@ -75,7 +75,10 @@ def istemci(db_oturum):
         yield db_oturum
 
     app.dependency_overrides[get_db] = _test_oturumu
-    with TestClient(app) as c:
+    # raise_server_exceptions=False: global exception handler'ın ürettiği 500
+    # yanıtı test edilebilsin diye. Varsayılan davranış istisnayı yeniden
+    # fırlatır ve handler'ın çıktısı hiç görülmez.
+    with TestClient(app, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
 

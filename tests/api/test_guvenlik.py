@@ -91,3 +91,64 @@ def test_pdf_gibi_gorunen_bozuk_dosya_reddedilir(
     # geçersiz baytlarda istisna fırlatıp "PDF processing error" ile 400
     # döner — durum kodu tek başına imza kontrolünü kanıtlamıyor.
     assert yanit.json()["detail"] == "Desteklenmeyen dosya"
+
+
+@pytest.mark.entegrasyon
+def test_hata_mesajinda_yigin_izi_yok(istemci, yetkili_baslik, monkeypatch):
+    # Yığın izi ve dosya yolları istemciye sızarsa saldırgan iç yapıyı öğrenir.
+    # Beklenmeyen bir istisna, /document/liste üzerinden tetikleniyor.
+    from app.api import document as document_modulu
+
+    def _patlat():
+        raise RuntimeError("gizli-ic-detay-sizmamali")
+
+    monkeypatch.setattr(document_modulu, "get_collection", _patlat)
+
+    yanit = istemci.get(
+        "/document/liste",
+        headers=yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+    )
+
+    assert yanit.status_code == 500
+    govde = yanit.text
+    assert "gizli-ic-detay-sizmamali" not in govde
+    assert "Traceback" not in govde
+    assert "RuntimeError" not in govde
+    # İzleme kodu, sızıntı yaratmadan log'daki satırla eşleşmeyi sağlıyor.
+    assert yanit.json()["izleme_kodu"]
+
+
+@pytest.mark.entegrasyon
+def test_gecersiz_jwt_ile_401_ve_detay_sizmaz(istemci, jeton_uret):
+    # İki FARKLI başarısızlık sebebi aynı yanıtı vermeli: "kullanıcı yok" ile
+    # "jeton bozuk" ayrımı dışarı verilirse saldırgan geçerli kullanıcı adı
+    # numaralandırabilir.
+    olmayan_kullanici_jetonu = jeton_uret(kullanici_adi="hic_olmayan", rol="user")
+    bozuk_jeton = "bu.gecerli.bir.jwt.degil"
+
+    yanit_a = istemci.get(
+        "/auth/me", headers={"Authorization": f"Bearer {olmayan_kullanici_jetonu}"}
+    )
+    yanit_b = istemci.get("/auth/me", headers={"Authorization": f"Bearer {bozuk_jeton}"})
+
+    assert yanit_a.status_code == 401
+    assert yanit_b.status_code == 401
+    assert yanit_a.json()["detail"] == yanit_b.json()["detail"]
+
+
+@pytest.mark.entegrasyon
+def test_cors_sadece_izinli_kaynaga_acik(istemci):
+    # İKİ yönlü doğrulama şart. Yalnızca "izinsiz origin başlık almamalı" demek
+    # bağlayıcı DEĞİL: CORS middleware'i hiç yokken de o başlık dönmez, yani test
+    # düzeltmeden önce de geçerdi. İzinli origin'in başlığı ALDIĞINI da
+    # doğrulamak, middleware'in gerçekten kurulu olmasını zorunlu kılıyor.
+    izinli = [k.strip() for k in settings.cors_origins.split(",") if k.strip()][0]
+
+    izinli_yanit = istemci.get("/health/", headers={"Origin": izinli})
+    izinsiz_yanit = istemci.get("/health/", headers={"Origin": "http://kotu-site.example"})
+
+    assert izinli_yanit.headers.get("access-control-allow-origin") == izinli
+    assert (
+        izinsiz_yanit.headers.get("access-control-allow-origin")
+        != "http://kotu-site.example"
+    )
