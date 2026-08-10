@@ -49,7 +49,7 @@ kullanılıyor (zaten bağımlılık).
 | `tests/api/test_speech_api.py` | üç teste fixture eklenir | 1 |
 | `app/models/visit.py` | `visit_id` unique | 2 |
 | `app/db/alembic/versions/<yeni>.py` | **YENİ** — unique + index, tek revision | 2 |
-| `tests/entegrasyon/test_doctor_review_kisitlari.py` | **YENİ** — unique kısıtının testi | 2 |
+| `tests/entegrasyon/test_ai_oneri_kisitlari.py` | **YENİ** — unique kısıtının testi | 2 |
 | `ornek_dokumanlar/protokoller/yanik.txt` | hasta dili eklenir | 3 |
 | `scripts/kalibre_esik.py` | yanık sorgusu yeniden yazılır + tutulan sorgu | 3 |
 | `tests/entegrasyon/test_yanik_reranker.py` | **YENİ** — `yavas`, reranker eşiği | 3 |
@@ -349,7 +349,7 @@ git commit -m "fix: speech yetki/dogrulama testleri gercek STT'ye ulasamiyor"
 **Files:**
 - Modify: `app/models/visit.py` (`AIRecommendation.visit_id`)
 - Create: `app/db/alembic/versions/<otomatik>_gun22_kisitlar.py`
-- Create: `tests/entegrasyon/test_doctor_review_kisitlari.py`
+- Create: `tests/entegrasyon/test_ai_oneri_kisitlari.py`
 
 **Interfaces:**
 - Consumes: Görev 1'den bir şey tüketmez.
@@ -357,7 +357,7 @@ git commit -m "fix: speech yetki/dogrulama testleri gercek STT'ye ulasamiyor"
 
 - [ ] **Step 1: Kısıt testini yaz**
 
-`tests/entegrasyon/test_doctor_review_kisitlari.py` (yeni dosya):
+`tests/entegrasyon/test_ai_oneri_kisitlari.py` (yeni dosya):
 
 ```python
 """Bir ziyaretin en fazla bir yapay zekâ önerisi olabileceğini veritabanı
@@ -417,7 +417,7 @@ def test_ayni_ziyarete_ikinci_oneri_yazilamaz(db_oturum):
 - [ ] **Step 2: Testi çalıştır, kırmızı olduğunu gör**
 
 ```
-.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_doctor_review_kisitlari.py -v --no-cov
+.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_ai_oneri_kisitlari.py -v --no-cov
 ```
 Beklenen: `DID NOT RAISE <class 'sqlalchemy.exc.IntegrityError'>` ile FAIL —
 bugün ikinci satır sorunsuz yazılıyor. Raporunda bu çıktıyı birebir göster.
@@ -485,7 +485,7 @@ docker exec ai_triage_postgres psql -U triage -d ai_triage -c "\d ai_recommendat
 - [ ] **Step 6: Testi çalıştır, yeşil olduğunu gör**
 
 ```
-.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_doctor_review_kisitlari.py -v --no-cov
+.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_ai_oneri_kisitlari.py -v --no-cov
 ```
 Beklenen: `1 passed`.
 
@@ -503,7 +503,7 @@ diye bak ve raporla.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add app/models/visit.py app/db/alembic/versions/ tests/entegrasyon/test_doctor_review_kisitlari.py
+git add app/models/visit.py app/db/alembic/versions/ tests/entegrasyon/test_ai_oneri_kisitlari.py
 git commit -m "fix: ai_recommendations.visit_id unique, doctor_reviews.doctor_id index"
 ```
 
@@ -641,13 +641,20 @@ def test_yanik_sikayeti_esigi_geciyor(derleme_koleksiyonu, sorgu):
 - [ ] **Step 3: Testi çalıştır, kırmızı olduğunu gör**
 
 ```
-.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_yanik_reranker.py -v --no-cov -m ""
+.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_yanik_reranker.py -v --no-cov
 ```
 
-`-m ""` işaret filtresini kapatır, yoksa `yavas` test seçilmez.
+`-m` bilerek verilmiyor: `pytest.ini`'nin `addopts`'unda işaret filtresi yok,
+yani filtresiz koşuda `yavas` testler de seçilir. Günlük koşuyu daraltan şey
+komut satırındaki `-m "not yavas"`tır.
 
-Beklenen: ikisi de `AssertionError: yanık şikayeti eşiği geçemedi` ile FAIL.
-İlk koşu modelleri indirebilir, uzun sürer. Raporunda çıktıyı birebir göster.
+Beklenen: **en az birinci sorgu** `AssertionError: yanık şikayeti eşiği geçemedi`
+ile FAIL etmeli. İlk koşu modelleri indirebilir, uzun sürer.
+
+**İkisi de bugün geçerse DUR ve raporla** — bu, düzeltmenin gereksiz olduğu
+anlamına gelir ve varsayımın yanlış olduğunu gösterir; devam etmek yerine
+kontrolcüye bildir. Yalnızca tutulan sorgu geçip birincisi kalırsa bu normaldir,
+devam et. Hangi durumda olursan ol çıktıyı raporuna birebir yaz.
 
 - [ ] **Step 4: `yanik.txt`'ye hasta dilini ekle**
 
@@ -676,7 +683,7 @@ olarak nasıl tarif ettiğini anlatır, ölçüm sorgusunu tekrarlamaz (tasarım
 - [ ] **Step 5: Testi çalıştır, yeşil olduğunu gör**
 
 ```
-.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_yanik_reranker.py -v --no-cov -m ""
+.venv\Scripts\python.exe -m pytest tests/entegrasyon/test_yanik_reranker.py -v --no-cov
 ```
 
 Beklenen: `2 passed`. **Tutulan sorgu da geçmelidir.**
