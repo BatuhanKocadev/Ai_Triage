@@ -76,11 +76,40 @@ adları kendi ad alanına almış durumda). Birim testlerinde ise servis modül�
 `tests/birim/test_rag_esik_kapisi.py` doğru şekilde `app.services.rag_service` üzerinde
 `get_reranker`'ı yamalar, çünkü ad orada tanımlı ve orada aranıyor.
 
+Paket bugün **137 test** (`-m "not yavas"` ile 137 passed, 2 deselected). Güvenlik
+kuralları `tests/api/test_guvenlik.py` altında ve her test bir saldırıyı taklit eder
+(hız sınırının iki katmanı, sahte imzalı dosya, yığın izi sızıntısı, CORS). Kuralların
+kendi davranışı ayrıca `tests/birim/test_hiz_sinirlayici.py` ve
+`tests/birim/test_dosya_dogrula.py`'de sınanır: uç testleri kuralın *kullanıldığını*,
+birim testleri *doğru çalıştığını* gösterir ve ikisi birbirinin yerine geçmez.
+
+`tests/conftest.py`'deki **autouse** `hiz_sinirlarini_sifirla` fixture'ı her testten önce
+üç sınırlayıcının üçünü de sıfırlar; yeni bir sınırlayıcı eklerseniz oraya da ekleyin.
+`TestClient` her istekte aynı IP'yi kullandığı için sıfırlanmayan bir sayaç, bir testin
+tükettiği kotayla sonrakini `429`'a düşürür ve hata "güvenlik çalışıyor" değil "test
+altyapısı bozuldu" biçiminde görünür — teşhisi zor, sinir bozucu bir sınıf (tasarım K3).
+
 Paketin mevcut durumu ve bilinen kapsam boşlukları için `docs/superpowers/ek-c-ilerleme.md`.
 
 Linter/formatter hâlâ yapılandırılmamıştır.
 
 ## Mimari
+
+### Bütün uçları kapsayan sözleşmeler (`app/main.py`, Gün 21)
+
+- **Beklenmeyen istisna:** global exception handler yakalar ve istemciye yalnızca
+  `{"detail": "Sunucu hatası", "izleme_kodu": "<8 hex>"}` döner; tam yığın izi ve istek
+  bağlamı **aynı kodla** `logger.exception` üzerinden log'a yazılır. Yığın izi istemciye
+  sızarsa saldırgan iç yapıyı öğrenir; kod olmadan da kullanıcının "hata aldım"ı ile
+  log satırını eşleştirmenin yolu kalmaz — izleme kodu, sızıntı yaratmadan teşhisi
+  mümkün kılan taviz (tasarım K6). Hata ayıklarken ekrandaki kodu log'da aratın.
+- **CORS:** `allow_origins` ayardan okunur (`settings.cors_origins`), `allow_credentials`
+  **False** — kimlik doğrulama Bearer başlığıyla yapılıyor, projede hiç çerez yok, buna
+  karşılık ayar `"*"` yapıldığında açık `allow_credentials` elde edilebilecek en kötü CORS
+  yapılandırmasını üretirdi. Dürüst sınır (K7): Streamlit backend'i **sunucu tarafından**
+  `requests` ile çağırdığı için tarayıcı araya girmiyor, yani CORS bugün fiilen hiçbir
+  saldırıyı engellemiyor; API tarayıcıdan da çağrılabildiği için yine de kapalı tutuluyor.
+- **Hız sınırı** global değil uç bazındadır; tablosu aşağıda, yetkilendirme bölümünde.
 
 ### AI analizi için istek akışı (`POST /ai/analiz`, `app/api/ai.py`)
 
@@ -95,7 +124,7 @@ Eski bulut tabanlı OpenAI SDK istemcisi (`app/services/openai_client.py`) **art
 
 ### Doküman yükleme (`POST /document/upload`, `app/api/document.py`)
 
-Yalnızca admin. PDF/DOCX/TXT kabul eder, `pdfplumber`/`python-docx` ile metni (ve tabloları, `format_table_to_markdown` ile markdown'a çevirerek) çıkarır, `RecursiveCharacterTextSplitter` ile parçalara ayırır (chunk_size=1000, overlap=200) ve analiz akışının sorguladığı aynı ChromaDB koleksiyonuna upsert eder. Chunk ID'leri deterministiktir (`<dosyaadi>_chunk_<n>`), bu yüzden aynı dosyayı tekrar yüklemek öncekini çoğaltmak yerine üzerine yazar — ama `upsert` yalnızca kendisine verilen id'lere dokunduğu için üzerine yazmak tek başına yetmez. Sıra şudur: önce eski chunk id'leri okunur, sonra yeni sürüm `upsert` edilir, en sonda yeni sürümde karşılığı olmayan eski chunk'lar silinir (hayalet chunk temizliği, `source` metadata'sıyla eşleşenler). Temizlik bilinçli olarak yazmadan **sonra** yapılır: önce silinseydi, `upsert` yarıda patladığında önceki iyi sürüm de kaybolurdu.
+Yalnızca admin. Gelen dosya önce `app/utils/dosya_dogrula.py` ile doğrulanır — uzantı (`izinli_uzantilar`), boyut (`max_upload_mb`, aşımda `413`) **ve gerçek içerik imzası**: PDF `%PDF-`, DOCX `PK\x03\x04` (DOCX bir ZIP arşividir), TXT ise UTF-8 çözülebiliyorsa geçerli. Uzantıya güvenmek yetmiyordu; saldırgan bir `.exe`'yi `.pdf` diye adlandırabilir (tasarım K4, kütüphane yerine elle imza kontrolü: `python-magic` Windows'ta ayrıca `libmagic` ikilisi istiyor). `IMZALAR` sözlüğünde kaydı olmayan bir uzantı **fail-closed** reddedilir — ayara yeni bir uzantı eklenip imzasının eklenmesi unutulursa doğrulama sessizce atlanmaz, dosya reddedilir. Reddetme mesajı tek ve geneldir (`"Desteklenmeyen dosya"`, K5): hangi kontrolün tetiklendiği istemciye söylenmez, çünkü saldırgana hangi kontrolü aştığını söylemek aşmasını kolaylaştırır; ayrım yalnızca log'da tutulur (her ret dalı dosya adı ve boyutla `logger.warning` basar). Doğrulamayı geçen dosyanın metnini (ve tablolarını, `format_table_to_markdown` ile markdown'a çevirerek) `pdfplumber`/`python-docx` ile çıkarır, `RecursiveCharacterTextSplitter` ile parçalara ayırır (chunk_size=1000, overlap=200) ve analiz akışının sorguladığı aynı ChromaDB koleksiyonuna upsert eder. Chunk ID'leri deterministiktir (`<dosyaadi>_chunk_<n>`), bu yüzden aynı dosyayı tekrar yüklemek öncekini çoğaltmak yerine üzerine yazar — ama `upsert` yalnızca kendisine verilen id'lere dokunduğu için üzerine yazmak tek başına yetmez. Sıra şudur: önce eski chunk id'leri okunur, sonra yeni sürüm `upsert` edilir, en sonda yeni sürümde karşılığı olmayan eski chunk'lar silinir (hayalet chunk temizliği, `source` metadata'sıyla eşleşenler). Temizlik bilinçli olarak yazmadan **sonra** yapılır: önce silinseydi, `upsert` yarıda patladığında önceki iyi sürüm de kaybolurdu.
 
 ### Yetkilendirme (`app/api/auth.py`, `app/services/auth_service.py`)
 
@@ -111,6 +140,16 @@ Standart OAuth2-password-flow JWT auth (`python-jose`, `passlib` üzerinden bcry
 
 `admin` her iki doktor ucundan da geçer ("admin her şeyi görür"). Buna karşılık `doctor` rolü `require_user_or_admin_role` ile korunan uçlardan **403 alır** — hasta başvurusu girmek ile doktor onayı vermek bilinçli olarak ayrı yetkilerdir (tasarım kararı K2, `docs/superpowers/specs/2026-08-03-doktor-uclari-design.md`). `POST /speech/kaydet` bir doğrulama demosudur ve hiçbir yetki bağımlılığı taşımaz.
 
+**Hız sınırı ayrı bir katmandır** (Gün 21, `app/utils/hiz_sinirlayici.py`): rol kapısı saldırı yüzeyini daraltır ama hız sınırının yerine geçmez — `hasta`/`hasta123` gibi sıradan bir hesapla ulaşılan pahalı bir uç, kapıdan geçildiği anda korumasızdır. Sayaçlar süreç belleğinde tutulur, pencere `rate_limit_pencere_sn` (60 sn) uzunluğunda kayan penceredir.
+
+| Uç | Sınırlayıcı | Anahtar | Sınır |
+|---|---|---|---|
+| `POST /auth/login` | `giris_ip_sinirlayici` (bağımlılık; uç gövdesinden önce çalışır) | bağlanan uç noktanın IP'si | `rate_limit_giris_ip` = 30/dk, **her istek** sayılır (başarılı giriş dahil) |
+| `POST /auth/login` | `giris_sinirlayici` (uç gövdesinde) | kullanıcı adı, `strip().casefold()` ile normalize | `rate_limit_giris` = 5/dk, yalnızca **başarısız** denemeler |
+| `POST /ai/analiz`, `POST /speech/transkript` | `genel_sinirlayici` (**ortak** örnek) | bağlanan uç noktanın IP'si | `rate_limit_genel` = 30/dk, ikisinin **toplamı** için |
+
+Giriş ucunun iki katmanı birbirinin yerine geçmez, ikisi de geçilmek zorundadır. Kullanıcı adı katmanı olmadan tüm klinik tek kovada kilitlenir: Streamlit backend'i **sunucu tarafından** çağırdığı için üretimde bütün girişler frontend konteynerinin IP'sinden gelir ve bir hemşirenin üç yanlış denemesi herkesi dışarıda bırakırdı. IP katmanı olmadan ise her istekte farklı bir kullanıcı adı deneyen saldırgan hiçbir kovayı doldurmadan sınırsız hızda vurabilir (parola serpme, kullanıcı adı numaralandırma). `X-Forwarded-For` bilerek hiç okunmuyor — sahte başlıkla sınır aşılabilirdi. Sınırsız uçlar: `/document/*`, `/doctor/*`, `/auth/me` ve `POST /speech/kaydet`.
+
 ### Doktor uçları (`app/api/doctor.py`)
 
 - `GET /doctor/bekleyen?limit=20&offset=0` — yalnızca `status == "bekliyor"` ziyaretleri, en yeni önce döndürür. Sıralama `created_at DESC, id DESC`; ikinci anahtar zaman damgaları eşitlendiğinde sayfalamayı belirlenimci kılar. Yapay zekâ önerisi `joinedload` ile aynı sorguda gömülü gelir (`ai_onerisi`, öneri yoksa `null`). `limit`: 1–100, `offset`: `ge=0`; sınır dışı değer 422.
@@ -121,6 +160,8 @@ Standart OAuth2-password-flow JWT auth (`python-jose`, `passlib` üzerinden bcry
 ### Konfigürasyon (`app/config/config.py`)
 
 Import anında bir kez okunan tek bir `pydantic-settings` `Settings` nesnesi (`settings = get_settings()`), önce ortam değişkenlerinden, sonra `.env`'den beslenir. Docker Compose `CHROMA_HOST`, `CHROMA_PORT`, `OLLAMA_BASE_URL`, `DATABASE_URL`, `JWT_SECRET_KEY`, `OPENAI_API_KEY` değerlerini konteyner ortam değişkeni olarak ayarlar — konteyner içinde bunlar her zaman `.env`'e göre önceliklidir. Servisler (`chroma_service.py`, `rag_service.py`, `llm_service.py`, `auth_service.py`) doğrudan `os.getenv` okumak yerine hepsi buradan `settings`'i import eder.
+
+Güvenlik ayarları `# --- Güvenlik (Gün 21) ---` başlığı altında **tek grupta** toplanmıştır (`rate_limit_genel`, `rate_limit_giris`, `rate_limit_giris_ip`, `rate_limit_pencere_sn`, `max_upload_mb`, `izinli_uzantilar`, `cors_origins`; karşılıkları `.env.example`'da aynı sırayla): dağınık güvenlik ayarı, hangi kuralın yürürlükte olduğunu okunamaz hâle getirir (tasarım K8). Yanlarındaki yorumlar yalnızca değeri değil **neye anahtarlandığını** anlatır — değeri değiştirirken yorumu da aynı turda güncelleyin; bu dal yanlış anlatan yorumları iki kez düzeltmek zorunda kaldı ve ikincisinde inceleyen bunu "aynı kusur sınıfı" diye adlandırdı (Ek C, Gün 21 süreç notu).
 
 ### Veri modeli (`app/models/`)
 
