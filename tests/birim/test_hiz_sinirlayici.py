@@ -150,6 +150,21 @@ def test_izin_var_mi_pencere_kayinca_yeniden_izin_verir():
     assert sinirlayici.izin_var_mi("ayse") is True
 
 
+def test_istegi_kaydet_bayat_kayitlari_kuyruktan_dusurur():
+    # Kaydetme yolu kuyruğu kaydırmazsa aynı anahtarın kayıtları pencereler
+    # boyunca birikir: kota `izin_var_mi` okurken doğru hesaplansa bile kuyruk
+    # sınırsız büyür. Uzun süre parolasını yanlış giren tek bir kullanıcı yeter.
+    saat = SahteSaat()
+    sinirlayici = HizSinirlayici(limit=5, pencere_sn=60, saat=saat)
+
+    sinirlayici.istegi_kaydet("ayse")
+    saat.ilerlet(61)
+    sinirlayici.istegi_kaydet("ayse")
+
+    # Eski kayıt pencere dışında kaldığı için düşmeli; yalnızca yenisi kalmalı.
+    assert len(sinirlayici._kayitlar["ayse"]) == 1
+
+
 def test_kaydetme_yolunda_da_bayat_anahtarlar_temizlenir():
     # Giriş ucu artık izin_ver() değil istegi_kaydet() çağırıyor; temizlik bu
     # yola taşınmazsa sözlük denenen her kullanıcı adıyla sınırsız büyür.
