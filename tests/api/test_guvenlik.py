@@ -53,6 +53,10 @@ def test_desteklenmeyen_uzantili_dosya_reddedilir(
     )
 
     assert yanit.status_code == 400
+    # Mesaj iddiası doğrulayıcıyı bağlar: eski uzantı zincirinin ürettiği
+    # "Unsupported file format" ile karışmasın diye (aksi halde bu test
+    # doğrulayıcı silinse de yeşil kalırdı).
+    assert yanit.json()["detail"] == "Desteklenmeyen dosya"
 
 
 @pytest.mark.entegrasyon
@@ -83,3 +87,7 @@ def test_pdf_gibi_gorunen_bozuk_dosya_reddedilir(
     )
 
     assert yanit.status_code == 400
+    # Mesaj iddiası doğrulayıcıyı bağlar: doğrulayıcı olmasa da pdfplumber
+    # geçersiz baytlarda istisna fırlatıp "PDF processing error" ile 400
+    # döner — durum kodu tek başına imza kontrolünü kanıtlamıyor.
+    assert yanit.json()["detail"] == "Desteklenmeyen dosya"
