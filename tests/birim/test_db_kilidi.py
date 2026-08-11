@@ -88,3 +88,25 @@ def test_ayristirilamayan_url_reddedilir():
     guvenli, _ = hedef_guvenli_mi("bu bir url degil")
 
     assert guvenli is False
+
+
+def test_query_stringle_ezilen_host_reddedilir():
+    # libpq bağlantı hedefini query string'den de alır ve bu url.host'u EZER:
+    # aşağıdaki adreste url.host "localhost" görünür ama psycopg2 "prod-host"a
+    # bağlanır, yani doğruladığımız hedef bağlanılan hedef olmaz. Bos-host
+    # deliğiyle aynı sınıf.
+    guvenli, sebep = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test?host=prod-host"
+    )
+
+    assert guvenli is False
+    assert "host" in sebep
+
+
+def test_hostaddr_ile_ezilen_host_reddedilir():
+    # hostaddr da aynı işi yapar; tek parametreyi kapatmak yetmez.
+    guvenli, _ = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test?hostaddr=10.0.0.5"
+    )
+
+    assert guvenli is False

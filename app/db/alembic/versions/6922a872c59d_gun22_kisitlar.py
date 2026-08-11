@@ -18,6 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    """Upgrade schema."""
     # Bir ziyarete iki öneri yazılmasını engeller (Gün 22).
     op.drop_index("ix_ai_recommendations_visit_id", table_name="ai_recommendations")
     op.create_unique_constraint(
@@ -30,6 +31,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Downgrade schema."""
+    # İki değişikliği de ters sırada geri alır: önce index düşer, sonra unique
+    # kısıt kalkar ve yerine eski düz index geri gelir. Sıra önemli — unique
+    # kısıt düşünce arkasındaki index de düştüğü için ad çakışması olmaz.
     op.drop_index("ix_doctor_reviews_doctor_id", table_name="doctor_reviews")
     op.drop_constraint(
         "uq_ai_recommendations_visit_id", "ai_recommendations", type_="unique"

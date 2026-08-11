@@ -22,7 +22,7 @@ Yanık — Kırmızı Alan Kriterleri
 - İnhalasyon yanığı bulguları (sesi kısılmış, öksürüğü kurumlu) olan, kapalı alan yangınlarında kalmış (yangında dumanın içinde kalmış) ve solunum tehlikesi olan hastalar.
 - Karbonmonoksit/siyanür maruziyetine bağlı bilinç değişikliği (dumandan etkilendikten sonra baygınlık, sersemlik, kendini bilmeme) ve laktat yüksekliği saptananlar.
 - Erişkinde TVYA >%20, çocuk/yaşlıda TVYA >%10 olan 2. veya 3. derece majör yanıklar; hastanın anlatımında vücudun geniş bir bölümü haşlanmış, geniş alanda kabarmış veya derisi soyulmuş olanlar.
-- Yüksek voltajlı elektrik yanıkları (yüksek gerilime kapılmış), kimyasal yanıklar (cilde asit, kireç veya benzeri kimyasal madde dökülmesi) veya sirkumferansiyel (çepeçevre) göğüs/ekstremite yanıkları.
+- Yüksek voltajlı elektrik yanıkları (yüksek gerilime kapılmış), kimyasal yanıklar (cilde dökülen asit, kireç gibi maddelerin yol açtığı yanıklar; yutulan kimyasallar bu protokole değil zehirlenme protokolüne aittir) veya sirkumferansiyel (çepeçevre) göğüs/ekstremite yanıkları.
 - Yanık bölgesi beyaz, sarı-kahverengi veya kabuk gibi sert görünen ve hastanın o bölgede ağrı hissetmediği tam kalınlıkta (3. derece) yanıklar; ağrının olmaması iyiye işaret değildir, sinir uçlarının harap olduğunu gösterir.
 - Yanığa hipotansiyon, şok veya majör travmanın eşlik ettiği durumlar.
 

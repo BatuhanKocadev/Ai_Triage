@@ -79,3 +79,43 @@ def test_yanik_sikayeti_esigi_geciyor(derleme_koleksiyonu, sorgu):
     # Boş liste = eşik altında kalındı, yani hasta "Belirsiz" alıyor.
     assert sonuc, "yanık şikayeti eşiği geçemedi; sistem 'Belirsiz' diyecek"
     assert "yanik.txt" in sonuc[0]
+
+    # Eşiği geçmek yetmez: LLM'e triyaj ÖLÇÜTÜ de ulaşmalı. Bu iddia olmadan test,
+    # yalnızca hasta-dili chunk'ının döndüğü kusurlu durumda da yeşil kalırdı —
+    # sistem "Belirsiz" demez ama kriter görmeden karar verir. Gün 22'nin
+    # incelemesinde tam bu kusur bulundu ve tek kanıtı elle yazılıp silinen bir
+    # script'ti; bu satır onu kalıcı hale getiriyor.
+    assert any("Alan Kriterleri" in belge for belge in sonuc), (
+        "dönen belgelerin hiçbiri triyaj kriteri taşımıyor; LLM ölçüt görmeden "
+        "karar verecek"
+    )
+
+
+@pytest.mark.yavas
+@pytest.mark.entegrasyon
+def test_kor_yanik_sorgusu_esigi_geciyor_ama_kriter_almiyor(derleme_koleksiyonu):
+    """Kör sorgunun BUGÜNKÜ davranışını dondurur — iyileşirse test kırılır.
+
+    Bu sorgu proje sahibi tarafından yanik.txt'nin yeni metni GÖRÜLMEDEN yazıldı;
+    kalibrasyon setindeki diğer iki yanık sorgusu protokol metniyle aynı kişi
+    tarafından yazıldığı için gerçekten kör tek ölçüm budur (tasarım K5).
+
+    Ölçüm sonucu: eşiği geçiyor (hasta "Belirsiz" almıyor) ama LLM'e yalnızca
+    hasta-dili chunk'ı ulaşıyor; Kırmızı kriterleri 0.0011'de kalıyor. Sebep
+    yapısal: reranker chunk'ın tamamını puanlıyor, yoğun kelime dağarcığı
+    olmayan bir bloğa tek cümle eklemek seyreliyor (Ek C, Gün 22).
+
+    İkinci iddia bilerek "kriter YOK" diyor: bu bir hedef değil, kayıt altına
+    alınmış bir kusur. Yapısal düzeltme geldiğinde bu test kırılacak ve o kırılma
+    "defekt kapandı" haberidir — testi silmek yerine iddiayı çevirin.
+    """
+    sorgu = "mangalda kolumu ateşe tuttum, kolum bembeyaz oldu hissetmiyorum"
+
+    sonuc = retrieve_and_rerank(sorgu, derleme_koleksiyonu)
+
+    assert sonuc, "kör yanık sorgusu eşiği geçemedi"
+    assert "yanik.txt" in sonuc[0]
+    assert not any("Alan Kriterleri" in belge for belge in sonuc), (
+        "kör sorgu artık kriter alıyor — Gün 22'nin adlandırılmış defekti "
+        "kapanmış olabilir; Ek C'yi güncelleyin ve bu testi çevirin"
+    )
