@@ -90,7 +90,10 @@ dayatır. Görev 3 ikisini de tüketen GitHub Actions workflow'unu yazar.
 Bu testin var oluş sebebi ölçüldü: tembelleştirmeden önce `app.main` import'u
 25,5 saniye sürüyor ve torch, transformers, sentence_transformers, chromadb,
 faster_whisper dahil 5214 modül yüklüyordu. Bu, hem her test koşusunun yarısını
-hem de CI'da 2,5 GB'lık bir kurulumu doğuruyordu.
+hem de CI ortamını büyütüyordu. (Uygulama sırasında ölçüldü: 28,5 sn → 1,85 sn,
+5215 → 1077 modül; ortam 1694 MB → 498 MB, torch tek başına 497 MB. Kurulum
+SÜRESİ hiç ölçülmedi — planın ilk hâlindeki "2,5 GB" ve "dakikalardan saniyelere"
+ifadeleri tahmindi ve düzeltildi.)
 
 Test olmadan, birinin `rag_service`'e modül düzeyinde bir `import torch` geri
 koyması hiçbir şeyi kırmaz ve CI sessizce yavaşlar — yol haritasının önceden
@@ -184,7 +187,8 @@ def get_reranker() -> CrossEncoder:
     if _reranker is None:
         # torch ve sentence_transformers BURADA import ediliyor, modül düzeyinde
         # değil: modül düzeyinde import her test koşusuna ~25 saniye ve CI'a
-        # 2,5 GB'lık bir kurulum ekliyordu (tasarım K2).
+        # ortamı ~1,2 GB büyütüyordu (tasarım K2). [Planın ilk hâli burada
+        # "2,5 GB" diyordu; ölçülmemişti ve uygulamada düzeltildi.]
         import torch
         from sentence_transformers import CrossEncoder
 

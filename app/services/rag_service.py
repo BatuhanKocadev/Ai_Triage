@@ -22,8 +22,9 @@ def get_reranker() -> CrossEncoder:
     global _reranker
     if _reranker is None:
         # torch ve sentence_transformers BURADA import ediliyor, modül düzeyinde
-        # değil: modül düzeyinde import her test koşusuna ~25 saniye ve CI'a
-        # 2,5 GB'lık bir kurulum ekliyordu (tasarım K2).
+        # değil: modül düzeyinde import `app.main` açılışına ~25 saniye ekliyordu
+        # (28,5 sn → 1,85 sn ölçüldü) ve CI ortamını ~1,2 GB büyütüyordu (torch
+        # tek başına 497 MB). Tasarım K2.
         import torch
         from sentence_transformers import CrossEncoder
 

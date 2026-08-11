@@ -1,9 +1,11 @@
 """`app.main` import edildiğinde ağır kütüphanelerin YÜKLENMEDİĞİNİ dondurur.
 
 Bu testin var oluş sebebi ölçüldü: tembelleştirmeden önce `app.main` import'u
-25,5 saniye sürüyor ve torch, transformers, sentence_transformers, chromadb,
-faster_whisper dahil 5214 modül yüklüyordu. Bu, hem her test koşusunun yarısını
-hem de CI'da 2,5 GB'lık bir kurulumu doğuruyordu.
+**28,5 saniye** sürüyor ve torch, transformers, sentence_transformers, chromadb,
+faster_whisper dahil **5215 modül** yüklüyordu; sonrasında 1,85 saniye ve 1077
+modül. Ayrıca bu kütüphaneler CI ortamını büyütüyordu: minimal listeyle kurulan
+ortam **498 MB**, tam listeyle kurulan geliştirme ortamı **1694 MB** — torch tek
+başına 497 MB. (Kurulum SÜRESİ hiç ölçülmedi, o yüzden iddia edilmiyor.)
 
 Test olmadan, birinin `rag_service`'e modül düzeyinde bir `import torch` geri
 koyması hiçbir şeyi kırmaz ve CI sessizce yavaşlar — yol haritasının önceden
@@ -20,8 +22,18 @@ from pathlib import Path
 
 KOK = Path(__file__).resolve().parent.parent.parent
 
-# CI kurulum süresini ve her koşunun ~25 saniyesini belirleyen kütüphaneler.
-AGIR_MODULLER = ["torch", "sentence_transformers", "faster_whisper", "chromadb"]
+# CI ortam boyutunu ve `app.main` açılışının ~25 saniyesini belirleyen kütüphaneler.
+# `transformers` listede çünkü lazy bir `__init__` kullanıyor: modül düzeyinde bir
+# `from transformers import ...` bugün fark edilmeden eklenebilir ve muhafız yeşil
+# kalırdı. Liste bir dize eklemekle genişler; genişletirken aşağıdaki `%` biçimini
+# de demet olarak bıraktığımıza dikkat edin.
+AGIR_MODULLER = [
+    "torch",
+    "transformers",
+    "sentence_transformers",
+    "faster_whisper",
+    "chromadb",
+]
 
 # Alt süreçte koşacak betik: app.main'i import eder ve hangi ağır modüllerin
 # yüklendiğini JSON olarak basar.
@@ -43,7 +55,9 @@ print(json.dumps([m for m in %s if m in sys.modules]))
 
 def test_app_import_agir_kutuphaneleri_cekmiyor():
     sonuc = subprocess.run(
-        [sys.executable, "-c", BETIK % AGIR_MODULLER],
+        # Demet olarak veriliyor: `BETIK % AGIR_MODULLER` yalnızca bu ad bir
+        # LİSTE olduğu sürece çalışır, demete çevrilirse TypeError verir.
+        [sys.executable, "-c", BETIK % (AGIR_MODULLER,)],
         capture_output=True,
         text=True,
         cwd=str(KOK),

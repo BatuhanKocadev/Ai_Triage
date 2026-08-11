@@ -105,6 +105,12 @@ async def upload_document(
 
         # Bölücü BURADA import ediliyor, modül düzeyinde değil: import zinciri
         # torch'a kadar iniyor ve uygulama açılışını ~25 saniye bekletiyordu.
+        #
+        # TAKAS AÇIK OLSUN: bu maliyet kaybolmadı, YER DEĞİŞTİRDİ. Yeniden
+        # başlatmadan sonraki İLK yükleme o ~25 saniyeyi olay döngüsünde öder,
+        # eskiden açılışta ödeniyordu. Süreç başına bir kez ve uç yalnızca
+        # admin'e açık; ayrıca depo bu deseni zaten kabul ediyor
+        # (`get_reranker()` istek yolunda 2 GB'lık model yüklüyor).
         from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         text_splitter = RecursiveCharacterTextSplitter(

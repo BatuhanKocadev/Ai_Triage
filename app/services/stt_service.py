@@ -41,7 +41,10 @@ def _resolve_device() -> tuple[str, str]:
 def get_model() -> WhisperModel:
     global _model
     if _model is None:
-        # faster_whisper BURADA import ediliyor, modül düzeyinde değil.
+        # faster_whisper BURADA import ediliyor, modül düzeyinde değil: kendisi
+        # `ctranslate2` ve `onnxruntime` çekiyor ve modül düzeyine alınırsa
+        # `app.main` açılışına da CI ortamına da o ağırlığı ekler (tasarım K2).
+        # `tests/birim/test_import_agirligi.py` bunu bağlıyor.
         from faster_whisper import WhisperModel
 
         device, compute_type = _resolve_device()

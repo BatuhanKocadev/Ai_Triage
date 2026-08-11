@@ -17,7 +17,10 @@ def _gomme_fonksiyonu():
     Açıkça veriliyor çünkü ChromaDB'nin varsayılanı all-MiniLM-L6-v2 (İngilizce);
     Türkçe sorguda ayırt edici olmayan vektör üretip yanlış dokümanları getiriyor.
     """
-    # chromadb BURADA import ediliyor, modül düzeyinde değil (tasarım K2).
+    # chromadb BURADA import ediliyor, modül düzeyinde değil. Sebebi görünmez
+    # olduğu için yazılıyor: chromadb hafif görünür ama `onnxruntime` ve
+    # `tokenizers` çekiyor, ve modül düzeyinde import edilince `app.main`
+    # açılışına da CI ortamına da o ağırlığı ekliyor (tasarım K2).
     from chromadb.utils import embedding_functions
 
     return embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -28,7 +31,9 @@ def _gomme_fonksiyonu():
 def get_collection():
     global _collection
     if _collection is None:
-        # chromadb BURADA import ediliyor, modül düzeyinde değil (tasarım K2).
+        # Yukarıdaki `_gomme_fonksiyonu` ile aynı sebep: chromadb hafif görünür
+        # ama `onnxruntime`/`tokenizers` çekiyor. Modül düzeyine taşımayın
+        # (tasarım K2); `tests/birim/test_import_agirligi.py` bunu bağlıyor.
         import chromadb
 
         chroma_client = chromadb.HttpClient(

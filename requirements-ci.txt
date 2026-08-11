@@ -17,8 +17,18 @@
 # tests/entegrasyon/ altindaki `yavas` dosyalar da import ediliyor ve
 # chromadb ile langchain-text-splitters bu yuzden listede.
 #
-# Surumler requirements.txt ile BIREBIR ayni olmali; ayrisirsa CI ile uretim
-# farkli kod kosar ve CI'in kanitladigi sey uretim icin gecerli olmaz.
+# PARITE: bu dosya yalnizca DOGRUDAN bagimliliklari pinliyor (21 satir).
+# requirements.txt bir tam freeze (151 pin); buradaki her paket onunla BIREBIR
+# ayni surumu tasimak zorunda ve bunu tests/birim/test_ci_gereksinimleri.py
+# dayatiyor - biri iki dosyadan yalnizca birinde surum yukseltirse test kirilir.
+#
+# AMA gecisli bagimliliklar (numpy, onnxruntime, grpcio, protobuf, cryptography,
+# pdfminer.six ...) burada pinli DEGIL; pip onlari serbest cozuyor. Bunun iki
+# bilinen sonucu var ve gizlenmemeli: (1) bir gecisli paketin yeni surumu CI'i
+# kodla ilgisiz bir sebeple kirabilir; (2) CI, uretimin hic kosmadigi bir
+# bagimlilik kumesi uzerinde yesil kalabilir. Tam freeze bunu kapatirdi ama
+# dosyayi ~121 satira cikarir ve requirements.txt ile elle esitlenmesi gerekirdi;
+# bugun bilincli olarak secilmedi.
 
 # --- Web katmani ---
 fastapi==0.139.0
