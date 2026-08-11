@@ -1749,8 +1749,18 @@ yazılı gerekçeyle seçilmiş bir kararı sessizce iptal etmek olurdu.
    protokolün kazandığına ve kaç kriter chunk'ının geçtiğine hiç bakmıyor. Bu
    teorik değil: chunk-0-only defektini sağlıklı bir 0.4291 diye gösterdi, ve
    "çamaşır suyu içtim" sorgusu için **`GEÇER 0.1001`** basıyor — oysa o sorgu
-   artık hiç `zehirlenme.txt` bağlamı almıyor, `yanik.txt` chunk'ları aday
-   havuzundan onu itiyor. Yukarıdaki 19/20 sayısının yanına bu kayıt düşülmeli.
+   artık hiç `zehirlenme.txt` bağlamı almıyor. Yukarıdaki 19/20 sayısının yanına
+   bu kayıt düşülmeli.
+
+   **Sebebi ölçüldü ve ilk hipotez yanlış çıktı.** İnceleme, `:25`'e eklenen
+   "yutulan kimyasallar zehirlenme protokolüne aittir" cümlesinden şüphelenmişti
+   (`yanik.txt`'yi daha çok yutma belgesi gibi gösterip rekabeti artırdığı için).
+   Cümle kaldırılıp yeniden ölçüldü: `zehirlenme.txt` **yine ilk 10'da yok**.
+   Skorlar oynadı (`yanik#3` 0.0156 → 0.0415), sonuç değişmedi. Yani sebep o
+   cümle değil, `yanik.txt`'nin 4 → 6 chunk'a büyümesiyle sabit 10 kişilik aday
+   havuzunu doldurması — aşağıdaki 3. madde. Cümle geri konmadı: retrieval'a
+   ölçülen faydası yok ve "bu protokole değil …" kalıbı, kostik yutmaya sık
+   eşlik eden yüz/havayolu yanıklarında yanıltıcı biçimde mutlak.
 3. **`top_k_initial = 10`, 51 chunk'lık derlemeye karşı.** Artık yalnızca geri
    çağırmayı sınırlamıyor, **doğru protokolün chunk'larını dışarı itiyor**
    (çamaşır suyu sorgusu). Eşikle birlikte ölçülmeli, ikisi etkileşiyor.
