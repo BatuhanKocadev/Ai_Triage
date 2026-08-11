@@ -1,0 +1,47 @@
+# CI icin minimal calisma zamani listesi.
+#
+# requirements.txt'in kopyasi DEGILDIR: torch ailesi (torch, transformers,
+# sentence-transformers, faster-whisper) bilerek DISARIDA. Onlar yalnizca
+# `yavas` isaretli testlerde gerekiyor ve CI o testleri hic kosmuyor
+# (tasarim K9). Kurulumu dakikalardan saniyelere indiren fark budur.
+#
+# DIKKAT: bu liste "hicbir agir sey yok" demek degil. pytest, isaret
+# filtrelemesini test modullerini TOPLADIKTAN sonra uyguluyor, yani
+# tests/entegrasyon/ altindaki `yavas` dosyalar da import ediliyor ve
+# chromadb ile langchain-text-splitters bu yuzden listede.
+#
+# Surumler requirements.txt ile BIREBIR ayni olmali; ayrisirsa CI ile uretim
+# farkli kod kosar ve CI'in kanitladigi sey uretim icin gecerli olmaz.
+
+# --- Web katmani ---
+fastapi==0.139.0
+starlette==1.3.1
+uvicorn==0.50.2
+python-multipart==0.0.32
+anyio==4.14.1
+
+# --- Veritabani ---
+SQLAlchemy==2.0.51
+psycopg2-binary==2.9.12
+alembic==1.18.5
+
+# --- Ayarlar ve dogrulama ---
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-dotenv==1.2.2
+email-validator==2.3.0           # speech.py'deki EmailStr olmadan sema kurulmuyor
+
+# --- Kimlik dogrulama ---
+python-jose==3.5.0
+passlib==1.7.4
+bcrypt==4.0.1
+
+# --- Test istemcisi (TestClient httpx kullaniyor) ---
+httpx==0.28.1
+
+# --- Uc modullerinin modul duzeyinde import ettikleri ---
+ollama==0.6.2                    # llm_service modul duzeyinde Client kuruyor
+pdfplumber==0.11.10              # document.py metin cikarma
+python-docx==1.2.0               # document.py DOCX cikarma
+langchain-text-splitters==1.1.2  # document.py chunklama + yavas test modulleri
+chromadb==1.5.9                  # yavas test modullerinin toplanmasi icin
