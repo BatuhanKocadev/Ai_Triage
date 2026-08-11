@@ -328,7 +328,9 @@ ile doğrulandı.
 > **Durum güncellemesi (11 Ağustos 2026, Gün 22 birinci yarısı).**
 > **Madde 1b (güvenlik kilidinin sınırı) KAPATILDI** — kilit artık host doğruluyor
 > ve query string'li meşru adresi kırmıyor; karar mantığı
-> `tests/yardimcilar/db_kilidi.py`'de ve altı birim testiyle bağlı.
+> `tests/yardimcilar/db_kilidi.py`'de ve **on bir** birim testiyle bağlı
+> (altısı ilk turda, biri boş-host deliği için, ikisi beyaz liste girdileri için,
+> ikisi de query string'le ezilen host için).
 > **Madde 1c (aynı kusur deseninin üçüncü örneği) KAPATILDI** — `test_speech_api.py`'deki
 > üç test artık `transkript_engelle` ile yamalı; desenin bilinen tüm örnekleri kapandı.
 > **Madde 2'nin birinci sırası (`/auth/login` uçtan uca testi) ÇOKTAN KAPANMIŞTI** —
@@ -1069,8 +1071,9 @@ karaktersiz sorguda 8. sırada geliyor — ikisinde de reranker'a ulaşıyor.
 
 > **Durum güncellemesi (11 Ağustos 2026, Gün 22 birinci yarısı).**
 > **Madde 1 (`yanik.txt` reranker'da çok zayıf) KISMEN KAPATILDI** — skor
-> 0.0005 → 0.3848, hasta artık "Belirsiz" almıyor ve Sarı/Yeşil kriterleri ile
-> tetkikler LLM'e ulaşıyor. **Ama Kırmızı kriterleri hâlâ ulaşılamıyor** (üç
+> 0.0005 → 0.3848 ve hasta artık "Belirsiz" almıyor; **kalibrasyon-1 için**
+> Sarı/Yeşil kriterleri ile tetkikler LLM'e ulaşıyor (kör sorguda ulaşmıyor).
+> **Ama Kırmızı kriterleri hâlâ ulaşılamıyor** (üç
 > sorguda 0.0002/0.0003/0.0011) ve sebebi yapısal; Gün 23 devir listesinde
 > adlandırılmış defekt olarak duruyor.
 > Madde 2 (karaktersiz yazım) **açık**, K2 ile bilerek ertelendi.
@@ -1549,7 +1552,7 @@ diyordu. Protokole hasta dili eklendi ve kalibrasyon sorgusu yeniden yazıldı.
 
 | | Önce | Sonra |
 |---|---|---|
-| Test sayısı | 137 | **147** |
+| Test sayısı | 137 | **149** |
 | `app/` kapsaması | %85 | %85 |
 | `auth.py` kapsaması | %100 | %100 |
 | Alembic head | `72dffb9e5194` | **`6922a872c59d`** |
@@ -1557,7 +1560,17 @@ diyordu. Protokole hasta dili eklendi ve kalibrasyon sorgusu yeniden yazıldı.
 | Kalibrasyon `ILGILI` seti | 18 sorgu | **20 sorgu** |
 | Yeni bağımlılık | — | yok |
 
-Mevcut testlerin hiçbiri değiştirilmedi, zayıflatılmadı veya yeniden adlandırılmadı.
+Hiçbir mevcut test **zayıflatılmadı** veya yeniden adlandırılmadı. Üçü
+değiştirildi ve üçü de güçlendirildi: `test_speech_api.py`'deki yetki/doğrulama
+testlerine `transkript_engelle` fixture parametresi eklendi; gövdeleri ve
+iddiaları aynı kaldı. (Tasarım dokümanı "hiçbir test değiştirilmez" derken tam
+o düzenlemeyi mandate ediyordu — kendi içinde çelişiyordu, burada düzeltiliyor.)
+
+Yukarıdaki tablo yalnızca kazanılanı gösteriyor. **Bir gerileme de oldu:**
+pediatrik haşlanma probu 0.0186 → 0.0044'e düştü ve artık "Belirsiz" alıyor,
+çünkü Kırmızı+Sarı'yı birleştiren eski chunk ikiye bölündü. Yön emniyetli
+(hasta insan triyaj bankosuna gidiyor) ama pay %12, yani gürültü seviyesinde;
+ayrıntısı Gün 23 devir listesinin 5. maddesinde.
 
 ### İncelemelerin bulduğu gerçek sorunlar
 
@@ -1606,6 +1619,25 @@ chunk'ta duruyordu. *Klinik olarak yanlış ve sorgu biçimli* aynı anda, bir t
 belgede. Ayrıca `:37` el yanığını Yeşil örneği olarak veriyordu, oysa `:31` el
 yanığını Sarı'ya yolluyordu — belge en sık göreceği vakada kendisiyle çelişiyordu.
 Beşi de düzeltildi.
+
+**5. Aynı kaçış kapısının ikinci örneği — bir gün sonra, aynı dosyada.**
+Tüm-dal incelemesi kilitte ikinci bir delik buldu ve mekanik olarak kanıtladı:
+
+```
+make_url("...@localhost:5432/ai_triage_test?host=prod-host").host  ->  "localhost"
+create_connect_args(...)["host"]                                    ->  "prod-host"
+```
+
+libpq bağlantı hedefini `host`, `hostaddr` ve `service` query parametrelerinden de
+alır ve bunlar `url.host`'u **ezer**. Kilit "localhost" görüp güvenli der, psycopg2
+üretim sunucusuna bağlanır, `drop_all` orada koşar. Üç parametre de artık
+reddediliyor.
+
+Bunun öğretici yanı, deliğin kendisi değil **tekrarı**: boş-host deliği bir gün
+önce aynı dosyada, aynı gerekçeyle (K6, "kolay kaçış kapısı olan kilit, kilit
+değildir") bulunup kapatılmıştı. Bir güvenlik kontrolünde bir bypass bulunduğunda,
+doğru refleks o bypass'ı kapatmak değil **aynı sınıftan başka bypass aramaktır** —
+burada iki tur sürdü.
 
 ### Kör sorgu: günün en bilgilendirici ölçümü
 
