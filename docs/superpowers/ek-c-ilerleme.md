@@ -1792,9 +1792,27 @@ yazılı gerekçeyle seçilmiş bir kararı sessizce iptal etmek olurdu.
    arıyordu ve iki yönde de yanlıştı — örtüşmeli bölme başlığı kendi
    maddelerinden ayırıyor, yani saf kriter maddelerinden oluşan chunk başlıksız
    kalıyor, başlığı taşıyan chunk ise ağırlıklı olarak hasta dili olabiliyor.
-   Bu, Ek C'nin birkaç paragraf önce geri aldığı etiketleme hatasının aynısıydı;
-   ikinci turda içerik işaretine (`TVYA >`, `kritik bölge`, `Önerilen Tetkikler`)
-   çevrildi ve `yanik.txt` belgeleriyle sınırlandı.
+   Bu, Ek C'nin birkaç paragraf önce geri aldığı etiketleme hatasının aynısıydı.
+   İkinci turda `yanik.txt` belgeleriyle sınırlandı ve içerik işaretleri eklendi —
+   **ama başlık listede bırakıldı**, yani yanlış-pozitif yön açık kaldı ve bir
+   sonraki inceleme onu da yakaladı: başlığı taşıyan chunk ağırlıklı olarak hasta
+   dili + prosedür metniydi ve yalnızca başlık yüzünden "kriter var" sayılıyordu.
+   Üçüncü turda başlık listeden çıkarıldı; işaretlerin hepsi artık ölçüt metninden
+   (`TVYA >`, `TVYA <`, `TVYA %`, `kritik bölge`, `Önerilen Tetkikler`,
+   `İnhalasyon yanığı bulguları`). Aynı hatanın üç turda kapanması, bu bölümün
+   süreç notundaki "düzeltme kendi ölçüsünü üretemez" dersinin ikinci örneği.
+8b. **Kilit ORTAM DEĞİŞKENİYLE hâlâ atlatılabiliyor** — URL üzerinden gelen her
+   yönlendirme kapatıldı (39 vektör denendi, hiçbiri geçmiyor), ama süreç
+   ortamındaki `PGHOSTADDR` ve `PGSERVICE` bağlantıyı kilidin **kendi onayladığı
+   DSN'iyle** başka bir sunucuya götürüyor. İnceleme bunu canlı sunucuya karşı
+   kanıtladı: `PGHOSTADDR=192.0.2.7` + onaylı adres → bağlantı 192.0.2.7'ye gitti.
+   `PGPORT` de portsuz URL'lerde aynı işi yapıyor. Bu dalın getirdiği bir kusur
+   değil, kilit hiç bakmadığı bir kanal; ama modülün docstring'i "çözemezsek
+   reddederiz" diyor, yani belge kodun sağladığından fazlasını vaat ediyor.
+   Yıkım yarıçapı `dbname` sabitiyle sınırlı — nereye giderse gitsin
+   `ai_triage_test` adlı bir veritabanına gidiyor — bu yüzden Critical değil.
+   Ucuz kapanış: `PGHOSTADDR`/`PGSERVICE` ayarlıysa reddet, ya da `conftest.py`
+   `create_engine`'den önce bu üçünü temizlesin.
 9. **`test_turkce_retrieval.py:56` hâlâ `read_text()` kullanıyor**, yeni test
    `read_bytes()`. İki fixture da "üretim sadakati" iddia ediyor, yalnızca biri
    taşıyor. Mevcut test değiştirilemediği için kapsam dışıydı.

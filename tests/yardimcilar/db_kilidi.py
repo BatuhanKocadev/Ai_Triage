@@ -17,6 +17,14 @@ nitekim `dbname` gözden kaçtı. Bu depo dosya doğrulamasında bilinçli olara
 fail-**closed** davranıyor (`IMZALAR`'da kaydı olmayan uzantı reddedilir); kilit de
 aynı disipline getirildi: hedefi çözüyoruz, çözemezsek reddediyoruz.
 
+**Kilidin bilinen sınırı — burada yalan söylememek önemli.** Bu doğrulama
+yalnızca ADRESİ kapsıyor. Süreç ortamındaki `PGHOSTADDR`, `PGSERVICE` ve
+(portsuz adreslerde) `PGPORT`, libpq'yu kilidin onayladığı DSN'le başka bir
+sunucuya götürebilir; kilit o kanala hiç bakmıyor. Ölçüldü: `PGHOSTADDR` ayarlı
+bir ortamda bağlantı onaylı adrese rağmen o adrese gidiyor. Yıkım yarıçapını
+sınırlayan şey `dbname` sabiti — nereye giderse gitsin `ai_triage_test` adlı bir
+veritabanına gidiyor. Ek C'de Gün 23 borcu 8b olarak kayıtlı.
+
 Fonksiyon adı bilerek `test_` ile BAŞLAMIYOR: bir test modülüne import edilen
 `test_*` adlı her fonksiyonu pytest test sanıp toplamaya çalışır ve parametresi
 olduğu için `fixture 'url_metni' not found` diye kırılır. Adı "daha açıklayıcı"

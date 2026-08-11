@@ -62,20 +62,28 @@ def derleme_koleksiyonu():
         istemci.delete_collection(ad)
 
 
-# Triyaj ölçütü taşıyan metnin işaretleri. Başlığa ("Alan Kriterleri") tek başına
-# BAKILAMAZ: örtüşmeli bölme başlığı kendi maddelerinden ayırıyor, yani saf kriter
-# maddelerinden oluşan bir chunk başlıksız kalabiliyor ve başlığı taşıyan chunk
-# ağırlıklı olarak hasta dili olabiliyor. Ek C bu etiketleme hatasını bir kez
-# yapıp geri aldı; burada içerik işaretine bakılıyor.
-# "TVYA" tek başına da yetmez — İlk Değerlendirme bölümünde hesaplama adımı olarak
-# geçiyor; ölçüt olan hâli karşılaştırma operatörüyle gelir (TVYA >%20, <%5, %5-20).
+# Triyaj ölçütü taşıyan metnin işaretleri. Hepsi ÖLÇÜT metninden; başlık
+# ("Alan Kriterleri") bilerek listede YOK.
+#
+# Sebebi ölçüldü: örtüşmeli bölme başlığı kendi maddelerinden ayırıyor, yani
+# (a) saf kriter maddelerinden oluşan bir chunk başlıksız kalıyor — başlığa
+# bakan bir kontrol onu kaçırırdı — ve (b) başlığı taşıyan chunk ağırlıklı
+# olarak hasta dili + prosedür metni olabiliyor; o chunk yalnızca başlık
+# yüzünden "kriter var" sayılırdı. Yanlış yön ikisi birden.
+# Ek C bu etiketleme hatasını bir kez yapıp geri aldı, sonra bu dosyada bir kez
+# daha yapıldı ve inceleme yakaladı — üçüncüsü olmasın.
+#
+# "TVYA" tek başına da yetmez: İlk Değerlendirme bölümünde hesaplama adımı olarak
+# geçiyor. Ölçüt olan hâli karşılaştırma operatörüyle gelir (TVYA >%20, <%5, %5-20).
+# "İnhalasyon yanığı bulguları" Kırmızı kriter maddesinin kendi metnidir; başlıkla
+# aynı chunk'ta duran o maddeyi başlığa bakmadan tanımak için burada.
 KRITER_ISARETLERI = (
-    "Alan Kriterleri",
     "Önerilen Tetkikler",
     "kritik bölge",
     "TVYA >",
     "TVYA <",
     "TVYA %",
+    "İnhalasyon yanığı bulguları",
 )
 
 # Yalnızca yanık protokolünün ölçütleri sayılır: başka bir protokolün kriter
