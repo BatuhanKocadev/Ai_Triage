@@ -3,7 +3,13 @@ from datetime import datetime
 import io
 import pdfplumber
 import docx
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+# DİKKAT: `langchain_text_splitters` bilerek modül düzeyinde import EDİLMİYOR
+# (aşağıda upload_document içinde). Paketin __init__.py'si
+# `langchain_text_splitters.sentence_transformers`i her hâlükârda import ediyor,
+# o da kuruluysa `sentence_transformers` -> `transformers` -> `torch` zincirini
+# çekiyor. Ölçüldü: modül düzeyinde bırakıldığında `app.main` import'u tek başına
+# 25 saniye sürüyordu (tasarım K2). pdfplumber ve docx hafif oldukları için
+# yukarıda kalıyor.
 from app.utils.logger import logger
 from app.models.user import User
 from app.services.chroma_service import get_collection
@@ -96,6 +102,10 @@ async def upload_document(
 
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Empty content")
+
+        # Bölücü BURADA import ediliyor, modül düzeyinde değil: import zinciri
+        # torch'a kadar iniyor ve uygulama açılışını ~25 saniye bekletiyordu.
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,

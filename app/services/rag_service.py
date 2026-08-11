@@ -1,12 +1,17 @@
 """RAG servisi: Chroma'dan aday getirme + cross-encoder ile yeniden sıralama."""
 
-import torch
-from sentence_transformers import CrossEncoder
+# Tip açıklamalarının çalışma zamanında değerlendirilmesini kapatır. ZORUNLU:
+# aşağıdaki `_reranker: CrossEncoder | None` satırı, CrossEncoder modül düzeyinde
+# import EDİLMEDİĞİ için aksi hâlde NameError verir (tasarım K3).
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from app.config.config import settings
 from app.utils.logger import logger
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+if TYPE_CHECKING:  # yalnızca tip denetleyici için; çalışma zamanında import edilmez
+    from sentence_transformers import CrossEncoder
 
 # Model tembel yükleniyor: import anında ~2 GB'lık ağırlık yüklemek hem uygulama
 # açılışını hem de testleri gereksiz yere bloke ediyordu.
@@ -16,6 +21,13 @@ _reranker: CrossEncoder | None = None
 def get_reranker() -> CrossEncoder:
     global _reranker
     if _reranker is None:
+        # torch ve sentence_transformers BURADA import ediliyor, modül düzeyinde
+        # değil: modül düzeyinde import her test koşusuna ~25 saniye ve CI'a
+        # 2,5 GB'lık bir kurulum ekliyordu (tasarım K2).
+        import torch
+        from sentence_transformers import CrossEncoder
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Reranker yükleniyor: {settings.reranker_model} ({device})")
         # Aktivasyon açıkça veriliyor: predict()'in olasılık döndürmesi aksi hâlde
         # modelin config dosyasına bağlı kalır. Model ya da kütüphane varsayılanı

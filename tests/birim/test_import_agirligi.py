@@ -1,0 +1,57 @@
+"""`app.main` import edildiğinde ağır kütüphanelerin YÜKLENMEDİĞİNİ dondurur.
+
+Bu testin var oluş sebebi ölçüldü: tembelleştirmeden önce `app.main` import'u
+25,5 saniye sürüyor ve torch, transformers, sentence_transformers, chromadb,
+faster_whisper dahil 5214 modül yüklüyordu. Bu, hem her test koşusunun yarısını
+hem de CI'da 2,5 GB'lık bir kurulumu doğuruyordu.
+
+Test olmadan, birinin `rag_service`'e modül düzeyinde bir `import torch` geri
+koyması hiçbir şeyi kırmaz ve CI sessizce yavaşlar — yol haritasının önceden
+uyardığı yere geri dönülür.
+
+Alt süreçte koşuyor (tasarım K10): pytest oturumunun kendi içinde `sys.modules`
+sorulamaz, çünkü başka testler `torch`'u zaten yüklemiş olur.
+"""
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+KOK = Path(__file__).resolve().parent.parent.parent
+
+# CI kurulum süresini ve her koşunun ~25 saniyesini belirleyen kütüphaneler.
+AGIR_MODULLER = ["torch", "sentence_transformers", "faster_whisper", "chromadb"]
+
+# Alt süreçte koşacak betik: app.main'i import eder ve hangi ağır modüllerin
+# yüklendiğini JSON olarak basar.
+BETIK = """
+import json
+import os
+import sys
+
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://triage:triage@localhost:5432/ai_triage_test"
+)
+os.environ.setdefault("JWT_SECRET_KEY", "import-agirligi-testi")
+
+import app.main  # noqa: F401
+
+print(json.dumps([m for m in %s if m in sys.modules]))
+"""
+
+
+def test_app_import_agir_kutuphaneleri_cekmiyor():
+    sonuc = subprocess.run(
+        [sys.executable, "-c", BETIK % AGIR_MODULLER],
+        capture_output=True,
+        text=True,
+        cwd=str(KOK),
+    )
+
+    assert sonuc.returncode == 0, f"alt süreç patladı:\n{sonuc.stderr}"
+    yuklenen = json.loads(sonuc.stdout.strip().splitlines()[-1])
+    assert yuklenen == [], (
+        f"app.main şu ağır kütüphaneleri import zinciriyle çekiyor: {yuklenen}. "
+        "Modül düzeyinde import edilmiş olabilirler; fonksiyon içine taşıyın."
+    )
