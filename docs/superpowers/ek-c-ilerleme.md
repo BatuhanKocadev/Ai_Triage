@@ -325,6 +325,16 @@ ile doğrulandı.
 
 ### Gün 22'ye devredilenler
 
+> **Durum güncellemesi (11 Ağustos 2026, Gün 22 birinci yarısı).**
+> **Madde 1b (güvenlik kilidinin sınırı) KAPATILDI** — kilit artık host doğruluyor
+> ve query string'li meşru adresi kırmıyor; karar mantığı
+> `tests/yardimcilar/db_kilidi.py`'de ve altı birim testiyle bağlı.
+> **Madde 1c (aynı kusur deseninin üçüncü örneği) KAPATILDI** — `test_speech_api.py`'deki
+> üç test artık `transkript_engelle` ile yamalı; desenin bilinen tüm örnekleri kapandı.
+> **Madde 2'nin birinci sırası (`/auth/login` uçtan uca testi) ÇOKTAN KAPANMIŞTI** —
+> Gün 21 kapatmış ama bu liste güncellenmediği için altı gün açık göründü.
+> Kalan maddeler (1 kalıcılık testi, 2'nin diğer dört sırası, 3, 4) **açık**.
+
 **1. Kalıcılık (durability) testi.** `test_ziyaret_ve_oneri_veritabanina_yazilir`
 dayanıklılığı değil, "flush'lanmış ve oturumda görünür"ü ölçüyor:
 `AIRecommendation` `ai.py:113`'te yalnızca `db.add` ediliyor ve `conftest.py`
@@ -641,6 +651,12 @@ Dalın commit'leri: `d33c6e7` (rol), `bf5283e`+`8463048` (model+migration),
 
 Aşağıdakiler incelemede bulundu, bilinçli olarak ertelendi. Hiçbiri davranışı
 bugün bozmuyor.
+
+> **Durum güncellemesi (11 Ağustos 2026, Gün 22 birinci yarısı).**
+> **Madde 2 (`ai_recommendations.visit_id` unique değil) KAPATILDI** — migration
+> `6922a872c59d`; sessiz veri kaybı yolu (doktor kuyruğundan düşen hasta) kapandı.
+> **Madde 3 (`doctor_reviews.doctor_id` index'siz) KAPATILDI** — aynı revision.
+> Kalan yedi madde **açık**.
 
 1. `AIOnerisi`'nin katı olduğu üç alanın **sütun tarafı** hâlâ `nullable=True`
    (`app/models/visit.py`). Şema artık toleranslı; asıl temizlik sütunları
@@ -1051,6 +1067,15 @@ karaktersiz sorguda 8. sırada geliyor — ikisinde de reranker'a ulaşıyor.
 
 ### Gün 22'ye devredilenler (bu günden)
 
+> **Durum güncellemesi (11 Ağustos 2026, Gün 22 birinci yarısı).**
+> **Madde 1 (`yanik.txt` reranker'da çok zayıf) KISMEN KAPATILDI** — skor
+> 0.0005 → 0.3848, hasta artık "Belirsiz" almıyor ve Sarı/Yeşil kriterleri ile
+> tetkikler LLM'e ulaşıyor. **Ama Kırmızı kriterleri hâlâ ulaşılamıyor** (üç
+> sorguda 0.0002/0.0003/0.0011) ve sebebi yapısal; Gün 23 devir listesinde
+> adlandırılmış defekt olarak duruyor.
+> Madde 2 (karaktersiz yazım) **açık**, K2 ile bilerek ertelendi.
+> Kalan maddeler **açık**.
+
 1. **`yanik.txt` reranker'da çok zayıf.** Doğru doküman seçiliyor ama skoru 0.0005 —
    eşiğin altında, yani sistem "Belirsiz" diyor. Dosya "TVYA", "Parkland formülü"
    gibi klinik terimlerle yazılmış; hasta "kaynar su döküldü, su topladı" diyor.
@@ -1455,3 +1480,287 @@ dekoratörü çıkarmak hacim sınırını sessizce yok etti ve bunu ancak bir s
 yeniden inceleme yakaladı. Otomatik paket bu boşlukta yeşildi — çünkü hiçbir test
 "hacim sınırı var" iddiasını dondurmuyordu. Bir davranış silindiğinde hiçbir
 testin kırılmaması, o davranışın hiç test edilmediğinin kanıtıdır.
+
+---
+
+## Gün 22 · Birinci yarı — borç kapatma (10–11 Ağustos 2026)
+
+Yol haritasının Gün 22'si "test derinleştirme, coverage kapısı, CI" diyor. Bu gün
+o değil, onun **öncesi**: altı gündür Ek C'de biriken borcun, CI'ı mümkün kılan ve
+Gün 23'ün ölçümünü kurtaran kısmının kapatılması. Asıl Gün 22 kendi tasarım
+dokümanını ve planını alacak.
+
+Tasarım: `docs/superpowers/specs/2026-08-10-gun22-borc-kapatma-design.md` (K1–K11).
+
+### Borç envanteri: 60 madde, bir gün
+
+Ek C'de **altı** ayrı "Gün 22'ye devredilenler" bölümü birikmişti (satır 326, 640,
+764, 878, 1052, 1321). Doğrulama turunda üç şey çıktı:
+
+- **Dört tekrar çifti** — K9 dosya adı çakışması, silme atomikliği,
+  `sahte_chroma` `include`, `response_model` eksikliği; her biri hem 878 hem 1052
+  bölümünde. Ham sayı bu kadar şişikti.
+- **Bir madde çoktan kapanmıştı.** 326 bölümü "`/auth/login` uçtan uca testi —
+  bugün tamamen korumasız" diyordu; Gün 21 bunu kapatmış, `auth.py` %100 kapsamda.
+  Devir listesi güncellenmediği için altı gün boyunca açık göründü.
+- Kalanı ~55 madde, yani bir güne sığmaz. Seçim ölçütü "önemli mi" değil **"neyi
+  mümkün kılıyor"** oldu (K1): Görev 1 CI'ın ön koşulu, Görev 3 Gün 23'ün ön koşulu,
+  Görev 2 sessiz veri kaybı olduğu için içeride.
+
+Bu, devir listelerinin kendisiyle ilgili bir ders: **kapatılan madde kaydından
+düşülmezse, liste zamanla gerçeği değil geçmişi anlatır.**
+
+### Bu gün ne yapıldı
+
+**Görev 1 — test altyapısı.** Test veritabanı kilidi (`tests/conftest.py`)
+yalnızca `settings.database_url.endswith("/ai_triage_test")` bakıyordu ve iki
+yönden birden kusurluydu: üretim sunucusundaki aynı adlı bir veritabanı kilitten
+**geçiyor**, buna karşılık `?sslmode=require` taşıyan meşru bir adres
+**takılıyordu**. Karar mantığı `tests/yardimcilar/db_kilidi.py`'ye taşındı
+(conftest içindeki bir dal test edilemez, oradaki fonksiyon edilebilir) ve URL
+düzgün ayrıştırılıyor: veritabanı adı tam olarak `ai_triage_test` **ve** host
+`{localhost, 127.0.0.1, ::1, postgres}` kümesinde. Ortam değişkeniyle geçiş
+bilerek yok (K6) — kolay kaçış kapısı olan kilit, kilit değildir.
+
+Aynı görevde `tests/api/test_speech_api.py`'deki üç yetki/doğrulama testine
+`transkript_engelle` fixture'ı bağlandı. Bu testler bugün uç gövdesine hiç
+girmiyor, ama korudukları kural gevşerse istek ilerliyor ve gerçek faster-whisper
+`medium` modeli iniyor. CI'da bu, yol haritasının önceden kaydettiği "testler 10
+dakikayı geçiyor" tuzağının ta kendisi. Bu, aynı kusur deseninin **üçüncü ve son
+bilinen** örneğiydi (`/ai/analiz`, `/document/upload`, `/speech/transkript`);
+desen artık kapalı.
+
+**Görev 2 — şema.** `ai_recommendations.visit_id` unique yapıldı ve
+`doctor_reviews.doctor_id` index'lendi, tek Alembic revision'ında
+(`6922a872c59d`). Kapatılan şey stil değil sessiz veri kaybı: `Visit.recommendation`
+ilişkisi `uselist=False` diyordu ama veritabanı bunu hiç dayatmıyordu; bir ziyarete
+ikinci bir öneri satırı yazılsa hem ilişki yalanlanır hem de doktor kuyruğunun
+`joinedload` + `LIMIT 20` sorgusu 20 satır döndürüp yalnızca 19 farklı ziyaret
+kapsar — **kuyruktan sessizce düşen bir hasta** demek.
+
+**Görev 3 — retrieval.** `yanik.txt` klinik dilde yazılmıştı ("TVYA", "Parkland
+formülü", "bül", "sirkumferansiyel"), hasta ise "kaynar su döküldü", "su topladı",
+"kabardı" der; "haşlanma" belgede yalnızca bir kez geçiyordu. Sonuç: reranker
+yanık protokolüne **0.0005** veriyordu, eşik 0.005, yani `retrieve_and_rerank`
+boş liste döndürüyor, LLM hiç çağrılmıyor ve sistem yanık hastasına **"Belirsiz"**
+diyordu. Protokole hasta dili eklendi ve kalibrasyon sorgusu yeniden yazıldı.
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 137 | **147** |
+| `app/` kapsaması | %85 | %85 |
+| `auth.py` kapsaması | %100 | %100 |
+| Alembic head | `72dffb9e5194` | **`6922a872c59d`** |
+| Yanık sorgusu reranker skoru | **0.0005** | **0.3848** |
+| Kalibrasyon `ILGILI` seti | 18 sorgu | **20 sorgu** |
+| Yeni bağımlılık | — | yok |
+
+Mevcut testlerin hiçbiri değiştirilmedi, zayıflatılmadı veya yeniden adlandırılmadı.
+
+### İncelemelerin bulduğu gerçek sorunlar
+
+Üç görev incelemesi ve üç yeniden inceleme koşuldu. Değerli olanlar şunlar.
+
+**1. Kilidin kendi kaçış kapısı — ve yanlış önerme kuran yorum.** Plan şu kodu
+mandate etmişti:
+
+```python
+# Host boşsa (Unix soketi) yerel kabul edilir; uzak bir sokete bağlanılamaz.
+host = url.host or "localhost"
+```
+
+Önerme yanlıştı. Boş host "Unix soketi" demek değil: SQLAlchemy host'u bağlantı
+argümanlarından çıkarır, libpq da **`PGHOST` ortam değişkenine** düşer.
+`PGHOST=prod-host` iken `postgresql:///ai_triage_test` kilitten geçiyor ve
+`drop_all` **üretim sunucusunda** koşuyordu — tam olarak
+`test_uzak_host_ayni_ad_olsa_bile_reddedilir`'in engellemek için yazıldığı senaryo,
+hiçbir testin kapsamadığı tek daldan. K6 zaten "kolay kaçış kapısı olan kilit,
+kilit değildir" diyordu, yani plan kendi kararıyla çelişiyordu. Boş host artık
+reddediliyor ve `test_hostsuz_url_reddedilir` bunu bağlıyor.
+
+**2. Brief'in kendi içinde tutarsızlığı — ve uygulayıcının haklı sapması.**
+Görev 2'nin brief'i dosya listesinde yalnızca `app/models/visit.py`'yi sayıyordu,
+ama mandate ettiği migration gövdesi **ikinci bir tabloda** index yaratıyordu.
+Uygulayıcı `alembic check` koşup bir sonraki autogenerate'in
+`ix_doctor_reviews_doctor_id`'yi **düşüreceğini** gösterdi — K7'nin adıyla andığı
+hatanın ta kendisi — ve modele `index=True` ekledi. İnceleyen sapmayı yalnızca
+onaylamakla kalmadı, **gerekli** buldu.
+
+**3. "Belirsiz" kusuru kapandı, yerine bilgisiz vaka geldi.** İlk retrieval
+düzeltmesi skoru 0.0005'ten 0.4291'e çıkardı ve test yeşil oldu. İnceleyen üretim
+bölücüsünü **kendi koşup** asıl durumu gördü: eklenen metnin hepsi chunk 0'a
+düşmüştü, ve LLM'e giden tek belge oydu — içinde **hiç Kırmızı/Sarı/Yeşil kriteri
+ve hiç Önerilen Tetkik yok**. Yani hasta artık "Belirsiz" almıyordu ama sistem
+triyaj ölçütü görmeden karar veriyordu. Hasta dili kriter maddelerine dağıtıldı;
+Kalibrasyon-1 için kriter ve tetkik chunk'ları artık LLM'e ulaşıyor.
+
+**4. Tıbbi belgede klinik hata — ve onun sorgu biçimli olması.** Kriter
+maddelerine gloss eklenirken `:31`'in kritik bölge listesine **"kolunu"**
+girmişti. Kol kritik bölge değildir (yüz, el, ayak, perine, büyük eklemler);
+madde izole önkol haşlanmasını Yeşil'den Sarı'ya çıkarıyor ve aynı dosyanın
+`:35` satırıyla çelişiyordu. İnceleyenin asıl uyarısı bileşiktir: bu, **ölçülen
+kalibrasyon sorgusuna en çok benzeyen** gloss'tu ve skoru 0.0003 → 0.0750 yapan
+chunk'ta duruyordu. *Klinik olarak yanlış ve sorgu biçimli* aynı anda, bir tıbbi
+belgede. Ayrıca `:37` el yanığını Yeşil örneği olarak veriyordu, oysa `:31` el
+yanığını Sarı'ya yolluyordu — belge en sık göreceği vakada kendisiyle çelişiyordu.
+Beşi de düzeltildi.
+
+### Kör sorgu: günün en bilgilendirici ölçümü
+
+K5 "tutulan sorgu" kuralı koymuştu: ikinci bir yanık sorgusu, belgeye
+dokunulmadan **önce** yazılacak ve skoru en sonda ölçülecekti. Uygulayıcı sırayı
+harfiyen izledi. Ama inceleme, garantinin **yukarıdan delindiğini** gösterdi:
+plandaki protokol metnini de her iki sorguyu da aynı kişi (kontrolcü) yazmıştı,
+ve tutulan sorgunun ayırt edici sözcükleri ("ütü", "deri soyulması") metinde
+ekiliydi.
+
+Bunun üzerine proje sahibi, `yanik.txt`'nin yeni metnini **görmeden** bir sorgu
+yazdı:
+
+> "mangalda kolumu ateşe tuttum, kolum bembeyaz oldu hissetmiyorum"
+
+Körlüğü ölçülerek doğrulandı: "beyaz", "hisset", "his kaybı", "uyuş", "ağrısız"
+kelimelerinin hiçbiri belgede geçmiyordu. Klinik olarak tam kalınlıkta (3. derece)
+yanığı tarif ediyor — beyaz/mumsu görünüm ve sinir uçları harap olduğu için **ağrı
+yokluğu**; belge o tabloyu yalnızca "3. derece" diye anıyordu, hasta ise asla öyle
+demez.
+
+**Sonuç: düzeltme genelleşmiyor.** Kör sorgu eşiği geçiyor (0.0241) ama LLM'e
+giden tek belge yine hasta-dili chunk'ı; kriter yok, tetkik yok. Ve asıl bulgu:
+`yanik#1` (Kırmızı kriterleri) **üç sorgunun üçünde de** eşiğin çok altında —
+0.0002 / 0.0003 / 0.0011.
+
+### Neden metin eklemek çözmedi
+
+Tam kalınlıkta yanığın hasta dilindeki tarifi Kırmızı kriterlerine eklendi. Klinik
+olarak doğruydu ve belgede gerçek bir boşluğu kapatıyordu. **Retrieval'ı hiç
+değiştirmedi:** cümlenin düştüğü chunk'ın skoru 0.0029 → 0.0029.
+
+Chunk haritası sebebi gösterdi: cümle, içeriği inhalasyon yanığı + karbonmonoksit
++ TVYA/Parkland + yüksek voltaj olan 965 karakterlik bir bloğa düştü. **Reranker
+chunk'ın tamamını sorguyla karşılaştırıyor, cümleyi değil.** Ağırlıklı olarak başka
+şeyden bahseden bir bloğa bir cümle eklemek onu getirilebilir yapmıyor — cümle
+seyreliyor.
+
+Genellenebilir hâli: **retrieval kelimenin varlığını değil, chunk başına
+yoğunluğunu izliyor.** Haşlanma ekseni bu yüzden düzeldi (on üç maddeye dağıtılmış
+yoğun kelime dağarcığı), alev/tam kalınlık ekseni bu yüzden düzelmedi (tek cümle).
+Çözüm metin ekleme değil yapısaldır ve bugünün kapsamı dışındadır.
+
+Bir de kendi ölçümümün düzeltmesi: önceki notlarda chunk'lar **başlık** varlığına
+göre etiketlenmişti, ama örtüşmeli bölme başlıkları kendi maddelerinden ayırıyor
+("Kırmızı Alan Kriterleri" başlığı bir chunk'ta, maddeleri sonrakinde). Bulgunun
+özü değişmedi, etiketleme yanlıştı.
+
+### Doğrulama
+
+Bilgi tabanı `scripts/bilgi_tabani_kur.py` ile sıfırdan kuruldu: **15 dosya /
+51 chunk** (`yanik.txt` 6 chunk), gömme doğrulandı (`sentence_transformer`,
+1024 boyut). Bu adım atlanamaz — `yanik.txt` değişti, yeniden yükleme yapılmadan
+kalibrasyon eski gömmeleri ölçer.
+
+`scripts/kalibre_esik.py` çıktısı (eşik 0.005):
+
+| | Sonuç |
+|---|---|
+| İlgili sorgular | **19/20 geçer** |
+| Alakasız sorgular | **0/10 geçer** |
+| İlgili skor aralığı | 0.0031 – 0.7381 |
+| Alakasız skor aralığı | 0.0000 – 0.0030 |
+| Güvenlik payı | +0.0020 |
+
+Geçemeyen tek sorgu `inme`'nin karaktersiz yazımı (0.0031) — K2 ile **bilerek**
+kapsam dışı bırakılan madde. Üç yanık sorgusu da geçiyor: 0.3848 (kalibrasyon 1),
+0.1521 (kalibrasyon 2), 0.0241 (kör sorgu).
+
+**Script 0.0030 öneriyor ve bu reddedildi (K3).** Kendi uyarısını da basıyor:
+güvenlik payı +0.0001, yani alakasız bir sorgu kolayca geçebilir. `rerank_threshold`
+**0.005'te kaldı**; içerik düzeltmesinin yan etkisi olarak eşiği oynatmak, Gün 20'de
+yazılı gerekçeyle seçilmiş bir kararı sessizce iptal etmek olurdu.
+
+### Gün 23'e devredilenler (bu günden)
+
+**A — Retrieval, ve ilki adlandırılmış bir defekt**
+
+1. **`yanik.txt`'nin Kırmızı kriterleri hasta dilinden ulaşılamıyor.** Üç bağımsız
+   sorguda 0.0002 / 0.0003 / 0.0011. Sebep yukarıda: reranker chunk'ın tamamını
+   puanlıyor, yoğun kelime dağarcığı olmayan bir bloğa tek cümle eklemek seyreliyor.
+   Çözüm **yapısal** ve üçü de ölçümle birlikte denenmeli: akuite başına
+   hasta-sunumu bölümü, daha küçük chunk, ya da `top_k_initial` artırımı.
+   **Gün 23'ün yanık senaryoları bunu bilerek kurulmalı** — kriter görmeden verilen
+   bir triyaj kararı ölçülüyor olacak.
+2. **`kalibre_esik.py` kaynak kör.** Yalnızca en yüksek skoru ölçüyor, hangi
+   protokolün kazandığına ve kaç kriter chunk'ının geçtiğine hiç bakmıyor. Bu
+   teorik değil: chunk-0-only defektini sağlıklı bir 0.4291 diye gösterdi, ve
+   "çamaşır suyu içtim" sorgusu için **`GEÇER 0.1001`** basıyor — oysa o sorgu
+   artık hiç `zehirlenme.txt` bağlamı almıyor, `yanik.txt` chunk'ları aday
+   havuzundan onu itiyor. Yukarıdaki 19/20 sayısının yanına bu kayıt düşülmeli.
+3. **`top_k_initial = 10`, 51 chunk'lık derlemeye karşı.** Artık yalnızca geri
+   çağırmayı sınırlamıyor, **doğru protokolün chunk'larını dışarı itiyor**
+   (çamaşır suyu sorgusu). Eşikle birlikte ölçülmeli, ikisi etkileşiyor.
+4. **Karaktersiz yazım** (`inme` 0.0089 → 0.0031). K2 ile bilerek ertelendi; çözümü
+   ya üretim sorgu yolunu değiştirmek ya da 15 protokole ASCII eş anlamlı eklemek,
+   ikisi de ayrı karar.
+5. **Pediatrik haşlanma probu gerileme yaşadı** (0.0186 → 0.0044, "Belirsiz").
+   Sebep: eski chunk Kırmızı+Sarı'yı birleştiriyordu, yeni kesim ayırıyor.
+   Uygulayıcı bilerek o sorguya göre metin yazmadı (ölçülmüş sorguya ayarlamak
+   hiçbir şey kanıtlamaz) — doğru karar, ama disiplini koruyan ucuz hamle vardı:
+   sorguyu bir sonraki düzenlemeden **önce** `ILGILI`'ye eklemek.
+
+**B — Test ve şema borcu**
+
+6. **Migration zinciri pytest altında hiç koşmuyor.** `conftest.py` şemayı
+   `create_all` ile kuruyor, yani `6922a872c59d`'nin doğruluğu yalnızca elle
+   round-trip'e dayanıyor. **Gün 22'nin ikinci yarısı için kritik:** CI şemayı
+   `create_all` ile kurarsa, kırık bir migration zinciriyle yeşil kalır.
+7. **Unique kısıt modelde adsız**, yani adı ortama göre değişiyor (`create_all` →
+   `ai_recommendations_visit_id_key`, migration → `uq_ai_recommendations_visit_id`).
+   Bugün zararsız; `IntegrityError` mesajına bakıp `409` üreten bir kod yazılırsa
+   testte farklı davranır.
+8. **Yeni `yavas` test chunk-0-only durumunu yakalayamaz** — yalnızca `assert sonuc`
+   ve `"yanik.txt" in sonuc[0]` iddia ediyor. Madde 1'in kanıtı elle yazılmış,
+   sonra silinmiş bir script'ti. Dönen belgelerden birinin kriter başlığı
+   taşıdığını iddia eden bir assert ucuz kalıcı muhafız olurdu.
+9. **`test_turkce_retrieval.py:56` hâlâ `read_text()` kullanıyor**, yeni test
+   `read_bytes()`. İki fixture da "üretim sadakati" iddia ediyor, yalnızca biri
+   taşıyor. Mevcut test değiştirilemediği için kapsam dışıydı.
+10. **`test_config.py:17` hâlâ `endswith("/ai_triage_test")` kullanıyor** — bu günün
+    conftest'ten kaldırdığı kusurlu yüklemin aynısı. Meşru bir `?sslmode=require`
+    adresi kilitten geçer ama bu testte takılır.
+11. `downgrade()`'de Türkçe yorum yok; revision template'in docstring'lerini
+    düşürmüş (dört revision içinde tek istisna).
+
+**C — Kapatılamayan, kayda geçen**
+
+12. Ek C'nin altı devir bölümündeki kalan ~45 madde duruyor. Bu gün beşini kapattı,
+    dördünün tekrar olduğunu ve birinin çoktan kapandığını gösterdi.
+
+### Süreç notu
+
+Bu günün en pahalı dersi metodolojik: **bir düzeltme kendi ölçüsünü üretemez.**
+K5 "tutulan sorgu" kuralını doğru koymuştu ama garantiyi tek yazarlık deldi —
+protokol metnini de ölçüm sorgularını da aynı kişi yazınca, sorgu belgenin bir
+özetine dönüşüyor ve geçmesi hiçbir şey kanıtlamıyor. Bunu ne uygulayıcı ne
+kontrolcü fark etti; inceleyen ölçerek gösterdi: skorlar sözcüğün **varlığını**
+değil, hangi eksene **yoğun metin yazıldığını** izliyordu — "elektrik çarpması"
+belgede birebir geçtiği hâlde eşiğin 1.26 katındayken, haşlanma ekseni 86 katındaydı.
+
+Çözüm süreçseldi, kod değil: proje sahibi metni görmeden bir sorgu yazdı ve o tek
+sorgu, üç görev incelemesinin bulamadığı şeyi gösterdi — düzeltme genelleşmiyordu.
+**Ölçüm setini yazan kişi ile ölçülen şeyi yazan kişi ayrı olmalı.** Gün 23'ün
+değerlendirme seti bu kuralla kurulmalı, yoksa doğruluk sayısı kendi kendini
+doğrular.
+
+İkinci ders birincinin devamı: **incelemeye "test yeşil mi" diye sormak yetmiyor.**
+Retrieval düzeltmesinin testi yeşildi, skor 0.0005'ten 0.4291'e çıkmıştı ve her
+şey doğru görünüyordu. İnceleyen üretim bölücüsünü kendi koşup LLM'e giden belgenin
+içinde hiç triyaj ölçütü olmadığını gördü. Yeşil bir test, doğru şeyi ölçtüğünü
+kanıtlamaz.
+
+Üçüncüsü kayda değer bir sınır: bu gün üretim kodunda **hiçbir davranış
+değiştirmedi** — Görev 1 yalnızca `tests/`, Görev 3 yalnızca veri ve ölçüm.
+Değişen tek üretim satırı Görev 2'nin şema kısıtı. Buna karşılık iki gerçek
+güvenlik/veri kaybı yolu kapandı ve bir tıbbi belgedeki klinik hata düzeltildi.
+Borç kapatma günlerinin çıktısı böyle görünüyor: az satır, çok gerekçe.
