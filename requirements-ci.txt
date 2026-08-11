@@ -3,7 +3,14 @@
 # requirements.txt'in kopyasi DEGILDIR: torch ailesi (torch, transformers,
 # sentence-transformers, faster-whisper) bilerek DISARIDA. Onlar yalnizca
 # `yavas` isaretli testlerde gerekiyor ve CI o testleri hic kosmuyor
-# (tasarim K9). Kurulumu dakikalardan saniyelere indiren fark budur.
+# (tasarim K9).
+#
+# KAZANC OLCULDU, BOYUT OLARAK: bu listeyle kurulan ortam 498 MB, tam
+# requirements.txt ile kurulan ortam 1694 MB (~1,2 GB fark, 3,4 kat); torch
+# tek basina 497 MB. SURE KAZANCI OLCULMEDI - minimal liste 6 dk 53 sn ve
+# 6 dk 19 sn olarak iki kez olculdu ama tam listenin kurulumu karsilastirma
+# icin hic kosulmadi. "Dakikalardan saniyelere" demeyin; bilinen sey indirilen
+# ve saklanan boyuttur, gecen sure degil.
 #
 # DIKKAT: bu liste "hicbir agir sey yok" demek degil. pytest, isaret
 # filtrelemesini test modullerini TOPLADIKTAN sonra uyguluyor, yani
