@@ -5,7 +5,9 @@ ChromaDB'nin varsayılan gömme modeli İngilizcedir; Türkçe sorguda anlamsız
 dönülmesini engeller.
 """
 
+import chromadb
 import pytest
+from chromadb.utils import embedding_functions
 
 from app.config.config import settings
 from app.services import chroma_service
@@ -39,9 +41,14 @@ def sahte_chromadb(monkeypatch):
         olusan["istemci"] = _SahteIstemci(**kwargs)
         return olusan["istemci"]
 
-    monkeypatch.setattr(chroma_service.chromadb, "HttpClient", _istemci_uret)
+    # Yama KAYNAĞIN kendisine uygulanıyor, uç modülün takma adına değil:
+    # chroma_service bu iki adı artık modül düzeyinde tutmuyor, get_collection()
+    # ve _gomme_fonksiyonu() çağrı anında import ediyor (tembelleştirme, K2).
+    # Çağrı anındaki import sys.modules'ten çözüldüğü için gerçek modül nesnesi
+    # üzerindeki yama görülüyor.
+    monkeypatch.setattr(chromadb, "HttpClient", _istemci_uret)
     monkeypatch.setattr(
-        chroma_service.embedding_functions,
+        embedding_functions,
         "SentenceTransformerEmbeddingFunction",
         _SahteGomme,
     )
