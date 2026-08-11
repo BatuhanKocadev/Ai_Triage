@@ -23,6 +23,7 @@ from app.main import app  # noqa: E402
 from app.models.doctor_review import DoctorReview  # noqa: E402,F401
 from app.models.user import User  # noqa: E402,F401
 from app.models.visit import AIRecommendation, Visit  # noqa: E402,F401
+from tests.yardimcilar.db_kilidi import hedef_guvenli_mi  # noqa: E402
 
 
 @pytest.fixture(scope="session")
@@ -31,9 +32,12 @@ def test_motoru():
     # Güvenlik kilidi: aşağıdaki drop_all bir şemayı tamamen siler ve
     # os.environ.setdefault, DATABASE_URL zaten tanımlıysa (CI, docker compose)
     # hiçbir şey yapmaz. Motora dokunmadan önce hedefi doğruluyoruz.
-    if not settings.database_url.endswith("/ai_triage_test"):
+    # Kararın kendisi tests/yardimcilar/db_kilidi.py'de ve orada ayrıca test
+    # ediliyor; burada yalnızca sonucu uygulanıyor.
+    guvenli, sebep = hedef_guvenli_mi(settings.database_url)
+    if not guvenli:
         pytest.exit(
-            f"Testler yalnızca ai_triage_test üzerinde çalışır. "
+            f"Testler yalnızca yerel ai_triage_test üzerinde çalışır ({sebep}). "
             f"Bulunan: {settings.database_url}",
             returncode=3,
         )

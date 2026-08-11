@@ -25,7 +25,9 @@ class DoctorReview(Base):
         index=True,
     )
     # Onayı veren doktor; istek gövdesinden değil JWT'deki kullanıcıdan okunur.
-    doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # index: Gün 23'ün doktor bazlı raporlaması bu sütunda filtreleyecek. Migration
+    # ile birlikte modelde de duruyor, yoksa bir sonraki autogenerate index'i düşürürdü.
+    doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     # Doktorun nihai triyaj kodu; yapay zekânınkinden farklı olabilir, fark korunur.
     onaylanan_triage_code = Column(String(20), nullable=False)
     # Doktorun onayladığı tetkik listesi; yapay zekânın listesini değiştirmiş olabilir.

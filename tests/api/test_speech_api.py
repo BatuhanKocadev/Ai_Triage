@@ -15,14 +15,14 @@ def _ses_dosyasi(ad="kayit.wav", icerik=b"sahte-ses-baytlari"):
 
 
 @pytest.mark.entegrasyon
-def test_jetonsuz_istek_401_doner(istemci):
+def test_jetonsuz_istek_401_doner(istemci, transkript_engelle):
     # Regresyon: uçtaki auth bağımlılığı düşerse ses yükleme herkese açılır.
     yanit = istemci.post("/speech/transkript", files=_ses_dosyasi())
     assert yanit.status_code == 401
 
 
 @pytest.mark.entegrasyon
-def test_desteklenmeyen_format_400_doner(istemci, yetkili_baslik):
+def test_desteklenmeyen_format_400_doner(istemci, yetkili_baslik, transkript_engelle):
     # Regresyon: beyaz liste gevşerse ses olmayan dosya STT'ye gider (model boşuna yüklenir).
     # .txt beyaz listede yok; STT hiç çağrılmadan reddedilmeli.
     yanit = istemci.post(
@@ -35,7 +35,7 @@ def test_desteklenmeyen_format_400_doner(istemci, yetkili_baslik):
 
 
 @pytest.mark.entegrasyon
-def test_cok_buyuk_dosya_400_doner(istemci, yetkili_baslik):
+def test_cok_buyuk_dosya_400_doner(istemci, yetkili_baslik, transkript_engelle):
     # Regresyon: boyut kapısı kalkarsa devasa yükleme belleği ve CPU'yu sınırsız tüketir.
     # 25 MB sınırının üstü reddedilmeli.
     buyuk = b"x" * (26 * 1024 * 1024)

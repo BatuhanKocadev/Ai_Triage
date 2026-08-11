@@ -62,8 +62,28 @@ ILGILI = [
     "İki aylık bebeğimin ateşi 38.5 çıktı ve sürekli uyukluyor.",
     # psikiyatrik aciller
     "Kendime zarar vermeyi düşünüyorum, artık dayanamıyorum.",
-    # yanık
-    "Kaynar su elimin üstüne döküldü, hemen su toplamaya başladı.",
+    # yanık — birinci sorgu: protokolün kelimelerini kullanmadan, hasta ağzından.
+    # ESKİ sorgu ("Kaynar su elimin üstüne döküldü, hemen su toplamaya başladı.")
+    # yerine yazıldı: yanik.txt'ye hasta dili eklenirken o cümlenin öbekleri
+    # belgeye girecekti ve ölçüm kendi kendini doğrulayan bir sızıntıya dönüşecekti
+    # — Gün 20'de inme.txt'de tam bu olmuştu (tasarım K4).
+    "Çaydanlığı devirdim, kolum fena halde haşlandı ve derim kabardı.",
+    # yanık — İKİNCİ, TUTULAN sorgu (tasarım K5). Bu satır yanik.txt'ye
+    # dokunulmadan ÖNCE yazıldı ve belge düzenlenirken buna BAKILMADI. Amacı,
+    # düzeltmenin tek bir cümleye ezberlenmediğini kanıtlamak: yalnızca birinci
+    # sorgu geçip bu geçmezse düzeltme yetersizdir.
+    "Ütü elimin üstüne düştü, deri soyuldu ve çok acıyor.",
+    # yanık — ÜÇÜNCÜ sorgu: projeyi yürüten kişi tarafından, yanik.txt'nin yeni
+    # metnini GÖRMEDEN yazıldı (11 Ağustos 2026). İlk iki sorgu aynı kişi tarafından
+    # protokol metniyle birlikte yazıldığı için K5'in "tutulan sorgu" garantisi
+    # fiilen delinmişti; gerçekten kör tek ölçüm budur.
+    #
+    # DİKKAT — bu sorgu GEÇER görünür ama tablo yanıltıcıdır. Ölçüldüğünde yalnızca
+    # yanik.txt'nin hasta-dili chunk'ı eşiği aşıyor (0.0241); Kırmızı kriterlerini
+    # taşıyan chunk 0.0011'de kalıyor, yani LLM triyaj ölçütü GÖRMEDEN karar veriyor.
+    # Bu script yalnızca en yüksek skoru ölçtüğü için o farkı gösteremez
+    # (bkz. Ek C, Gün 22 — "Kırmızı erişilebilirliği").
+    "mangalda kolumu ateşe tuttum, kolum bembeyaz oldu hissetmiyorum",
 ]
 
 # Elenmesi beklenen sorgular. İKİ SINIF var ve ikincisi asıl zorlayıcı olan:

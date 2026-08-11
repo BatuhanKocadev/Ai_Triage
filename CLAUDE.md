@@ -76,7 +76,7 @@ adları kendi ad alanına almış durumda). Birim testlerinde ise servis modül�
 `tests/birim/test_rag_esik_kapisi.py` doğru şekilde `app.services.rag_service` üzerinde
 `get_reranker`'ı yamalar, çünkü ad orada tanımlı ve orada aranıyor.
 
-Paket bugün **137 test** (`-m "not yavas"` ile 137 passed, 2 deselected). Güvenlik
+Paket bugün **153 test** (`-m "not yavas"` ile 153 passed, 5 deselected). Güvenlik
 kuralları `tests/api/test_guvenlik.py` altında ve her test bir saldırıyı taklit eder
 (hız sınırının iki katmanı, sahte imzalı dosya, yığın izi sızıntısı, CORS). Kuralların
 kendi davranışı ayrıca `tests/birim/test_hiz_sinirlayici.py` ve

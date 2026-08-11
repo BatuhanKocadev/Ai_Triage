@@ -69,19 +69,24 @@ class Settings(BaseSettings):
     # yalnızca İngilizce üzerinde eğitilmiştir ve Türkçe sorguda anlamsız
     # vektör üretiyor.
     embedding_model: str = "BAAI/bge-m3"
-    # 9 Ağustos 2026'da ölçüldü (scripts/kalibre_esik.py, 15 protokol / 48 chunk,
-    # 18 ilgili + 10 alakasız sorgu). Ölçülen dağılım:
-    #   ilgili   -> 0.0005 ... 0.7381
+    # 11 Ağustos 2026'da yeniden ölçüldü (scripts/kalibre_esik.py, 15 protokol /
+    # 51 chunk, 20 ilgili + 10 alakasız sorgu). Ölçülen dağılım:
+    #   ilgili   -> 0.0031 ... 0.7381
     #   alakasız -> 0.0000 ... 0.0030
-    # 0.005 seçildi: alakasız sorguların en yükseğinin 1.7 katı, bir sonraki net
-    # ilgili skora (0.0089) kadar olan boşlukta duruyor. 18 ilgiliden 16'sı
-    # geçiyor, 10 alakasızın hiçbiri geçmiyor.
+    # 0.005 seçildi (9 Ağustos'ta) ve Gün 22'de DEĞİŞTİRİLMEDİ: alakasız
+    # sorguların en yükseğinin 1.7 katı. 20 ilgiliden 19'u geçiyor, 10
+    # alakasızın hiçbiri geçmiyor; güvenlik payı +0.0020.
+    # Script 0.0030 önerdi ve reddedildi: kendi uyarısına göre payı +0.0001,
+    # yani alakasız bir sorgu kolayca geçer. İçerik düzeltmesinin yan etkisi
+    # olarak eşiği oynatmak, buradaki gerekçeyi sessizce iptal etmek olurdu.
     # Sayının küçük olması bir hata değil: reranker olasılık döndürüyor ve bu
     # derlemede alakasız eşleşmeler sıfıra yapışıyor. Önemli olan mutlak değer
     # değil, iki sınıf arasındaki ayrım — düzeltmeden önce sınıflar iç içeydi
     # (ilgili min 0.5001 < alakasız max 0.5004) ve hiçbir eşik işe yaramıyordu.
-    # Eşiğin altında kalan iki ilgili sorgu (yanık 0.0005, karaktersiz inme
-    # 0.0031) Ek C'de Gün 22 borcu olarak kayıtlı.
+    # Eşiğin altında kalan tek ilgili sorgu karaktersiz yazımlı inme (0.0031);
+    # Ek C'de Gün 23 borcu olarak kayıtlı. Yanık sorgusu Gün 22'de 0.0005'ten
+    # 0.3848'e çıkarıldı — ama protokolün KIRMIZI kriterleri hâlâ hasta
+    # dilinden ulaşılamıyor, o da adlandırılmış bir defekt olarak Ek C'de.
     # Reranker modeli, gömme modeli ya da derleme değişirse YENİDEN ÖLÇÜLMELİ.
     rerank_threshold: float = 0.005
 
