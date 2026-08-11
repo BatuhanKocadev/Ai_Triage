@@ -110,3 +110,44 @@ def test_hostaddr_ile_ezilen_host_reddedilir():
     )
 
     assert guvenli is False
+
+
+def test_query_stringle_ezilen_veritabani_adi_reddedilir():
+    # En tehlikelisi bu: uzak sunucu bile gerekmiyor. url.database
+    # "ai_triage_test" görünür ama psycopg2 dbname=ai_triage ile bağlanır,
+    # yani drop_all geliştiricinin kendi makinesindeki ÜRETİM veritabanında koşar.
+    guvenli, sebep = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test?dbname=ai_triage"
+    )
+
+    assert guvenli is False
+    assert "veritabanı" in sebep
+
+
+def test_query_stringle_ezilen_port_reddedilir():
+    # Beyaz listedeki bir host üzerinde başka port, çoğu zaman üretime açılmış
+    # bir tünel ya da ikinci bir küme demektir; host kontrolü tek başına yetmez.
+    guvenli, sebep = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test?port=5433"
+    )
+
+    assert guvenli is False
+    assert "port" in sebep
+
+
+def test_service_parametresi_reddedilir():
+    # service, hedefi bir pg_service dosyasından okur ve host/port/dbname'i
+    # aynı anda belirleyebilir; göremediğimiz bir kaynağı doğrulayamayız.
+    guvenli, sebep = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test?service=prod"
+    )
+
+    assert guvenli is False
+    assert "service" in sebep
+
+
+def test_portsuz_yerel_adres_kabul_edilir():
+    # Port belirtilmemesi meşrudur (varsayılan 5432); kilit fazla sıkı olmamalı.
+    guvenli, _ = hedef_guvenli_mi("postgresql://triage:triage@localhost/ai_triage_test")
+
+    assert guvenli is True

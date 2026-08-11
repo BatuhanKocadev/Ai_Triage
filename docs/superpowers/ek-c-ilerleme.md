@@ -328,9 +328,9 @@ ile doğrulandı.
 > **Durum güncellemesi (11 Ağustos 2026, Gün 22 birinci yarısı).**
 > **Madde 1b (güvenlik kilidinin sınırı) KAPATILDI** — kilit artık host doğruluyor
 > ve query string'li meşru adresi kırmıyor; karar mantığı
-> `tests/yardimcilar/db_kilidi.py`'de ve **on bir** birim testiyle bağlı
-> (altısı ilk turda, biri boş-host deliği için, ikisi beyaz liste girdileri için,
-> ikisi de query string'le ezilen host için).
+> `tests/yardimcilar/db_kilidi.py`'de ve **on beş** birim testiyle bağlı.
+> Kilit URL'in görünen hâlini değil, psycopg2'ye verilecek çözülmüş hedefi
+> doğruluyor; on beş bypass vektörü ölçülerek kapatıldı.
 > **Madde 1c (aynı kusur deseninin üçüncü örneği) KAPATILDI** — `test_speech_api.py`'deki
 > üç test artık `transkript_engelle` ile yamalı; desenin bilinen tüm örnekleri kapandı.
 > **Madde 2'nin birinci sırası (`/auth/login` uçtan uca testi) ÇOKTAN KAPANMIŞTI** —
@@ -1552,7 +1552,7 @@ diyordu. Protokole hasta dili eklendi ve kalibrasyon sorgusu yeniden yazıldı.
 
 | | Önce | Sonra |
 |---|---|---|
-| Test sayısı | 137 | **149** |
+| Test sayısı | 137 | **153** |
 | `app/` kapsaması | %85 | %85 |
 | `auth.py` kapsaması | %100 | %100 |
 | Alembic head | `72dffb9e5194` | **`6922a872c59d`** |
@@ -1628,16 +1628,38 @@ make_url("...@localhost:5432/ai_triage_test?host=prod-host").host  ->  "localhos
 create_connect_args(...)["host"]                                    ->  "prod-host"
 ```
 
-libpq bağlantı hedefini `host`, `hostaddr` ve `service` query parametrelerinden de
-alır ve bunlar `url.host`'u **ezer**. Kilit "localhost" görüp güvenli der, psycopg2
-üretim sunucusuna bağlanır, `drop_all` orada koşar. Üç parametre de artık
-reddediliyor.
+libpq bağlantı hedefini query parametrelerinden de alır ve bunlar URL'in kendi
+alanlarını **ezer**. Kilit "localhost" görüp güvenli der, psycopg2 üretim
+sunucusuna bağlanır, `drop_all` orada koşar.
 
-Bunun öğretici yanı, deliğin kendisi değil **tekrarı**: boş-host deliği bir gün
-önce aynı dosyada, aynı gerekçeyle (K6, "kolay kaçış kapısı olan kilit, kilit
-değildir") bulunup kapatılmıştı. Bir güvenlik kontrolünde bir bypass bulunduğunda,
-doğru refleks o bypass'ı kapatmak değil **aynı sınıftan başka bypass aramaktır** —
-burada iki tur sürdü.
+**İlk düzeltme yanlış şekildeydi ve bir sonraki inceleme onu da yakaladı.** Üç
+parametre (`host`, `hostaddr`, `service`) bir **kara listeye** kondu; kara liste
+fail-**open**'dır ve nitekim `dbname` gözden kaçtı:
+
+```
+hedef_guvenli_mi(".../ai_triage_test?dbname=ai_triage")  ->  (True, "")
+psycopg2 DSN                                             ->  dbname=ai_triage
+```
+
+Bu, bildirilen delikten **daha kötüsüydü**: `host=` bypass'ı erişilebilir bir
+üretim sunucusu ister, `dbname=` yalnızca geliştiricinin kendi makinesini —
+`docker compose` üretim veritabanını tam da o host ve portta sunuyor. `port=`
+de aynı mekanizmadan açıktı (beyaz listedeki bir host üzerinde üretime açılmış
+bir tünel).
+
+Doğru şekil, URL'in görünen hâlini değil **psycopg2'ye verilecek hedefi**
+doğrulamaktır: `create_connect_args` çözülüyor, `dbname`/`host`/`hostaddr`/`port`
+o çıktıdan okunuyor, `service` (hedefi göremediğimiz bir dosyadan okuduğu için)
+baştan reddediliyor. On beş bypass vektörü tek tek ölçüldü ve on beşi de doğru
+sonuç veriyor.
+
+Bunun öğretici yanı ikili. Birincisi **tekrar**: boş-host deliği bir gün önce
+aynı dosyada, aynı gerekçeyle (K6) bulunup kapatılmıştı — bir güvenlik
+kontrolünde bypass bulununca doğru refleks onu kapatmak değil **aynı sınıftan
+başkasını aramaktır**; burada üç tur sürdü. İkincisi **şekil**: bu depo dosya
+doğrulamasında bilinçli olarak fail-closed davranıyor (`IMZALAR`'da kaydı olmayan
+uzantı reddedilir), ama aynı repo aynı hafta kilidi fail-open yazdı. Doğru
+soru "hangi parametreler tehlikeli" değil, **"doğruladığım şey bağlandığım şey mi"**.
 
 ### Kör sorgu: günün en bilgilendirici ölçümü
 
@@ -1751,10 +1773,18 @@ yazılı gerekçeyle seçilmiş bir kararı sessizce iptal etmek olurdu.
    `ai_recommendations_visit_id_key`, migration → `uq_ai_recommendations_visit_id`).
    Bugün zararsız; `IntegrityError` mesajına bakıp `409` üreten bir kod yazılırsa
    testte farklı davranır.
-8. **Yeni `yavas` test chunk-0-only durumunu yakalayamaz** — yalnızca `assert sonuc`
-   ve `"yanik.txt" in sonuc[0]` iddia ediyor. Madde 1'in kanıtı elle yazılmış,
-   sonra silinmiş bir script'ti. Dönen belgelerden birinin kriter başlığı
-   taşıdığını iddia eden bir assert ucuz kalıcı muhafız olurdu.
+8. ~~**Yeni `yavas` test chunk-0-only durumunu yakalayamaz.**~~ **KAPATILDI**
+   (aynı gün, tüm-dal incelemesinin bulgusu üzerine). Test artık dönen yanık
+   belgelerinden en az birinin triyaj ölçütü taşıdığını iddia ediyor; kör
+   sorgunun bugünkü davranışı da ayrı bir testte donduruldu (`assert not ...`),
+   yapısal düzeltme gelince o test kırılacak ve kırılma "defekt kapandı"
+   haberi olacak. **Not:** ilk deneme ölçütü "Alan Kriterleri" **başlığıyla**
+   arıyordu ve iki yönde de yanlıştı — örtüşmeli bölme başlığı kendi
+   maddelerinden ayırıyor, yani saf kriter maddelerinden oluşan chunk başlıksız
+   kalıyor, başlığı taşıyan chunk ise ağırlıklı olarak hasta dili olabiliyor.
+   Bu, Ek C'nin birkaç paragraf önce geri aldığı etiketleme hatasının aynısıydı;
+   ikinci turda içerik işaretine (`TVYA >`, `kritik bölge`, `Önerilen Tetkikler`)
+   çevrildi ve `yanik.txt` belgeleriyle sınırlandı.
 9. **`test_turkce_retrieval.py:56` hâlâ `read_text()` kullanıyor**, yeni test
    `read_bytes()`. İki fixture da "üretim sadakati" iddia ediyor, yalnızca biri
    taşıyor. Mevcut test değiştirilemediği için kapsam dışıydı.

@@ -62,6 +62,36 @@ def derleme_koleksiyonu():
         istemci.delete_collection(ad)
 
 
+# Triyaj ölçütü taşıyan metnin işaretleri. Başlığa ("Alan Kriterleri") tek başına
+# BAKILAMAZ: örtüşmeli bölme başlığı kendi maddelerinden ayırıyor, yani saf kriter
+# maddelerinden oluşan bir chunk başlıksız kalabiliyor ve başlığı taşıyan chunk
+# ağırlıklı olarak hasta dili olabiliyor. Ek C bu etiketleme hatasını bir kez
+# yapıp geri aldı; burada içerik işaretine bakılıyor.
+# "TVYA" tek başına da yetmez — İlk Değerlendirme bölümünde hesaplama adımı olarak
+# geçiyor; ölçüt olan hâli karşılaştırma operatörüyle gelir (TVYA >%20, <%5, %5-20).
+KRITER_ISARETLERI = (
+    "Alan Kriterleri",
+    "Önerilen Tetkikler",
+    "kritik bölge",
+    "TVYA >",
+    "TVYA <",
+    "TVYA %",
+)
+
+# Yalnızca yanık protokolünün ölçütleri sayılır: başka bir protokolün kriter
+# taşıyan chunk'ının ilk üçe girmesi, yanık hastasının triyaj edilebildiği
+# anlamına gelmez.
+YANIK_KAYNAGI = "[Kaynak: yanik.txt]"
+
+
+def _kriter_tasiyan_yanik_belgesi_var_mi(sonuc: list[str]) -> bool:
+    """Dönen belgeler arasında yanık ÖLÇÜTÜ taşıyan bir chunk var mı."""
+    return any(
+        YANIK_KAYNAGI in belge and any(isaret in belge for isaret in KRITER_ISARETLERI)
+        for belge in sonuc
+    )
+
+
 @pytest.mark.yavas
 @pytest.mark.entegrasyon
 @pytest.mark.parametrize(
@@ -85,9 +115,9 @@ def test_yanik_sikayeti_esigi_geciyor(derleme_koleksiyonu, sorgu):
     # sistem "Belirsiz" demez ama kriter görmeden karar verir. Gün 22'nin
     # incelemesinde tam bu kusur bulundu ve tek kanıtı elle yazılıp silinen bir
     # script'ti; bu satır onu kalıcı hale getiriyor.
-    assert any("Alan Kriterleri" in belge for belge in sonuc), (
-        "dönen belgelerin hiçbiri triyaj kriteri taşımıyor; LLM ölçüt görmeden "
-        "karar verecek"
+    assert _kriter_tasiyan_yanik_belgesi_var_mi(sonuc), (
+        "dönen yanık belgelerinin hiçbiri triyaj ölçütü taşımıyor; LLM ölçüt "
+        "görmeden karar verecek"
     )
 
 
@@ -115,7 +145,7 @@ def test_kor_yanik_sorgusu_esigi_geciyor_ama_kriter_almiyor(derleme_koleksiyonu)
 
     assert sonuc, "kör yanık sorgusu eşiği geçemedi"
     assert "yanik.txt" in sonuc[0]
-    assert not any("Alan Kriterleri" in belge for belge in sonuc), (
-        "kör sorgu artık kriter alıyor — Gün 22'nin adlandırılmış defekti "
+    assert not _kriter_tasiyan_yanik_belgesi_var_mi(sonuc), (
+        "kör sorgu artık yanık ölçütü alıyor — Gün 22'nin adlandırılmış defekti "
         "kapanmış olabilir; Ek C'yi güncelleyin ve bu testi çevirin"
     )
