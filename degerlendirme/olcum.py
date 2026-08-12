@@ -7,6 +7,7 @@ istediği birim testlerinin Ollama'sız koşabilmesi için (K6).
 from __future__ import annotations
 
 import json
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -115,21 +116,29 @@ def _hata(sira: int, mesaj: str) -> SenaryoHatasi:
     return SenaryoHatasi(f"{sira}. kayıt: {mesaj}")
 
 
-def _metin_dogrula(kayit: dict, alan: str, sira: int, *, zorunlu: bool) -> None:
-    """Bir alanın metin olduğunu doğrular; zorunlu değilse None'a izin verir."""
-    deger = kayit.get(alan)
+def _metin_degeri_dogrula(deger: object, ad: str, sira: int, *, zorunlu: bool) -> None:
+    """Tek bir metin değerinin tip ve boşluk kapısı.
+
+    Hem sözlük alanları hem `beklenen_tetkikler` elemanları buradan geçiyor;
+    "boş dize gerçek bir beklenti sayılmaz" kuralı tek yerde duruyor.
+    """
     if deger is None and not zorunlu:
         return
     if not isinstance(deger, str):
         raise _hata(
             sira,
-            f"{alan!r} alanı metin olmalı, {type(deger).__name__} geldi",
+            f"{ad!r} alanı metin olmalı, {type(deger).__name__} geldi",
         )
     if not deger.strip():
         # Boş dize sessizce geçerse ölçüm onu gerçek bir beklenti sanır; örneğin
         # beklenen_bolum="" her sistem cevabıyla karşılaştırılıp kalıcı sıfır yazar.
         kuyruk = "; alan yoksa None yazın" if not zorunlu else ""
-        raise _hata(sira, f"{alan!r} alanı boş olamaz{kuyruk}")
+        raise _hata(sira, f"{ad!r} alanı boş olamaz{kuyruk}")
+
+
+def _metin_dogrula(kayit: dict, alan: str, sira: int, *, zorunlu: bool) -> None:
+    """Bir alanın metin olduğunu doğrular; zorunlu değilse None'a izin verir."""
+    _metin_degeri_dogrula(kayit.get(alan), alan, sira, zorunlu=zorunlu)
 
 
 def _kaydi_dogrula(kayit: dict, sira: int) -> None:
@@ -178,13 +187,13 @@ def _kaydi_dogrula(kayit: dict, sira: int) -> None:
             f"'beklenen_tetkikler' liste olmalı, {type(tetkikler).__name__} geldi "
             f'(tek tetkik için de ["EKG"] yazılmalı)',
         )
-    for tetkik in tetkikler:
-        if not isinstance(tetkik, str):
-            raise _hata(
-                sira,
-                f"'beklenen_tetkikler' elemanları metin olmalı, "
-                f"{type(tetkik).__name__} geldi",
-            )
+    # Elemanlar da zorunlu metin alanlarıyla aynı kapıdan geçiyor: boş bir tetkik
+    # adı ("EKG", "") beklenen kümeye gerçek bir beklenti olarak girer ve Jaccard
+    # oranını hiç ulaşılamayacak bir tavana çakar.
+    for indeks, tetkik in enumerate(tetkikler):
+        _metin_degeri_dogrula(
+            tetkik, f"beklenen_tetkikler[{indeks}]", sira, zorunlu=True
+        )
 
     vitals = kayit.get("vitals")
     if vitals is not None and not isinstance(vitals, dict):
@@ -263,3 +272,41 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
         )
 
     return senaryolar
+
+
+def _sadelestir(metin: str) -> str:
+    """Türkçe karakterleri ASCII'ye indirir ve küçük harfe çevirir.
+
+    Yalnızca triyaj kodu ve tetkik adı karşılaştırmasında kullanılır; WER
+    normalizasyonunda kullanılmaz (K12), çünkü orada katlama gerçek tanıma
+    hatasını gizler. Burada katlamak doğru: ölçülen şey triyaj kalitesi, yerel
+    modelin yazım tercihi değil — `app/api/ai.py` de aynı sebeple kendi
+    `_sadelestir`ini taşıyor. Seste ise "şiddetli" → "siddetli" gerçek bir
+    tanıma hatasıdır ve katlanırsa WER olduğundan iyi görünür.
+    """
+    esleme = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+    sade = metin.translate(esleme)
+    sade = unicodedata.normalize("NFKD", sade)
+    sade = "".join(k for k in sade if not unicodedata.combining(k))
+    return sade.lower().strip()
+
+
+def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
+    """Beklenen ve çıkan triyaj kodu aynı mı — yazım farkına dayanıklı."""
+    if cikan is None:
+        return False
+    return _sadelestir(beklenen) == _sadelestir(cikan)
+
+
+def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
+    """Beklenen ve önerilen tetkik kümeleri arasındaki Jaccard benzerliği."""
+    # Çıkan taraf modelin ham çıktısı, yani güvenilmeyen girdi: boş adlar
+    # birleşimi şişirip skoru haksız yere düşürmesin diye burada eleniyor.
+    # Beklenen tarafta boş ad zaten yükleme anında reddediliyor (yazım hatası).
+    b = {_sadelestir(t) for t in beklenen if t and t.strip()}
+    c = {_sadelestir(t) for t in cikan if t and t.strip()}
+    if not b and not c:
+        return 1.0
+    if not b or not c:
+        return 0.0
+    return len(b & c) / len(b | c)

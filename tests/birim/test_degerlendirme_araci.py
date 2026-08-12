@@ -12,6 +12,8 @@ from degerlendirme.olcum import (
     Senaryo,
     SenaryoHatasi,
     senaryolari_yukle,
+    tetkik_ortusmesi,
+    triyaj_dogru_mu,
 )
 
 
@@ -275,6 +277,28 @@ def test_bosluklu_sikayet_uzunluk_kapisini_gecemez(tmp_path):
         senaryolari_yukle(yol)
 
 
+@pytest.mark.parametrize("deger", ["", "   "])
+def test_bos_tetkik_adi_hata_verir(tmp_path, deger):
+    """Boş bir tetkik adı Jaccard hesabına gerçek bir beklenti olarak girer.
+
+    Skaler alanlarda kapatılan kusurun aynısı: `["EKG", ""]` sessizce yüklenirse
+    beklenen küme iki elemanlı sayılır ve örtüşme oranı hiç ulaşılamayacak bir
+    tavana çarpar.
+    """
+    yol = _yaz(tmp_path, _senaryo_sozlugu(beklenen_tetkikler=["EKG", deger]))
+
+    with pytest.raises(SenaryoHatasi, match="beklenen_tetkikler"):
+        senaryolari_yukle(yol)
+
+
+def test_ic_bosluklu_tetkik_adi_kabul_edilir(tmp_path):
+    """Kapı yalnızca boş adı elemeli; ad içindeki boşluk tamamen meşrudur."""
+    adlar = ["Tam Kan Sayımı", "EKG"]
+    yol = _yaz(tmp_path, _senaryo_sozlugu(beklenen_tetkikler=adlar))
+
+    assert senaryolari_yukle(yol)[0].beklenen_tetkikler == adlar
+
+
 def test_utf8_olmayan_dosya_senaryo_hatasi_verir(tmp_path):
     """Windows'ta cp1254 kaydedilmiş dosya ham UnicodeDecodeError vermemeli.
 
@@ -304,3 +328,62 @@ def test_tum_istege_bagli_alanlar_dolu_senaryo_yuklenir(tmp_path):
     assert senaryo.vitals == {"fever": 38.2, "pulse": 104}
     assert senaryo.kronik_hastalik == "hipertansiyon"
     assert senaryo.ses_dosyasi == "t01.wav"
+
+
+# --- Karşılaştırma ilkelleri: triyaj kodu ve tetkik örtüşmesi ---
+
+
+def test_dogruluk_hesaplanir():
+    """Dört karşılaştırmadan üçü tutuyorsa doğruluk %75'tir."""
+    ciftler = [
+        ("Kırmızı", "Kırmızı"),
+        ("Sarı", "Sarı"),
+        ("Yeşil", "Yeşil"),
+        ("Kırmızı", "Yeşil"),
+    ]
+    dogru = sum(1 for beklenen, cikan in ciftler if triyaj_dogru_mu(beklenen, cikan))
+
+    assert dogru == 3
+    assert dogru / len(ciftler) == 0.75
+
+
+def test_triyaj_karsilastirmasi_yazim_farkina_dayanikli():
+    """Yerel model kodu bazen ASCII yazıyor; normalizasyon uçta var ama
+    ölçüm aracı da kendi başına dayanıklı olmalı."""
+    assert triyaj_dogru_mu("Kırmızı", "kirmizi") is True
+    assert triyaj_dogru_mu("Kırmızı", "Sarı") is False
+
+
+def test_cevapsiz_senaryo_dogru_sayilmaz():
+    """Cevapsızlık ile "Belirsiz" ayrı şeyler; ikisi de kod tutmadan doğru sayılmaz."""
+    assert triyaj_dogru_mu("Kırmızı", None) is False
+    assert triyaj_dogru_mu("Kırmızı", "Belirsiz") is False
+    # Kapsam dışı senaryoda cevap vermemek doğrudur.
+    assert triyaj_dogru_mu("Belirsiz", "Belirsiz") is True
+
+
+def test_tetkik_ortusme_orani_hesaplanir():
+    """Jaccard: kesişim / birleşim."""
+    # {EKG, Troponin} ∩ {EKG, Troponin, D-Dimer} = 2, birleşim = 3
+    assert tetkik_ortusmesi(
+        ["EKG", "Troponin"], ["EKG", "Troponin", "D-Dimer"]
+    ) == pytest.approx(2 / 3)
+    assert tetkik_ortusmesi(["EKG"], ["EKG"]) == 1.0
+    assert tetkik_ortusmesi(["EKG"], ["Troponin"]) == 0.0
+    # İki taraf da boşsa örtüşme tamdır; biri boşsa hiç yoktur.
+    assert tetkik_ortusmesi([], []) == 1.0
+    assert tetkik_ortusmesi(["EKG"], []) == 0.0
+
+
+def test_tetkik_ortusmesi_yazim_farkina_dayanikli():
+    """Tetkik adında ASCII katlaması doğru: ölçülen şey triyaj kalitesi, yazım değil."""
+    assert tetkik_ortusmesi(
+        ["Tam Kan Sayımı"], ["tam kan sayimi"]
+    ) == 1.0
+
+
+def test_cikan_taraftaki_bos_tetkik_adi_yok_sayilir():
+    """Model çıktısı güvenilmeyen girdi: boş bir ad birleşimi şişirip örtüşmeyi
+    haksız yere düşürmemeli. Yazarın elindeki tarafta ise aynı şey hatadır
+    (bkz. test_bos_tetkik_adi_hata_verir) — asimetri bilinçli."""
+    assert tetkik_ortusmesi(["EKG"], ["EKG", "", "   "]) == 1.0
