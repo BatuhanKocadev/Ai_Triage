@@ -19,6 +19,7 @@ from degerlendirme.olcum import (
     senaryolari_yukle,
     tetkik_ortusmesi,
     triyaj_dogru_mu,
+    wer,
 )
 
 
@@ -814,3 +815,67 @@ def test_beklenen_kaynak_yuklemede_kirpilir(tmp_path):
     )
     assert kok_neden(senaryo, dogru) is None
     assert sansli_dogru_mu(senaryo, dogru) is False
+
+
+def test_wer_hesaplanir():
+    # Birebir aynı
+    assert wer("başım ağrıyor", "başım ağrıyor") == 0.0
+    # Beş kelimeden biri yanlış
+    assert wer(
+        "sabahtan beri başım çok ağrıyor", "sabahtan beri başım cok ağrıyor"
+    ) == pytest.approx(1 / 5)
+    # Bir kelime eksik (silme)
+    assert wer("başım çok ağrıyor", "başım ağrıyor") == pytest.approx(1 / 3)
+    # Bir kelime fazla (ekleme)
+    assert wer("başım ağrıyor", "başım çok ağrıyor") == pytest.approx(1 / 2)
+
+
+def test_wer_noktalama_ve_buyuk_harf_yok_sayar():
+    assert wer("Başım ağrıyor!", "başım ağrıyor") == 0.0
+    assert wer("Işığa bakamıyorum, midem kalkıyor.", "ışığa bakamıyorum midem kalkıyor") == 0.0
+
+
+def test_wer_turkce_karakteri_asciye_katlamaz():
+    """Katlarsak gerçek tanıma hatasını doğru saymış oluruz (K12)."""
+    assert wer("şiddetli ağrı", "siddetli agri") == pytest.approx(1.0)
+
+
+def test_wer_noktali_noktasiz_i_harfi_dogru_kucultulur():
+    """Python'un `.lower()`'ı Türkçe bilmez; iki I harfi elle eşlenmeli.
+
+    `"I".lower()` "i" verir ("ı" değil), `"İ".lower()` ise "i" + birleşen
+    nokta (iki karakter) verir. Eşleme yapılmazsa cümle başındaki her "I"/"İ"
+    tanıma doğruyken bile hata sayılır ve WER olduğundan kötü çıkar. Bu bir
+    büyük/küçük harf düzeltmesi; harf katlaması değil (bkz. bir üstteki test).
+    """
+    assert wer("Işığa bakamıyorum", "ışığa bakamıyorum") == 0.0
+    assert wer("İyileşmedi ağrım", "iyileşmedi ağrım") == 0.0
+
+
+def test_wer_bos_referans():
+    assert wer("", "") == 0.0
+    assert wer("", "bir şey") == 1.0
+
+
+def test_wer_bos_hipotez_tam_hata():
+    """Ses akışı boş metin döndürürse tüm kelimeler silinmiş sayılır.
+
+    `degerlendirme/` `--cov=app` dışında olduğu için burada test edilmeyen bir
+    dal hem takımda hem kapsam kapısında görünmez kalır; hipotezin boş olduğu
+    durumda düzenleme mesafesi iç döngüye hiç girmez ve o dal yalnızca bu
+    testle kilitleniyor. Boş transkript koşumda gerçekten olabilir (sessiz ya
+    da tanınamayan kayıt) ve WER 1.0 yerine 0.0 çıkarsa hata mükemmel skor
+    gibi görünür.
+    """
+    assert wer("başım çok ağrıyor", "") == pytest.approx(1.0)
+    # Yalnızca noktalamadan oluşan bir transkript de kelimesizdir.
+    assert wer("başım çok ağrıyor", "...") == pytest.approx(1.0)
+
+
+def test_wer_birin_ustune_cikabilir():
+    """WER 1.0'da kırpılmaz; uydurma (halüsinasyon) uzunluğu oranı aşırtır.
+
+    Görev 5 özeti bu sayıyı yüzdeye çevirecek; üst sınır 1.0 sanılırsa
+    %100'den büyük bir değer rapora hata gibi girer. Sözleşme burada duruyor.
+    """
+    assert wer("ağrı", "ağrı var çok fena") == pytest.approx(3.0)

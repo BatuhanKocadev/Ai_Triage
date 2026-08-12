@@ -7,6 +7,7 @@ istediği birim testlerinin Ollama'sız koşabilmesi için (K6).
 from __future__ import annotations
 
 import json
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -441,3 +442,58 @@ def sansli_dogru_mu(senaryo: Senaryo, sonuc: Sonuc) -> bool:
     if not triyaj_dogru_mu(senaryo.beklenen_triage_code, sonuc.cikan_triage_code):
         return False
     return senaryo.beklenen_kaynak not in _gelen_kaynaklar(sonuc)
+
+
+def _kelimelere_ayir(metin: str) -> list[str]:
+    """WER için metni normalize edip kelimelere böler.
+
+    Küçük harfe indirir ve noktalamayı atar; Türkçe karakteri ASCII'ye
+    KATLAMAZ (K12) — katlarsak "şiddetli" → "siddetli" tanıma hatası doğru
+    sayılır ve WER olduğundan iyi çıkar. Bu yüzden aynı modüldeki
+    `_sadelestir` buradan ÇAĞRILMAZ; o fonksiyon triyaj/bölüm/tetkik adı
+    karşılaştırması içindir.
+
+    Küçük harfe indirmeden önce yalnızca noktalı/noktasız I çifti eşleniyor,
+    çünkü Python'un `.lower()`'ı Türkçe bilmez: "I" → "i" verir ("ı" değil) ve
+    "İ" → "i" + birleşen nokta (iki karakter) verir. Bu bir BÜYÜK/KÜÇÜK HARF
+    düzeltmesidir, harf katlaması değil — "I" ile "ı" aynı harfin iki hâli,
+    "ş" ile "s" ise ayrı harflerdir ve ikincisi katlanmaz (K12). Eşleme
+    olmasaydı cümle başındaki "Işığa", tanıma doğruyken bile hata sayılırdı ve
+    WER olduğundan kötü çıkardı.
+    """
+    esleme = str.maketrans("Iİ", "ıi")
+    temiz = re.sub(r"[^\w\s]", " ", metin, flags=re.UNICODE)
+    return temiz.translate(esleme).lower().split()
+
+
+def wer(referans: str, hipotez: str) -> float:
+    """Kelime hata oranı: düzenleme mesafesi / referans kelime sayısı.
+
+    Standart Levenshtein, kelime düzeyinde. Yeni bağımlılık eklememek için
+    elle yazıldı (K11): `jiwer` iki gereksinim dosyasını birden güncellemeyi
+    gerektirir ve ölçüm gününde gereksiz bir CI riski yaratır.
+
+    Ekleme cezalandırıldığı için sonuç 1.0'ı aşabilir; oran kırpılmıyor,
+    uydurma bir transkript uzunluğu oranında görünür kalsın.
+    """
+    ref = _kelimelere_ayir(referans)
+    hip = _kelimelere_ayir(hipotez)
+
+    if not ref:
+        # Referans yoksa bölünecek kelime de yok: hipotez de boşsa hata yok,
+        # doluysa tamamı fazlalık sayılıp tam hata (1.0) yazılıyor.
+        return 0.0 if not hip else 1.0
+
+    onceki_satir = list(range(len(hip) + 1))
+    for i in range(1, len(ref) + 1):
+        simdiki_satir = [i] + [0] * len(hip)
+        for j in range(1, len(hip) + 1):
+            maliyet = 0 if ref[i - 1] == hip[j - 1] else 1
+            simdiki_satir[j] = min(
+                onceki_satir[j] + 1,           # silme
+                simdiki_satir[j - 1] + 1,      # ekleme
+                onceki_satir[j - 1] + maliyet, # değiştirme
+            )
+        onceki_satir = simdiki_satir
+
+    return onceki_satir[len(hip)] / len(ref)
