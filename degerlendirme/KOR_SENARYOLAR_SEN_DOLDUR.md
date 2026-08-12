@@ -66,39 +66,53 @@ Aşağıdaki boşlukları doldur. 6 tanesi yeterli, 8 daha iyi.
 ### kor_01
 **Konu:**
 **Şikayet:**
+Sabah kalktığımdan beri başımın sağ tarafı felaket zonkluyor. Ağrısı resmen gözüme vuruyor. Işığa falan hiç bakamıyorum, midem kalkıyor.
 **Yaş / cinsiyet:**
 
 ### kor_02
 **Konu:**
 **Şikayet:**
+"Merdivenden inerken ayağım burkuldu. Bileğim inanılmaz şişti, üstüne kesinlikle basamıyorum. Durduğu yerde zonkluyor resmen."
 **Yaş / cinsiyet:**
 
 ### kor_03
 **Konu:**
 **Şikayet:**
+"Dünden beri karnıma kramplar giriyor. Midem sürekli bulanıyor, ağzıma bir lokma bir şey koyamadım. Biraz da ateşim çıktı galiba."
 **Yaş / cinsiyet:**
 
 ### kor_04
 **Konu:**
 **Şikayet:**
+"Üç gündür geçmeyen bir öksürüğüm var. Yutkunurken boğazım jilet gibi kesiliyor. Bir de derin nefes almaya çalışırken sırtıma garip bir ağrı saplanıyor."
 **Yaş / cinsiyet:**
 
 ### kor_05
 **Konu:**
 **Şikayet:**
+"Çay demlerken kaynar su elime döküldü. Bileğime kadar kıpkırmızı oldu, şimdiden su toplamaya başladı. Acısından yerimde duramıyorum."
 **Yaş / cinsiyet:**
 
 ### kor_06
 **Konu:**
 **Şikayet:**
+"Dün akşam dışarıda bir şeyler yemiştim, sabahtan beri her yerim deliler gibi kaşınıyor. Kollarımda kırmızı kırmızı lekeler çıktı, yüzüm de hafiften şişmeye başladı."
 **Yaş / cinsiyet:**
 
 ### kor_07 (isteğe bağlı)
 **Konu:**
 **Şikayet:**
+"İki gündür idrara çıkarken çok fena yanmam oluyor. Belimin sağ tarafına, boşluğuma doğru da öyle bir ağrı vuruyor ki nefesimi kesiyor."
 **Yaş / cinsiyet:**
 
 ### kor_08 (isteğe bağlı)
 **Konu:**
 **Şikayet:**
+"Kaç gündür üstümde bir kırgınlık var, bütün eklemlerim sızlıyor. Sürekli üşüyorum, ara ara titreme geliyor ama alnım da yanıyor sanki."
+**Yaş / cinsiyet:**
+
+### kor_09 (isteğe bağlı)
+**Konu:**
+**Şikayet:**
+"Dün akşam yanlış ilaç içmişim bu yüzden kendimi iyi hissetmiyorum
 **Yaş / cinsiyet:**
