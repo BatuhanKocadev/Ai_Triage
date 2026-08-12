@@ -32,10 +32,13 @@ ZORUNLU_ALANLAR = (
     "beklenen_tetkikler",
 )
 
-# Metin olması zorunlu alanlar; boş ya da başka tipte olamazlar.
+# Metin olması zorunlu alanlar; başka tipte ya da boş/yalnızca boşluk olamazlar.
 ZORUNLU_METIN_ALANLARI = ("id", "cinsiyet", "beklenen_bolum")
 
 # Verilirse metin olması gereken, verilmezse None kalabilen alanlar.
+# Karar: bu alanlarda boş dize de reddediliyor. "" ile None anlamca farklı
+# ("boş adlı kaynak bekle" ile "kapsam dışı"), ikisinin de geçmesi "yok" demenin
+# iki yolu olması demekti; tek meşru yol None (ya da alanı hiç yazmamak).
 ISTEGE_BAGLI_METIN_ALANLARI = ("beklenen_kaynak", "kronik_hastalik", "ses_dosyasi")
 
 # app/api/ai.py:40 patient_age alanına ge=0 le=120 dayatıyor. Aralık dışı bir
@@ -57,17 +60,29 @@ class SenaryoHatasi(Exception):
 class Senaryo:
     """Tek bir değerlendirme senaryosu — ölçümün girdisi ve altın standardı."""
 
+    # Senaryonun benzersiz kimliği; sonuçlar ve raporlar bununla eşleştirilir.
     id: str
+    # Hastanın kendi cümlesiyle şikayeti; uca symptom_text olarak gider.
     sikayet: str
+    # Hastanın yaşı; uca patient_age olarak gider.
     yas: int
+    # Uca gender olarak giden cinsiyet; GenderEnum ile birebir eşleşmek zorunda.
     cinsiyet: str
+    # Altın standart triyaj kodu; triyaj doğruluğu buna göre ölçülür.
     beklenen_triage_code: str
+    # Altın standart bölüm; bölüm doğruluğu buna göre ölçülür.
     beklenen_bolum: str
+    # Altın standart tetkik listesi; Jaccard benzerliği bununla hesaplanır.
     beklenen_tetkikler: list[str]
     # Hangi protokolün gelmesi bekleniyor; None = kapsam dışı senaryo.
     beklenen_kaynak: str | None = None
+    # Varsa hastanın kronik hastalığı; None = bilinen kronik hastalık yok.
     kronik_hastalik: str | None = None
-    # Yalnızca fever ve pulse taşır; app/api/ai.py:35 bundan fazlasını kabul etmiyor.
+    # Ölçümde yalnızca fever ve pulse kullanılıyor. Dikkat: app/api/ai.py:35'teki
+    # Vitals modeli fazladan anahtarları reddetmiyor, sessizce yok sayıyor
+    # (pydantic 2.13.4 varsayılanı extra="ignore"). Yani {"ates": 39} yazılırsa
+    # uçtan 422 gelmez; senaryo vitals'sız koşar ve ölçülen senaryo yazılan
+    # senaryo olmaz. Anahtar adları bu yüzden elle doğru yazılmak zorunda.
     vitals: dict | None = None
     # Kör senaryolarda dolu; WER yalnızca bu alanı olan senaryolarda hesaplanır.
     ses_dosyasi: str | None = None
@@ -77,10 +92,15 @@ class Senaryo:
 class Sonuc:
     """Bir senaryonun sisteme sorulmasından dönen ham kayıt."""
 
+    # Bu sonucun hangi senaryoya ait olduğu; Senaryo.id ile eşleşir.
     senaryo_id: str
+    # Sistemin verdiği triyaj kodu; None = cevap alınamadı (bkz. hata alanı).
     cikan_triage_code: str | None = None
+    # Sistemin önerdiği bölüm; None = cevap alınamadı.
     cikan_bolum: str | None = None
+    # Sistemin önerdiği tetkikler; beklenen_tetkikler ile karşılaştırılır.
     cikan_tetkikler: list[str] = field(default_factory=list)
+    # RAG'in döndürdüğü kaynak dosyalar; kaynak doğruluğu bununla ölçülür.
     sources: list[str] = field(default_factory=list)
     # Koşumun yarattığı ziyaret; silinmiyor, video demosunda kullanılacak (K14).
     visit_id: str | None = None
@@ -105,6 +125,11 @@ def _metin_dogrula(kayit: dict, alan: str, sira: int, *, zorunlu: bool) -> None:
             sira,
             f"{alan!r} alanı metin olmalı, {type(deger).__name__} geldi",
         )
+    if not deger.strip():
+        # Boş dize sessizce geçerse ölçüm onu gerçek bir beklenti sanır; örneğin
+        # beklenen_bolum="" her sistem cevabıyla karşılaştırılıp kalıcı sıfır yazar.
+        kuyruk = "; alan yoksa None yazın" if not zorunlu else ""
+        raise _hata(sira, f"{alan!r} alanı boş olamaz{kuyruk}")
 
 
 def _kaydi_dogrula(kayit: dict, sira: int) -> None:
@@ -182,6 +207,14 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
         ham = json.loads(yol.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise SenaryoHatasi(f"Senaryo dosyası bulunamadı: {yol}") from exc
+    except UnicodeDecodeError as exc:
+        # UnicodeDecodeError, JSONDecodeError'ın alt sınıfı değil; ayrıca yakalanmazsa
+        # ham traceback olarak kaçar. Dosyayı Windows'ta Türkçe konuşan biri elle
+        # yazacak ve cp1254 kaydedilmiş bir dosyadaki ğ/ı/ş geçerli UTF-8 değildir.
+        raise SenaryoHatasi(
+            f"Senaryo dosyası UTF-8 kodlamasında değil: {yol} — {exc}. "
+            f"Dosyayı UTF-8 olarak kaydedin."
+        ) from exc
     except json.JSONDecodeError as exc:
         raise SenaryoHatasi(f"Senaryo dosyası geçerli JSON değil: {yol} — {exc}") from exc
 

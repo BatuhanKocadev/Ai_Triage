@@ -228,6 +228,68 @@ def test_vitals_sozluk_olmali(tmp_path):
         senaryolari_yukle(yol)
 
 
+# --- Boş dize: "yok" demenin tek yolu None, "" değil ---
+
+
+@pytest.mark.parametrize("alan", ["id", "cinsiyet", "beklenen_bolum", "sikayet"])
+@pytest.mark.parametrize("deger", ["", "   "])
+def test_bos_zorunlu_metin_alani_hata_verir(tmp_path, alan, deger):
+    """`beklenen_bolum: ""` sessizce geçerse bölüm doğruluğu kalıcı sıfır yazar."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(**{alan: deger}))
+
+    with pytest.raises(SenaryoHatasi, match=alan):
+        senaryolari_yukle(yol)
+
+
+@pytest.mark.parametrize(
+    "alan", ["beklenen_kaynak", "kronik_hastalik", "ses_dosyasi"]
+)
+@pytest.mark.parametrize("deger", ["", "   "])
+def test_bos_istege_bagli_metin_alani_hata_verir(tmp_path, alan, deger):
+    """`beklenen_kaynak: ""` ile `None` anlamca farklı; boş dize reddedilir."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(**{alan: deger}))
+
+    with pytest.raises(SenaryoHatasi, match=alan):
+        senaryolari_yukle(yol)
+
+
+def test_istege_bagli_alanlar_none_ile_kabul_edilir(tmp_path):
+    """"Yok" demenin meşru yolu None; boş dizeyi reddetmek bunu bozmamalı."""
+    yol = _yaz(
+        tmp_path,
+        _senaryo_sozlugu(beklenen_kaynak=None, kronik_hastalik=None, ses_dosyasi=None),
+    )
+
+    senaryo = senaryolari_yukle(yol)[0]
+
+    assert senaryo.beklenen_kaynak is None
+    assert senaryo.kronik_hastalik is None
+    assert senaryo.ses_dosyasi is None
+
+
+def test_bosluklu_sikayet_uzunluk_kapisini_gecemez(tmp_path):
+    """10 boşluk uzunluk sınırını geçer ama şikayet değildir."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(sikayet=" " * 10))
+
+    with pytest.raises(SenaryoHatasi, match="sikayet"):
+        senaryolari_yukle(yol)
+
+
+def test_utf8_olmayan_dosya_senaryo_hatasi_verir(tmp_path):
+    """Windows'ta cp1254 kaydedilmiş dosya ham UnicodeDecodeError vermemeli.
+
+    Senaryo dosyasını Türkçe konuşan biri elle yazacak; cp1254 kaydedilmiş bir
+    dosyadaki `ğ`/`ı`/`ş` geçerli UTF-8 değildir. Görev 7'nin sürücüsü bütün
+    yükleme hatalarının `SenaryoHatasi` olduğunu varsayıyor.
+    """
+    yol = tmp_path / "senaryolar.json"
+    metin = json.dumps([_senaryo_sozlugu()], ensure_ascii=False)
+    yol.write_bytes(metin.encode("cp1254"))
+
+    with pytest.raises(SenaryoHatasi, match="UTF-8"):
+        senaryolari_yukle(yol)
+
+
 def test_tum_istege_bagli_alanlar_dolu_senaryo_yuklenir(tmp_path):
     """Doğrulama fazla sıkı olmamalı: geçerli tam kayıt sorunsuz geçmeli."""
     tam = _senaryo_sozlugu(
