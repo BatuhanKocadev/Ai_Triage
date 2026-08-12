@@ -52,8 +52,17 @@ jobs:
       # dogruluyor: host beyaz listede (localhost), port 5432, ad ai_triage_test.
       # Uclerinden biri degisirse kilit paketi pytest.exit ile durdurur.
       DATABASE_URL: postgresql://triage:triage@localhost:5432/ai_triage_test
-      JWT_SECRET_KEY: ci-icin-sahte-anahtar
-      OLLAMA_BASE_URL: http://localhost:11434
+      #
+      # JWT_SECRET_KEY ve OLLAMA_BASE_URL BILEREK VERILMIYOR. tests/conftest.py
+      # ikisini de `os.environ.setdefault` ile kuruyor ve bir test conftest'in
+      # DEGERINI dogrudan iddia ediyor (test_config.py: jwt_secret_key ==
+      # "test-anahtari-sadece-testler-icin"). Burada bir deger verirsek
+      # setdefault hicbir sey yapmaz, conftest'in degeri gecmez ve o test
+      # KIRILIR. Ilk CI kosusunda tam bu oldu.
+      #
+      # Genel kural: test isinin ortami, conftest'in sahiplendigi degiskenleri
+      # ezmemeli. DATABASE_URL istisna cunku servis konteynerini gostermek
+      # zorunda - ve conftest'in varsayilani zaten birebir ayni deger.
 
     steps:
       - uses: actions/checkout@v4
@@ -109,7 +118,9 @@ jobs:
       # Test veritabani kilidi burada DEVREDE DEGIL ve bu bilinclidir: kilit
       # yalnizca pytest fixture'inin yolunda, alembic'i korumuyor (tasarim K8).
       DATABASE_URL: postgresql://triage:triage@localhost:5432/ai_triage
-      JWT_SECRET_KEY: ci-icin-sahte-anahtar
+      # JWT_SECRET_KEY gerekmiyor: alembic yalnizca database_url'i kullaniyor ve
+      # ayarin zaten bir varsayilani var. Test isindeki dersle ayni yonde -
+      # gereksiz ortam degiskeni vermeyin.
 
     steps:
       - uses: actions/checkout@v4
