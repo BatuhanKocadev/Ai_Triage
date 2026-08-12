@@ -145,6 +145,17 @@ o tasnif senaryo senaryo elle kazılarak yapılır — 3 iş günü kalmışken 
 yer orasıdır. Veri zaten yanıtta geliyor (`AnalysisResponse.sources`), maliyeti
 sıfıra yakın.
 
+İki kenar durum açıkça tanımlı:
+
+- **Hata alan senaryo** (500, timeout, 429 tükenmesi) kök nedene hiç girmez; kendi
+  sayısıyla "ölçülemedi" olarak raporlanır. Bir altyapı hatasını model hatası
+  saymak ölçümü kirletir.
+- **"Şanslı doğru"**: triyaj kodu doğru ama `beklenen_kaynak` gelmemişse cevap
+  doğru sayılır **ve ayrıca işaretlenir.** Model doğru cevabı yanlış bağlamdan
+  ya da kendi ön bilgisinden üretmiştir; Gün 24'te retrieval düzeltilince bu
+  senaryolar bozulabilir. İşaretlenmezse Gün 24'ün önce/sonra tablosunda
+  açıklanamayan bir gerileme olarak görünür.
+
 **K10 — Hız sınırı ölçüm için kapatılmaz.** `genel_sinirlayici` `/ai/analiz` ve
 `/speech/transkript` için ortaktır ve 30/dk'dır; ~24 senaryo + 6-8 ses çağrısı bu
 sınıra değebilir. Sürücü 429 görünce bekler, yeniden dener **ve bunu rapora
@@ -186,6 +197,7 @@ degerlendirme/
   calistir.py            # sürücü — HTTP, ön uçuş, raporlama
   senaryolar.json        # ~18 türetilmiş senaryo
   kor_senaryolar.json    # 6-8 kör senaryo (kullanıcı yazar)
+  KOR_SENARYOLAR_SEN_DOLDUR.md  # kullanıcının doldurduğu şablon → JSON'a çevrilir
   few_shot_havuzu.json   # 3-5 örnek — ASLA ölçülmez
   ses/                   # .gitignore — kullanıcının kayıtları
   sonuclar/
@@ -240,6 +252,8 @@ için** vardır.
 | Eşik altı oranı | "Belirsiz" / toplam |
 | Tetkik Jaccard | ortalama örtüşme, yalnızca cevap verilenlerde |
 | Kök neden dağılımı | A / B / C sayıları |
+| Şanslı doğru | doğru cevap verilen ama beklenen kaynağın gelmediği senaryo sayısı |
+| Ölçülemedi | altyapı hatası alan senaryo sayısı |
 | WER | ortalama, ses kaydı olan senaryolarda |
 
 Her sayı **kör set ve türetilmiş set için ayrı ayrı** basılır (K2).
