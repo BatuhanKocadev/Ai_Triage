@@ -473,6 +473,25 @@ def test_altyapi_hatasi_model_hatasi_sayilmaz():
     assert kok_neden(senaryo, hatali) == "HATA"
 
 
+def test_altyapi_hatasi_muhakeme_kutusunu_sisirmez():
+    """Protokol gelmişken düşen bir istek B'ye yazılırsa muhakeme kutusu şişer.
+
+    Üstteki test `hata` kapısını yalnızca A'ya karşı sınıyor (boş `sources`).
+    Asıl tehlike bu: kaynak gelmiş, kod yanlış görünüyor ve istek 500 almış.
+    Kapı düşerse bu sonuç "B" olur ve Gün 24 muhakemeyi düzeltmeye koşar.
+    """
+    senaryo = _senaryo()
+    dusen = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Yeşil",
+        cikan_bolum="Acil Servis",
+        sources=["gogus_agrisi.txt"],
+        hata="500 Internal Server Error",
+    )
+
+    assert kok_neden(senaryo, dusen) == "HATA"
+
+
 def test_kapsam_disi_senaryoda_cevap_vermek_retrieval_hatasidir():
     """Beklenti 'Belirsiz' iken sistem kod ürettiyse eşik fazla geçirgen."""
     senaryo = _senaryo(
@@ -564,8 +583,15 @@ def test_sansli_dogru_yalnizca_dogru_cevapta_isaretlenir():
     )
     assert sansli_dogru_mu(_senaryo(), yanlis) is False
 
-    # Altyapı hatası ölçülememiş demektir; şans da talihsizlik de sayılmaz.
-    hatali = Sonuc(senaryo_id="t01", hata="timeout")
+    # `hata` doluysa senaryo ölçülememiştir ve yanındaki alanlar güvenilmez;
+    # kod doğru görünse bile şans sayılmamalı. Alanlar bilerek dolu: boş bir
+    # Sonuc'ta zaten kod tutmaz, yani `hata` kapısı sınanmamış olurdu.
+    hatali = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        sources=["bas_agrisi.txt"],
+        hata="timeout",
+    )
     assert sansli_dogru_mu(_senaryo(), hatali) is False
 
     # Kaynağı yazılmamış senaryoda "beklenen protokol gelmedi" iddiası kurulamaz.
