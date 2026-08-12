@@ -56,3 +56,7 @@ hata_logu.txt
 # Claude Code worktree'leri: depo içinde duran ayrı çalışma ağaçları, asla
 # commit'lenmemeli. .claude/ altındaki diğer dosyalar (ayarlar) paylaşılabilir.
 .claude/worktrees/
+
+# Gün 23 değerlendirme seti ses kayıtları: kullanıcının kendi sesi, yani kişisel
+# veri — public depoya girmez. Senaryo metinleri (JSON) commit'lenir, ses girmez.
+degerlendirme/ses/
