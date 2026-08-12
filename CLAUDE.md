@@ -108,6 +108,35 @@ altyapısı bozuldu" biçiminde görünür — teşhisi zor, sinir bozucu bir s�
 
 Paketin mevcut durumu ve bilinen kapsam boşlukları için `docs/superpowers/ek-c-ilerleme.md`.
 
+## Sürekli entegrasyon (CI)
+
+`.github/workflows/ci.yml`, `main`'e push'ta ve her pull request'te iki iş koşar:
+
+- **`test`** — Postgres servisi, `pytest -m "not yavas"`, kapsama kapısı dayatılır.
+- **`migration`** — boş bir veritabanında `alembic upgrade head` → `downgrade base`
+  → `upgrade head`. Yerel testler şemayı `create_all` ile kurduğu için migration'lar
+  pytest altında hiç koşmuyor; bu iş o boşluğu kapatıyor.
+
+`yavas` işaretli testler CI'da **hiç** koşmaz (gerçek bge-m3, cross-encoder ve
+ayakta bir ChromaDB isterler). Faydalı sonucu: CI'ın ölçtüğü kapsama yereldekiyle
+aynı, yani eşik iki ortamda da aynı anlama gelir.
+
+**CI `requirements.txt`'i DEĞİL `requirements-ci.txt`'i kurar** — torch ailesi
+(torch, transformers, sentence-transformers, faster-whisper) o listede yok, çünkü
+onlara yalnızca `yavas` testler ihtiyaç duyuyor. Ortam 498 MB yerine 1694 MB
+olurdu; torch tek başına 497 MB.
+
+**Bir sürüm yükseltirken İKİ dosyayı da güncelleyin.** `requirements.txt`'te bir
+paketin sürümünü değiştirip `requirements-ci.txt`'te unutursanız paket kırmızıya
+döner — `tests/birim/test_ci_gereksinimleri.py` bu pariteyi dayatıyor. Kural şu
+sebeple var: CI üretimden farklı bir sürümle koşarsa, kanıtladığı şey üretim için
+geçerli olmaz.
+
+Ağır kütüphaneler `rag_service`, `stt_service`, `chroma_service` ve
+`document.py`'de **fonksiyon içinde** import ediliyor; modül düzeyine taşımayın.
+`tests/birim/test_import_agirligi.py` bunu alt süreçte bağlıyor — `app.main`
+import edildiğinde o kütüphanelerin hiçbiri yüklenmemeli.
+
 Linter/formatter hâlâ yapılandırılmamıştır.
 
 ## Mimari

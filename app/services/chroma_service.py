@@ -7,7 +7,8 @@ Ayarlar pydantic-settings üzerinden okunuyor: önce ortam değişkenleri
 from app.config.config import settings
 
 # Bağlantı tembel kuruluyor: import anında kurulursa ChromaDB kapalıyken
-# uygulama hiç açılmıyordu (/health bile cevap vermiyordu).
+# uygulama hiç açılmıyordu (/health bile cevap vermiyordu). Desen
+# `rag_service.py` içindeki `get_reranker()` ile aynı.
 _collection = None
 
 

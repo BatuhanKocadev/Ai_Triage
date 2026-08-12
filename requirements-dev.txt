@@ -1,5 +1,12 @@
 pytest==8.4.2
 pytest-cov==6.2.1
+# coverage PINLI olmali cunku KAPIYI O KARARLASTIRIYOR. pytest-cov yalnizca
+# sarmalayici; esigi (--cov-fail-under=87) hesaplayan ve gecip gecmedigine karar
+# veren coverage'in kendisi. Kapinin bugun ~8 birimlik payi var, ve ornegin
+# `if TYPE_CHECKING:` bloklari yalnizca coverage >= 7.6 onlari varsayilan olarak
+# hariç tuttugu icin bedava; farkli varsayilanlari olan bir surum sayiyi
+# kendiliginden dusurur ve CI aciklanamayan bir kirmizi verir.
+coverage==7.15.2
 pytest-asyncio==1.1.0
 freezegun==1.5.2
 # httpx zaten requirements.txt icinde var (FastAPI TestClient onu kullanir)

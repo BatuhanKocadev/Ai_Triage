@@ -33,6 +33,15 @@ AGIR_MODULLER = [
     "sentence_transformers",
     "faster_whisper",
     "chromadb",
+    # `langchain_text_splitters` LISTEDE OLMAK ZORUNDA ve sebebi ince: kendisi
+    # hafif ama `__init__.py`'si bir `sentence_transformers` shim'i tasiyor ve o
+    # shim import'u `try/except ImportError` ile sariyor. Yani biri
+    # `document.py`'deki import'u modul duzeyine geri koyarsa, YERELDE
+    # sentence_transformers kurulu oldugu icin zincir yuklenir ve muhafiz
+    # yakalar; ama TORCH'SUZ CI'DA shim sessizce yutar, listedeki hicbir ad
+    # gorunmez ve muhafiz YESIL kalir. Gerileme o zaman fark edilmeden,
+    # sentence_transformers'in kurulu OLDUGU uretime gider.
+    "langchain_text_splitters",
 ]
 
 # Alt süreçte koşacak betik: app.main'i import eder ve hangi ağır modüllerin

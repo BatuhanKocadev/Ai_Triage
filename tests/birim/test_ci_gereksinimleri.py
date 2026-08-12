@@ -24,8 +24,12 @@ def _ad_normalize(ad: str) -> str:
     `SQLAlchemy` ile `sqlalchemy`, `python_docx` ile `python-docx` aynı pakettir;
     normalize edilmezse test gerçek bir ayrışma olmadan kırılır ve yanlış alarm,
     hiç test olmamasından beterdir.
+
+    PEP 503'ün kanonik biçimi: `-`, `_` ve `.` ayırıcılarının hepsi tek bir `-`
+    olur. Nokta da dahil, çünkü `pdfminer.six` gibi adlar mevcut ve ileride
+    `paket.x` / `paket-x` çifti sessiz bir yanlış-negatif üretebilir.
     """
-    return ad.lower().replace("_", "-")
+    return re.sub(r"[-_.]+", "-", ad).lower()
 
 
 def _pinleri_oku(dosya_adi: str) -> dict[str, str]:
