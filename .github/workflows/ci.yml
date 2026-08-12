@@ -1,0 +1,123 @@
+# Iki is: `test` paketi kosar ve kapsama kapisini dayatir, `migration` alembic
+# zincirinin bos bir veritabanindan kurulabildigini ve geri alinabildigini
+# kanitlar. Ikisi de kendi Postgres servisini alir.
+#
+# `yavas` isaretli testler CI'da HIC kosmaz (tasarim K9): gercek bge-m3 (~2,2 GB),
+# cross-encoder ve ayakta bir ChromaDB isterler. Bunun sonucu, CI'in olctugu
+# kapsamanin yereldeki `-m "not yavas"` olcumuyle AYNI olmasidir - yani esik iki
+# ortamda da ayni anlama gelir.
+#
+# Bagimliliklar requirements.txt'ten DEGIL requirements-ci.txt'ten kuruluyor:
+# torch ailesi disarida. O listenin ne icerdigi ve neyi icermedigi kendi
+# basliginda yazili.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Testler ve kapsama kapisi
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: triage
+          POSTGRES_PASSWORD: triage
+          POSTGRES_DB: ai_triage_test
+        ports:
+          - 5432:5432
+        # Postgres hazir olmadan testler baslarsa baglanti hatasi aliriz ve
+        # hata "test kirildi" gibi gorunur.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Test veritabani kilidi (tests/yardimcilar/db_kilidi.py) bu adresi
+      # dogruluyor: host beyaz listede (localhost), port 5432, ad ai_triage_test.
+      # Uclerinden biri degisirse kilit paketi pytest.exit ile durdurur.
+      DATABASE_URL: postgresql://triage:triage@localhost:5432/ai_triage_test
+      JWT_SECRET_KEY: ci-icin-sahte-anahtar
+      OLLAMA_BASE_URL: http://localhost:11434
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      # ChromaDB servisi GEREKMIYOR: entegrasyon testlerinde Chroma sahte,
+      # yalnizca Postgres gercek.
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt -r requirements-dev.txt
+
+      # Kapsama kapisi pytest.ini'den geliyor (--cov-branch --cov-fail-under);
+      # burada ayrica bayrak verilmiyor ki CI ile yerel ayni esigi kullansin.
+      - name: Testler
+        run: pytest -m "not yavas"
+
+  migration:
+    name: Alembic zinciri
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: triage
+          POSTGRES_PASSWORD: triage
+          POSTGRES_DB: ai_triage
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Bilerek uretimdeki ad (ai_triage), test veritabani DEGIL: test isi
+      # conftest uzerinden drop_all cagiriyor, ayni adi paylasmak iki isi
+      # birbirine baglardi. Ayrica bu, Gun 27 kurulum provasinin provasi.
+      #
+      # Test veritabani kilidi burada DEVREDE DEGIL ve bu bilinclidir: kilit
+      # yalnizca pytest fixture'inin yolunda, alembic'i korumuyor (tasarim K8).
+      DATABASE_URL: postgresql://triage:triage@localhost:5432/ai_triage
+      JWT_SECRET_KEY: ci-icin-sahte-anahtar
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      # Zincir bos bir veritabanindan kurulabiliyor mu, ve geri alinabiliyor mu?
+      # Yerel testler semayi create_all ile kuruyor, yani migration'lar pytest
+      # altinda HIC kosmuyor; bu is o boslugu kapatiyor.
+      - name: upgrade head
+        run: alembic upgrade head
+
+      - name: downgrade base
+        run: alembic downgrade base
+
+      - name: tekrar upgrade head
+        run: alembic upgrade head
