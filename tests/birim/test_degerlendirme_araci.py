@@ -475,11 +475,22 @@ def test_kok_neden_retrieval_ve_muhakeme_ayrilir():
 
 
 def test_esik_alti_yanit_retrieval_hatasi_sayilir():
-    """Eşik altında kalmak, retrieval'ın başarısız olmasının başka adıdır (K8)."""
+    """Eşik altında kalmak, retrieval'ın başarısız olmasının başka adıdır (K8).
+
+    İkinci vaka kuralı asıl sabitleyen: `beklenen_kaynak` yazılmamış kapsam içi
+    bir senaryo "Belirsiz" alırsa, `"A"`'yı üretebilecek tek kapı Belirsiz
+    kapısıdır. Yalnızca birinci vaka olsaydı kapı silinince kontrol kaynak
+    kontrolüne düşer, `"gogus_agrisi.txt" not in []` yine `"A"` verir ve kural
+    hiç kırmızıya dönmeden kaybolurdu.
+    """
     senaryo = _senaryo()
     esik_alti = Sonuc(senaryo_id="t01", cikan_triage_code="Belirsiz", sources=[])
 
     assert kok_neden(senaryo, esik_alti) == "A"
+
+    kaynaksiz = _senaryo(beklenen_kaynak=None)
+
+    assert kok_neden(kaynaksiz, esik_alti) == "A"
 
 
 def test_altyapi_hatasi_model_hatasi_sayilmaz():
@@ -522,6 +533,44 @@ def test_kapsam_disi_senaryoda_cevap_vermek_retrieval_hatasidir():
     )
 
     assert kok_neden(senaryo, cevap_verdi) == "A"
+
+
+def test_kapsam_disi_senaryo_dogru_reddedilirse_eksik_sayilmaz():
+    """Cevap vermeyi reddetmiş sistemde derecelendirilecek bölüm ya da tetkik yoktur.
+
+    Uç eşik altında `department="Triyaj Bankosu"`, `onerilen_tetkikler=[]`
+    döndürüyor (`app/api/ai.py:152-160`). C kapıları koşsaydı **doğru** reddedilen
+    her kapsam dışı senaryo "doğru ama eksik" sayılır, C kutusu sahte biçimde
+    şişerdi. Senaryo yazarına `beklenen_bolum="Triyaj Bankosu"` yazdırmak da çözüm
+    değildi: senaryo dosyasını bir uygulama detayına bağlardı.
+
+    Bölüm tutsa da tutmasa da sonuç aynı olmalı — bu alanlar artık puanlanmıyor.
+    """
+    reddedildi = Sonuc(
+        senaryo_id="t02",
+        cikan_triage_code="Belirsiz",
+        cikan_bolum="Triyaj Bankosu",
+        cikan_tetkikler=[],
+        sources=[],
+    )
+
+    bolum_tutmuyor = _senaryo(
+        id="t02",
+        beklenen_triage_code="Belirsiz",
+        beklenen_bolum="Acil Servis",
+        beklenen_tetkikler=["EKG"],
+        beklenen_kaynak=None,
+    )
+    assert kok_neden(bolum_tutmuyor, reddedildi) is None
+
+    bolum_tutuyor = _senaryo(
+        id="t02",
+        beklenen_triage_code="Belirsiz",
+        beklenen_bolum="Triyaj Bankosu",
+        beklenen_tetkikler=[],
+        beklenen_kaynak=None,
+    )
+    assert kok_neden(bolum_tutuyor, reddedildi) is None
 
 
 def test_sansli_dogru_isaretlenir():
@@ -684,31 +733,84 @@ def test_bos_kaynak_listesi_bos_doner():
     assert kaynak_adlarini_ayikla([]) == []
 
 
-def test_ayiklanmamis_kaynaklar_a_kutusunu_sisirir():
-    """Ayıklama adımının neden taşıyıcı olduğunun kanıtı — regresyon muhafızı.
+def test_ham_kaynak_dizeleri_kok_nedeni_yaniltmaz():
+    """Ayrıştırma iki katmanda da yapılıyor: sürücü atlasa bile tasnif doğru.
 
-    Uç `sources`'u dosya adı olarak döndürmüyor; sürücü ham dizeleri olduğu gibi
-    yazarsa `beklenen_kaynak` hiçbir zaman bulunamaz, her yanlış cevap A kutusuna
-    yazılır ve Gün 24 retrieval'a koşar. İlk iddia o bozuk hâli gösteriyor
-    (istenen davranış değil), ikincisi ayıklamanın onu düzelttiğini.
+    Uç `sources`'u dosya adı olarak döndürmüyor. Ayrıştırma yalnızca sürücüde
+    dursaydı, bir kez unutulduğunda her yanlış cevap A kutusuna yazılır ve
+    hiçbir test kırmızıya dönmezdi. `kaynak_adlarini_ayikla` etkisiz eleman
+    (çıplak dosya adı değişmeden geçiyor), o yüzden `kok_neden` içinde de
+    çağırmak bedava.
+
+    İlk iddia testin kendini kandırmadığını gösteriyor: ayrıştırma girdiyi
+    gerçekten değiştiriyor, yani iki iddianın aynı olması tesadüf değil.
     """
     senaryo = _senaryo()
     ham = ["[Kaynak: gogus_agrisi.txt] Göğüs ağrısı protokolü: EKG çekilir."]
+    assert kaynak_adlarini_ayikla(ham) != ham
 
-    ayiklanmamis = Sonuc(
+    def _sonuc(sources):
+        """Yalnızca `sources` alanı değişen, kodu yanlış bir sonuç üretir."""
+        return Sonuc(
+            senaryo_id="t01",
+            cikan_triage_code="Yeşil",
+            cikan_bolum="Acil Servis",
+            cikan_tetkikler=["EKG", "Troponin"],
+            sources=sources,
+        )
+
+    # Beklenen protokol gelmiş; hata muhakemede. Ham da verilse ayıklanmış da
+    # verilse aynı kutuya düşmeli.
+    assert kok_neden(senaryo, _sonuc(ham)) == "B"
+    assert kok_neden(senaryo, _sonuc(kaynak_adlarini_ayikla(ham))) == "B"
+
+
+def test_ham_kaynak_dizeleri_sansli_dogruyu_yaniltmaz():
+    """Ayıklama atlanırsa beklenen protokol hiç bulunamaz ve her doğru cevap
+    "şanslı" işaretlenir; `sansli_dogru_mu` da kendi içinde normalize ediyor."""
+    senaryo = _senaryo()
+    ham = ["[Kaynak: gogus_agrisi.txt] Göğüs ağrısı protokolü: EKG çekilir."]
+    assert kaynak_adlarini_ayikla(ham) != ham
+
+    dogru = Sonuc(
         senaryo_id="t01",
-        cikan_triage_code="Yeşil",
+        cikan_triage_code="Kırmızı",
         cikan_bolum="Acil Servis",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=ham,
     )
-    assert kok_neden(senaryo, ayiklanmamis) == "A"
 
-    ayiklanmis = Sonuc(
+    # Protokol geldi: şans değil, dürüst doğru.
+    assert sansli_dogru_mu(senaryo, dogru) is False
+
+
+def test_kaynak_adinin_cevresindeki_bosluk_kirpilir():
+    """`[Kaynak:  x.txt ]` ile `[Kaynak: x.txt]` aynı protokolü göstermeli."""
+    ham = ["[Kaynak:  yanik.txt ] Yanık protokolü: TBSA hesaplanır."]
+
+    assert kaynak_adlarini_ayikla(ham) == ["yanik.txt"]
+
+
+def test_beklenen_kaynak_yuklemede_kirpilir(tmp_path):
+    """`"gogus_agrisi.txt "` doğrulamayı geçer ama kırpılmazsa hiç eşleşmez.
+
+    Ayıklanan adlar kırpılıyor, senaryo tarafı kırpılmasaydı o senaryo sonsuza
+    dek A kutusunda otururdu ve doğru cevap verdiğinde "şanslı doğru"
+    işaretlenirdi — hata vermeden. Görev 6 bu dosyaları elle yazacak.
+    """
+    yol = _yaz(tmp_path, _senaryo_sozlugu(beklenen_kaynak="  gogus_agrisi.txt  "))
+
+    senaryo = senaryolari_yukle(yol)[0]
+
+    assert senaryo.beklenen_kaynak == "gogus_agrisi.txt"
+
+    # Kırpılan değer artık gerçekten eşleşiyor: ne A kutusu ne "şanslı doğru".
+    dogru = Sonuc(
         senaryo_id="t01",
-        cikan_triage_code="Yeşil",
+        cikan_triage_code="Kırmızı",
         cikan_bolum="Acil Servis",
         cikan_tetkikler=["EKG", "Troponin"],
-        sources=kaynak_adlarini_ayikla(ham),
+        sources=["[Kaynak: gogus_agrisi.txt] Göğüs ağrısı protokolü"],
     )
-    assert kok_neden(senaryo, ayiklanmis) == "B"
+    assert kok_neden(senaryo, dogru) is None
+    assert sansli_dogru_mu(senaryo, dogru) is False

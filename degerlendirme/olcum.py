@@ -263,6 +263,12 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
             raise SenaryoHatasi(f"Tekrarlanan senaryo id: {kayit['id']}")
         gorulen_idler.add(kayit["id"])
 
+        # Ayıklanan kaynak adları kırpılıyor; senaryo tarafı kırpılmazsa
+        # `"gogus_agrisi.txt "` doğrulamayı geçer ama hiçbir zaman eşleşmez ve o
+        # senaryo hata vermeden sonsuza dek A kutusunda oturur. Dosyaları Görev
+        # 6'da elle yazan kişi bu boşluğu göremez.
+        ham_kaynak = kayit.get("beklenen_kaynak")
+
         senaryolar.append(
             Senaryo(
                 id=kayit["id"],
@@ -272,7 +278,7 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
                 beklenen_triage_code=kod,
                 beklenen_bolum=kayit["beklenen_bolum"],
                 beklenen_tetkikler=list(kayit["beklenen_tetkikler"]),
-                beklenen_kaynak=kayit.get("beklenen_kaynak"),
+                beklenen_kaynak=ham_kaynak.strip() if ham_kaynak else None,
                 kronik_hastalik=kayit.get("kronik_hastalik"),
                 vitals=kayit.get("vitals"),
                 ses_dosyasi=kayit.get("ses_dosyasi"),
@@ -299,24 +305,29 @@ def _sadelestir(metin: str) -> str:
     return sade.lower().strip()
 
 
-def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
-    """Beklenen ve çıkan triyaj kodu aynı mı — yazım farkına dayanıklı."""
+def _ad_esit_mi(beklenen: str, cikan: str | None) -> bool:
+    """İki adı yazım farkını katlayarak karşılaştırır; cevapsızlık asla eşleşmez."""
     if cikan is None:
         return False
     return _sadelestir(beklenen) == _sadelestir(cikan)
+
+
+def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
+    """Beklenen ve çıkan triyaj kodu aynı mı — yazım farkına dayanıklı."""
+    return _ad_esit_mi(beklenen, cikan)
 
 
 def bolum_dogru_mu(beklenen: str, cikan: str | None) -> bool:
     """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı.
 
-    `triyaj_dogru_mu` ile aynı desende ve bilerek ayrı bir fonksiyon: bölüm
-    karşılaştırması ileride eş anlamlıları ("Acil" ~ "Acil Servis") tanımak
-    zorunda kalabilir, triyaj kodu kalmaz. Tek yerde durmasının sebebi
-    `kok_neden`'in C kutusu ile Görev 5'in bölüm oranının ayrışmaması.
+    Ayrı bir fonksiyon çünkü `kok_neden`'in C kutusu ile Görev 5'in bölüm oranı
+    tek bir tanımdan beslenmeli. Bugün gövdesi `triyaj_dogru_mu` ile aynı, o
+    yüzden ikisi de `_ad_esit_mi`'ye delege ediyor: aynı karşılaştırmanın
+    ikinci bir birebir kopyası, önlemek için çıkarıldığı kaymayı bir seviye
+    yukarıda geri getirirdi. Bölüm bir gün eş anlamlıları ("Acil" ~ "Acil
+    Servis") tanımak zorunda kalırsa delegasyon silinip gövde buraya yazılır.
     """
-    if cikan is None:
-        return False
-    return _sadelestir(beklenen) == _sadelestir(cikan)
+    return _ad_esit_mi(beklenen, cikan)
 
 
 def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
@@ -362,11 +373,28 @@ def kaynak_adlarini_ayikla(sources: list[str]) -> list[str]:
     return adlar
 
 
+def _gelen_kaynaklar(sonuc: Sonuc) -> list[str]:
+    """Sonucun kaynaklarını her hâlükârda dosya adına indirger.
+
+    `Sonuc.sources`'un sözleşmesi ayıklanmış dosya adları, ama ayrıştırma tek
+    başına sürücüde dursaydı bir kez unutulduğunda ölçüm sessizce her şeyi A
+    kutusuna yazardı ve hiçbir test kırmızıya dönmezdi. `kaynak_adlarini_ayikla`
+    etkisiz eleman olduğu için burada ikinci kez çağırmak bedava.
+    """
+    return kaynak_adlarini_ayikla(sonuc.sources)
+
+
 def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
     """Bir sonucu A (retrieval) / B (muhakeme) / C (biçim) kutusuna ayırır.
 
     Gün 24 "en büyük kutuya müdahale et" diyor; bu tasnif ölçülmezse o karar
     tahminle verilir. Doğru sonuçta None döner, altyapı hatasında "HATA".
+
+    Kapsam dışı senaryolar (`beklenen_triage_code == "Belirsiz"`) doğru
+    reddedildiğinde `beklenen_bolum` ve `beklenen_tetkikler` **puanlanmaz**:
+    cevap vermeyi reddetmiş bir sistemde derecelendirilecek bölüm ya da tetkik
+    yoktur, onları puanlamak kategori hatası olur. Alanlar yükleyicide zorunlu
+    olmaya devam ediyor, yalnızca bu şekilde ölçüme girmiyorlar.
     """
     if sonuc.hata:
         return "HATA"
@@ -381,9 +409,14 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
         if sonuc.cikan_triage_code == "Belirsiz":
             return "A"
         # Beklenen protokol aday havuzuna hiç girmediyse hata retrieval'dadır.
-        if senaryo.beklenen_kaynak and senaryo.beklenen_kaynak not in sonuc.sources:
+        beklenen_kaynak = senaryo.beklenen_kaynak
+        if beklenen_kaynak and beklenen_kaynak not in _gelen_kaynaklar(sonuc):
             return "A"
         return "B"
+
+    # Kapsam dışı senaryo doğru reddedilmiş: puanlanacak bölüm/tetkik yok.
+    if senaryo.beklenen_triage_code == "Belirsiz":
+        return None
 
     # Kod doğru: bölüm ya da tetkikler tutmuyorsa biçim/kapsam hatası.
     bolum_dogru = bolum_dogru_mu(senaryo.beklenen_bolum, sonuc.cikan_bolum)
@@ -407,4 +440,4 @@ def sansli_dogru_mu(senaryo: Senaryo, sonuc: Sonuc) -> bool:
         return False
     if not triyaj_dogru_mu(senaryo.beklenen_triage_code, sonuc.cikan_triage_code):
         return False
-    return senaryo.beklenen_kaynak not in sonuc.sources
+    return senaryo.beklenen_kaynak not in _gelen_kaynaklar(sonuc)
