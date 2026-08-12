@@ -101,7 +101,12 @@ class Sonuc:
     cikan_bolum: str | None = None
     # Sistemin önerdiği tetkikler; beklenen_tetkikler ile karşılaştırılır.
     cikan_tetkikler: list[str] = field(default_factory=list)
-    # RAG'in döndürdüğü kaynak dosyalar; kaynak doğruluğu bununla ölçülür.
+    # RAG'in döndürdüğü kaynak dosya ADLARI; kaynak doğruluğu bununla ölçülür.
+    # Görev 7 uyarısı: uç bu alanı dosya adı olarak DÖNDÜRMÜYOR, `"[Kaynak: x.txt]
+    # ...belge metni..."` biçiminde döndürüyor (app/services/rag_service.py:92,
+    # tests/api/test_ai_analiz_api.py:73). Sürücü dosya adını ayıklamazsa
+    # `beklenen_kaynak not in sources` her zaman doğru çıkar: her yanlış cevap A
+    # kutusuna, her doğru cevap "şanslı doğru"ya yazılır ve Gün 24 retrieval'a koşar.
     sources: list[str] = field(default_factory=list)
     # Koşumun yarattığı ziyaret; silinmiyor, video demosunda kullanılacak (K14).
     visit_id: str | None = None
@@ -277,8 +282,8 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
 def _sadelestir(metin: str) -> str:
     """Türkçe karakterleri ASCII'ye indirir ve küçük harfe çevirir.
 
-    Yalnızca triyaj kodu ve tetkik adı karşılaştırmasında kullanılır; WER
-    normalizasyonunda kullanılmaz (K12), çünkü orada katlama gerçek tanıma
+    Yalnızca triyaj kodu, bölüm adı ve tetkik adı karşılaştırmasında kullanılır;
+    WER normalizasyonunda kullanılmaz (K12), çünkü orada katlama gerçek tanıma
     hatasını gizler. Burada katlamak doğru: ölçülen şey triyaj kalitesi, yerel
     modelin yazım tercihi değil — `app/api/ai.py` de aynı sebeple kendi
     `_sadelestir`ini taşıyor. Seste ise "şiddetli" → "siddetli" gerçek bir
@@ -310,3 +315,53 @@ def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
     if not b or not c:
         return 0.0
     return len(b & c) / len(b | c)
+
+
+def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
+    """Bir sonucu A (retrieval) / B (muhakeme) / C (biçim) kutusuna ayırır.
+
+    Gün 24 "en büyük kutuya müdahale et" diyor; bu tasnif ölçülmezse o karar
+    tahminle verilir. Doğru sonuçta None döner, altyapı hatasında "HATA".
+    """
+    if sonuc.hata:
+        return "HATA"
+
+    kod_dogru = triyaj_dogru_mu(senaryo.beklenen_triage_code, sonuc.cikan_triage_code)
+
+    if not kod_dogru:
+        # Kapsam dışı senaryoda cevap üretmek, eşiğin fazla geçirgen olmasıdır.
+        if senaryo.beklenen_triage_code == "Belirsiz":
+            return "A"
+        # Eşik altında kalmak retrieval başarısızlığıdır (K8).
+        if sonuc.cikan_triage_code == "Belirsiz":
+            return "A"
+        # Beklenen protokol aday havuzuna hiç girmediyse hata retrieval'dadır.
+        if senaryo.beklenen_kaynak and senaryo.beklenen_kaynak not in sonuc.sources:
+            return "A"
+        return "B"
+
+    # Kod doğru: bölüm ya da tetkikler tutmuyorsa biçim/kapsam hatası.
+    bolum_dogru = _sadelestir(senaryo.beklenen_bolum) == _sadelestir(
+        sonuc.cikan_bolum or ""
+    )
+    tetkikler_tam = tetkik_ortusmesi(
+        senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler
+    ) == 1.0
+    if not bolum_dogru or not tetkikler_tam:
+        return "C"
+
+    return None
+
+
+def sansli_dogru_mu(senaryo: Senaryo, sonuc: Sonuc) -> bool:
+    """Doğru cevap verildiği hâlde beklenen protokolün gelmediği durum.
+
+    Model cevabı yanlış bağlamdan ya da kendi ön bilgisinden üretmiştir;
+    Gün 24'te retrieval düzeltilince bu senaryolar bozulabilir. İşaretlenmezse
+    önce/sonra tablosunda açıklanamayan bir gerileme olarak görünür.
+    """
+    if sonuc.hata or not senaryo.beklenen_kaynak:
+        return False
+    if not triyaj_dogru_mu(senaryo.beklenen_triage_code, sonuc.cikan_triage_code):
+        return False
+    return senaryo.beklenen_kaynak not in sonuc.sources

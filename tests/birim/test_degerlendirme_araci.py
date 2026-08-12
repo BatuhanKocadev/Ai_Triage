@@ -11,6 +11,9 @@ from degerlendirme.olcum import (
     GECERLI_KODLAR,
     Senaryo,
     SenaryoHatasi,
+    Sonuc,
+    kok_neden,
+    sansli_dogru_mu,
     senaryolari_yukle,
     tetkik_ortusmesi,
     triyaj_dogru_mu,
@@ -387,3 +390,186 @@ def test_cikan_taraftaki_bos_tetkik_adi_yok_sayilir():
     haksız yere düşürmemeli. Yazarın elindeki tarafta ise aynı şey hatadır
     (bkz. test_bos_tetkik_adi_hata_verir) — asimetri bilinçli."""
     assert tetkik_ortusmesi(["EKG"], ["EKG", "", "   "]) == 1.0
+
+
+# --- Kök neden tasnifi: A (retrieval) / B (muhakeme) / C (biçim) ---
+
+
+def _senaryo(**degisiklikler) -> Senaryo:
+    """Testlerde kullanılan geçerli bir Senaryo nesnesi üretir."""
+    varsayilan = {
+        "id": "t01",
+        "sikayet": "göğsümde baskı var",
+        "yas": 58,
+        "cinsiyet": "Erkek",
+        "beklenen_triage_code": "Kırmızı",
+        "beklenen_bolum": "Acil Servis",
+        "beklenen_tetkikler": ["EKG", "Troponin"],
+        "beklenen_kaynak": "gogus_agrisi.txt",
+    }
+    varsayilan.update(degisiklikler)
+    return Senaryo(**varsayilan)
+
+
+def test_kok_neden_retrieval_ve_muhakeme_ayrilir():
+    """Dört ana hâl: protokol gelmedi (A), geldi ama muhakeme tuttu (B),
+    kod doğru ama eksik (C), her şey doğru (None)."""
+    senaryo = _senaryo()
+
+    # A: doğru protokol hiç gelmedi
+    a = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Yeşil",
+        cikan_bolum="Dahiliye",
+        cikan_tetkikler=[],
+        sources=["bas_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, a) == "A"
+
+    # B: doğru protokol geldi ama model yanlış kod verdi
+    b = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Yeşil",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, b) == "B"
+
+    # C: kod doğru, tetkikler eksik
+    c = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, c) == "C"
+
+    # Tam doğru
+    tam = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, tam) is None
+
+
+def test_esik_alti_yanit_retrieval_hatasi_sayilir():
+    """Eşik altında kalmak, retrieval'ın başarısız olmasının başka adıdır (K8)."""
+    senaryo = _senaryo()
+    esik_alti = Sonuc(senaryo_id="t01", cikan_triage_code="Belirsiz", sources=[])
+
+    assert kok_neden(senaryo, esik_alti) == "A"
+
+
+def test_altyapi_hatasi_model_hatasi_sayilmaz():
+    """500/timeout/429 muhakeme kutusunu şişirirse Gün 24 yanlış hedefe koşar."""
+    senaryo = _senaryo()
+    hatali = Sonuc(senaryo_id="t01", hata="timeout")
+
+    assert kok_neden(senaryo, hatali) == "HATA"
+
+
+def test_kapsam_disi_senaryoda_cevap_vermek_retrieval_hatasidir():
+    """Beklenti 'Belirsiz' iken sistem kod ürettiyse eşik fazla geçirgen."""
+    senaryo = _senaryo(
+        id="t02", beklenen_triage_code="Belirsiz", beklenen_kaynak=None
+    )
+    cevap_verdi = Sonuc(
+        senaryo_id="t02",
+        cikan_triage_code="Sarı",
+        cikan_bolum="Dahiliye",
+        sources=["karin_agrisi.txt"],
+    )
+
+    assert kok_neden(senaryo, cevap_verdi) == "A"
+
+
+def test_sansli_dogru_isaretlenir():
+    """Doğru cevap ama beklenen protokol hiç gelmemiş — Gün 24'te bozulabilir."""
+    senaryo = _senaryo()
+    sansli = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["bas_agrisi.txt"],
+    )
+
+    assert sansli_dogru_mu(senaryo, sansli) is True
+
+    durust = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert sansli_dogru_mu(senaryo, durust) is False
+
+
+def test_kod_dogru_bolum_yanlissa_da_c_kutusuna_girer():
+    """C'nin iki kapısı var; tetkikler tamken bölüm yanlışsa da "doğru ama eksik".
+
+    Tetkik kapısı tek başına test edilirse bölüm karşılaştırması sessizce
+    bozulabilir (ör. hep True dönebilir) ve C kutusu olduğundan küçük görünür.
+    Bölüm hiç dönmediği (None) hâl de aynı kapıdan geçmeli.
+    """
+    senaryo = _senaryo()
+    yanlis_bolum = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Dahiliye",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, yanlis_bolum) == "C"
+
+    bolumsuz = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum=None,
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, bolumsuz) == "C"
+
+
+def test_kaynagi_yazilmamis_senaryoda_yanlis_kod_muhakemeye_yazilir():
+    """`beklenen_kaynak` yoksa retrieval'ın suçlu olduğu kanıtlanamaz, B'ye düşer.
+
+    Kapının `beklenen_kaynak and ...` kısmı düşürülürse `None` hiçbir zaman
+    `sources` içinde olmadığı için bu senaryolar toptan A'ya yazılır ve
+    "en büyük kutu" retrieval gibi görünür — Gün 24 yanlış hedefe koşar.
+    """
+    senaryo = _senaryo(beklenen_kaynak=None)
+    yanlis = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Yeşil",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+
+    assert kok_neden(senaryo, yanlis) == "B"
+
+
+def test_sansli_dogru_yalnizca_dogru_cevapta_isaretlenir():
+    """Yanlış cevap, altyapı hatası ve kaynağı yazılmamış senaryo şanslı sayılmaz."""
+    yanlis = Sonuc(
+        senaryo_id="t01", cikan_triage_code="Yeşil", sources=["bas_agrisi.txt"]
+    )
+    assert sansli_dogru_mu(_senaryo(), yanlis) is False
+
+    # Altyapı hatası ölçülememiş demektir; şans da talihsizlik de sayılmaz.
+    hatali = Sonuc(senaryo_id="t01", hata="timeout")
+    assert sansli_dogru_mu(_senaryo(), hatali) is False
+
+    # Kaynağı yazılmamış senaryoda "beklenen protokol gelmedi" iddiası kurulamaz.
+    kaynaksiz = Sonuc(
+        senaryo_id="t01", cikan_triage_code="Kırmızı", sources=["bas_agrisi.txt"]
+    )
+    assert sansli_dogru_mu(_senaryo(beklenen_kaynak=None), kaynaksiz) is False
