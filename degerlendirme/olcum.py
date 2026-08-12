@@ -26,6 +26,22 @@ ZORUNLU_ALANLAR = (
     "beklenen_tetkikler",
 )
 
+# Metin olması zorunlu alanlar; boş ya da başka tipte olamazlar.
+ZORUNLU_METIN_ALANLARI = ("id", "cinsiyet", "beklenen_bolum")
+
+# Verilirse metin olması gereken, verilmezse None kalabilen alanlar.
+ISTEGE_BAGLI_METIN_ALANLARI = ("beklenen_kaynak", "kronik_hastalik", "ses_dosyasi")
+
+# app/api/ai.py:40 patient_age alanına ge=0 le=120 dayatıyor. Aralık dışı bir
+# senaryo koşum sırasında 422 alır ve boşa gider; koşum yerel Ollama yüzünden
+# dakikalar sürdüğü için geç patlamak pahalı, o yüzden burada yakalanıyor.
+YAS_ALT_SINIR = 0
+YAS_UST_SINIR = 120
+
+# app/api/ai.py:42 symptom_text alanına min_length=10 max_length=500 dayatıyor.
+SIKAYET_MIN_UZUNLUK = 10
+SIKAYET_MAX_UZUNLUK = 500
+
 
 class SenaryoHatasi(Exception):
     """Senaryo dosyası okunamadığında ya da şemaya uymadığında atılır."""
@@ -68,12 +84,85 @@ class Sonuc:
     hata: str | None = None
 
 
+def _hata(sira: int, mesaj: str) -> SenaryoHatasi:
+    """Senaryo hatalarını kaçıncı kaydın bozuk olduğunu söyleyecek şekilde biçimlendirir."""
+    return SenaryoHatasi(f"{sira}. kayıt: {mesaj}")
+
+
+def _metin_dogrula(kayit: dict, alan: str, sira: int, *, zorunlu: bool) -> None:
+    """Bir alanın metin olduğunu doğrular; zorunlu değilse None'a izin verir."""
+    deger = kayit.get(alan)
+    if deger is None and not zorunlu:
+        return
+    if not isinstance(deger, str):
+        raise _hata(
+            sira,
+            f"{alan!r} alanı metin olmalı, {type(deger).__name__} geldi",
+        )
+
+
+def _kaydi_dogrula(kayit: dict, sira: int) -> None:
+    """Tek bir senaryo kaydının alan tiplerini ve sınır değerlerini doğrular.
+
+    Varlık kontrolü tek başına yetmiyor: elle yazılmış bir JSON'da
+    `"beklenen_tetkikler": "EKG"` sessizce `['E','K','G']`'ye dönüşür ve Jaccard
+    skoru kendinden emin ama anlamsız çıkar. Ölçüm gününün tek çıktısı o sayı.
+    """
+    for alan in ZORUNLU_METIN_ALANLARI:
+        _metin_dogrula(kayit, alan, sira, zorunlu=True)
+
+    for alan in ISTEGE_BAGLI_METIN_ALANLARI:
+        _metin_dogrula(kayit, alan, sira, zorunlu=False)
+
+    _metin_dogrula(kayit, "sikayet", sira, zorunlu=True)
+    uzunluk = len(kayit["sikayet"])
+    if not SIKAYET_MIN_UZUNLUK <= uzunluk <= SIKAYET_MAX_UZUNLUK:
+        raise _hata(
+            sira,
+            f"'sikayet' {SIKAYET_MIN_UZUNLUK}-{SIKAYET_MAX_UZUNLUK} karakter "
+            f"olmalı, {uzunluk} karakter geldi",
+        )
+
+    yas = kayit["yas"]
+    # bool bir int alt sınıfıdır; True yaş olarak 1'e eşit sayılmasın diye ayrı eleniyor.
+    if isinstance(yas, bool) or not isinstance(yas, int):
+        raise _hata(sira, f"'yas' alanı tam sayı olmalı, {type(yas).__name__} geldi")
+    if not YAS_ALT_SINIR <= yas <= YAS_UST_SINIR:
+        raise _hata(
+            sira,
+            f"'yas' {YAS_ALT_SINIR}-{YAS_UST_SINIR} aralığında olmalı, {yas} geldi",
+        )
+
+    tetkikler = kayit["beklenen_tetkikler"]
+    if not isinstance(tetkikler, list):
+        raise _hata(
+            sira,
+            f"'beklenen_tetkikler' liste olmalı, {type(tetkikler).__name__} geldi "
+            f'(tek tetkik için de ["EKG"] yazılmalı)',
+        )
+    for tetkik in tetkikler:
+        if not isinstance(tetkik, str):
+            raise _hata(
+                sira,
+                f"'beklenen_tetkikler' elemanları metin olmalı, "
+                f"{type(tetkik).__name__} geldi",
+            )
+
+    vitals = kayit.get("vitals")
+    if vitals is not None and not isinstance(vitals, dict):
+        raise _hata(
+            sira,
+            f"'vitals' sözlük ya da None olmalı, {type(vitals).__name__} geldi",
+        )
+
+
 def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
     """JSON senaryo dosyasını okur ve şemayı doğrular.
 
-    Eksik alan, geçersiz triyaj kodu ya da tekrarlanan id durumunda
-    `SenaryoHatasi` atar — bozuk bir ölçüm setiyle koşmak, ölçüm yapmamaktan
-    daha kötüdür çünkü çıkan sayı güvenilir görünür.
+    Eksik alan, hatalı alan tipi, sınır dışı yaş/şikayet uzunluğu, geçersiz
+    triyaj kodu ya da tekrarlanan id durumunda `SenaryoHatasi` atar — bozuk bir
+    ölçüm setiyle koşmak, ölçüm yapmamaktan daha kötüdür çünkü çıkan sayı
+    güvenilir görünür.
     """
     yol = Path(yol)
     try:
@@ -97,6 +186,8 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
                 raise SenaryoHatasi(
                     f"{sira}. kayıtta zorunlu alan eksik: {alan}"
                 )
+
+        _kaydi_dogrula(kayit, sira)
 
         kod = kayit["beklenen_triage_code"]
         if kod not in GECERLI_KODLAR:
