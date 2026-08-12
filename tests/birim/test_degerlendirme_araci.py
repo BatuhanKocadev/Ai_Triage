@@ -184,6 +184,43 @@ def test_istege_bagli_metin_alanlari_str_ya_da_none_olmali(tmp_path, alan):
         senaryolari_yukle(yol)
 
 
+@pytest.mark.parametrize("cinsiyet", ["Erkek", "Kadın", "Diğer"])
+def test_gecerli_cinsiyetler_kabul_edilir(tmp_path, cinsiyet):
+    """app/api/ai.py:30-33 GenderEnum tam olarak bu üç dizeyi kabul ediyor."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(cinsiyet=cinsiyet))
+
+    assert senaryolari_yukle(yol)[0].cinsiyet == cinsiyet
+
+
+@pytest.mark.parametrize("cinsiyet", ["erkek", "Bay"])
+def test_gecersiz_cinsiyet_hata_verir(tmp_path, cinsiyet):
+    """Küçük harf de dahil; uca giden değer birebir eşleşmezse koşumda 422 gelir."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(cinsiyet=cinsiyet))
+
+    with pytest.raises(SenaryoHatasi, match="cinsiyet"):
+        senaryolari_yukle(yol)
+
+
+def test_gecersiz_cinsiyet_mesaji_kabul_edilen_degerleri_yazar(tmp_path):
+    """Senaryoyu yazan kişi hatadan ne yazması gerektiğini öğrenebilmeli."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(cinsiyet="Bay"))
+
+    with pytest.raises(SenaryoHatasi) as hata:
+        senaryolari_yukle(yol)
+
+    mesaj = str(hata.value)
+    for gecerli in ("Erkek", "Kadın", "Diğer"):
+        assert gecerli in mesaj
+
+
+def test_cinsiyet_sessizce_normalize_edilmez(tmp_path):
+    """Yükleyici uçtan farklı bir sözleşme dayatmamalı; düzeltmek yerine reddediyor."""
+    yol = _yaz(tmp_path, _senaryo_sozlugu(cinsiyet="ERKEK"))
+
+    with pytest.raises(SenaryoHatasi, match="cinsiyet"):
+        senaryolari_yukle(yol)
+
+
 def test_vitals_sozluk_olmali(tmp_path):
     yol = _yaz(tmp_path, _senaryo_sozlugu(vitals=[37.5, 90]))
 

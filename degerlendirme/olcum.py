@@ -15,6 +15,12 @@ from pathlib import Path
 # meşru bir beklentidir (kör set bu ihtiyacı ortaya çıkardı).
 GECERLI_KODLAR = {"Kırmızı", "Sarı", "Yeşil", "Belirsiz"}
 
+# app/api/ai.py:30-33'teki GenderEnum ile birebir eşleşmek zorunda; uca giden değer
+# tam olarak bu dizelerden biri olmalı. Büyük/küçük harf normalizasyonu bilerek
+# yapılmıyor: "erkek"i sessizce düzeltmek, yükleyicinin uçtan farklı bir sözleşme
+# dayatması olurdu — onun yerine reddedip senaryoyu yazana doğrusunu söylüyoruz.
+GECERLI_CINSIYETLER = {"Erkek", "Kadın", "Diğer"}
+
 # Senaryo sözlüğünde bulunması zorunlu alanlar; eksiği yükleme anında patlar.
 ZORUNLU_ALANLAR = (
     "id",
@@ -113,6 +119,13 @@ def _kaydi_dogrula(kayit: dict, sira: int) -> None:
 
     for alan in ISTEGE_BAGLI_METIN_ALANLARI:
         _metin_dogrula(kayit, alan, sira, zorunlu=False)
+
+    if kayit["cinsiyet"] not in GECERLI_CINSIYETLER:
+        raise _hata(
+            sira,
+            f"'cinsiyet' {sorted(GECERLI_CINSIYETLER)} değerlerinden biri olmalı, "
+            f"{kayit['cinsiyet']!r} geldi",
+        )
 
     _metin_dogrula(kayit, "sikayet", sira, zorunlu=True)
     uzunluk = len(kayit["sikayet"])
