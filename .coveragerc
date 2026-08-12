@@ -1,0 +1,22 @@
+# Kapsama olcumu yapilandirmasi. pytest.ini'deki --cov bayraklari bu dosyayi
+# otomatik okur; CI ayrica bir sey vermez.
+
+[run]
+# Dal kapsamasi: satir bazli olcum, kosul dallarinin yalnizca bir tarafinin
+# kosuldugu durumu goremiyordu.
+branch = True
+
+omit =
+    # Bilerek sahtelenen dis servis adaptorleri. Testlerde ikisi de HIC
+    # calistirilmiyor: yerlerine tests/yardimcilar/sahte_llm.py ve
+    # sahte_stt.py geciyor (Ollama ve faster-whisper cagrilmiyor).
+    #
+    # Olcume dahil edilirlerse global sayi test kalitesini degil BU IKI
+    # DOSYANIN BOYUTUNU izler: llm_service'e elli satir eklemek kapsamayi
+    # test kalitesiyle ilgisiz bir sebeple dusurur; tersine auth testleri
+    # bosaltilsa olu agirlik sayiyi maskeleyebilir (tasarim K6).
+    #
+    # Bedeli durustluktur: neyin olculmedigi yazilmadan "kapsama %87"
+    # iddiasi eksiktir. Bu yuzden Ek C'ye de yaziliyor.
+    app/services/llm_service.py
+    app/services/stt_service.py

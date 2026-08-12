@@ -64,6 +64,23 @@ imaja kopyalanır. Yapılandırma depo kökündeki `pytest.ini`.
 .venv\Scripts\python.exe -m pytest -m "not yavas"
 ```
 
+**Tek bir dosya ya da tek bir test koşarken `--no-cov` ekleyin:**
+
+```bash
+.venv\Scripts\python.exe -m pytest tests/birim/test_db_kilidi.py --no-cov
+```
+
+Kapsama kapısı (`--cov-fail-under=87`, dal bazlı) `pytest.ini`'de olduğu için
+**her** koşuya uygulanır; odaklı bir koşu doğal olarak eşiğin altında kalır ve
+testlerin hepsi geçse bile paket kırmızı görünür — üstelik hata "testin kırıldı"
+değil "kapsama yetersiz" der, yani teşhisi zordur. Kapının `pytest.ini`'de
+olması bilinçli: yalnızca CI'da hatırlanması gereken bir kapı, unutulabilen bir
+kapıdır.
+
+Kapsama ölçümü `.coveragerc`'den okunur ve `llm_service.py` ile `stt_service.py`
+**hariç tutulur** — ikisi de testlerde bilerek sahtelenen dış servis
+adaptörleri. Gerekçe o dosyanın içinde yazılı.
+
 `entegrasyon` işaretli testler gerçek Postgres ister: `docker compose up -d postgres` ve
 `ai_triage_test` veritabanı. Ollama, faster-whisper, ChromaDB ve cross-encoder
 (reranker) hiçbir testte çağrılmaz — dördü de `tests/yardimcilar/` altındaki sahte
@@ -76,7 +93,7 @@ adları kendi ad alanına almış durumda). Birim testlerinde ise servis modül�
 `tests/birim/test_rag_esik_kapisi.py` doğru şekilde `app.services.rag_service` üzerinde
 `get_reranker`'ı yamalar, çünkü ad orada tanımlı ve orada aranıyor.
 
-Paket bugün **153 test** (`-m "not yavas"` ile 153 passed, 5 deselected). Güvenlik
+Paket bugün **157 test** (`-m "not yavas"` ile 157 passed, 5 deselected). Güvenlik
 kuralları `tests/api/test_guvenlik.py` altında ve her test bir saldırıyı taklit eder
 (hız sınırının iki katmanı, sahte imzalı dosya, yığın izi sızıntısı, CORS). Kuralların
 kendi davranışı ayrıca `tests/birim/test_hiz_sinirlayici.py` ve
@@ -90,6 +107,35 @@ tükettiği kotayla sonrakini `429`'a düşürür ve hata "güvenlik çalışıy
 altyapısı bozuldu" biçiminde görünür — teşhisi zor, sinir bozucu bir sınıf (tasarım K3).
 
 Paketin mevcut durumu ve bilinen kapsam boşlukları için `docs/superpowers/ek-c-ilerleme.md`.
+
+## Sürekli entegrasyon (CI)
+
+`.github/workflows/ci.yml`, `main`'e push'ta ve her pull request'te iki iş koşar:
+
+- **`test`** — Postgres servisi, `pytest -m "not yavas"`, kapsama kapısı dayatılır.
+- **`migration`** — boş bir veritabanında `alembic upgrade head` → `downgrade base`
+  → `upgrade head`. Yerel testler şemayı `create_all` ile kurduğu için migration'lar
+  pytest altında hiç koşmuyor; bu iş o boşluğu kapatıyor.
+
+`yavas` işaretli testler CI'da **hiç** koşmaz (gerçek bge-m3, cross-encoder ve
+ayakta bir ChromaDB isterler). Faydalı sonucu: CI'ın ölçtüğü kapsama yereldekiyle
+aynı, yani eşik iki ortamda da aynı anlama gelir.
+
+**CI `requirements.txt`'i DEĞİL `requirements-ci.txt`'i kurar** — torch ailesi
+(torch, transformers, sentence-transformers, faster-whisper) o listede yok, çünkü
+onlara yalnızca `yavas` testler ihtiyaç duyuyor. Ortam 498 MB yerine 1694 MB
+olurdu; torch tek başına 497 MB.
+
+**Bir sürüm yükseltirken İKİ dosyayı da güncelleyin.** `requirements.txt`'te bir
+paketin sürümünü değiştirip `requirements-ci.txt`'te unutursanız paket kırmızıya
+döner — `tests/birim/test_ci_gereksinimleri.py` bu pariteyi dayatıyor. Kural şu
+sebeple var: CI üretimden farklı bir sürümle koşarsa, kanıtladığı şey üretim için
+geçerli olmaz.
+
+Ağır kütüphaneler `rag_service`, `stt_service`, `chroma_service` ve
+`document.py`'de **fonksiyon içinde** import ediliyor; modül düzeyine taşımayın.
+`tests/birim/test_import_agirligi.py` bunu alt süreçte bağlıyor — `app.main`
+import edildiğinde o kütüphanelerin hiçbiri yüklenmemeli.
 
 Linter/formatter hâlâ yapılandırılmamıştır.
 

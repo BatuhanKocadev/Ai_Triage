@@ -1,0 +1,149 @@
+# Iki is: `test` paketi kosar ve kapsama kapisini dayatir, `migration` alembic
+# zincirinin bos bir veritabanindan kurulabildigini ve geri alinabildigini
+# kanitlar. Ikisi de kendi Postgres servisini alir.
+#
+# `yavas` isaretli testler CI'da HIC kosmaz (tasarim K9): gercek bge-m3 (~2,2 GB),
+# cross-encoder ve ayakta bir ChromaDB isterler. Bunun sonucu, CI'in olctugu
+# kapsamanin yereldeki `-m "not yavas"` olcumuyle AYNI olmasidir - yani esik iki
+# ortamda da ayni anlama gelir.
+#
+# Bagimliliklar requirements.txt'ten DEGIL requirements-ci.txt'ten kuruluyor:
+# torch ailesi disarida. O listenin ne icerdigi ve neyi icermedigi kendi
+# basliginda yazili.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Hicbir adim GITHUB_TOKEN kullanmiyor; varsayilan izinleri daraltiyoruz.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Testler ve kapsama kapisi
+    runs-on: ubuntu-latest
+    # Bu gunun tezi "CI on dakikayi gecmemeli"; askida kalan bir is varsayilan
+    # 6 saati yakar. Sinir, tezin kendisini dayatiyor.
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: triage
+          POSTGRES_PASSWORD: triage
+          POSTGRES_DB: ai_triage_test
+        ports:
+          - 5432:5432
+        # Postgres hazir olmadan testler baslarsa baglanti hatasi aliriz ve
+        # hata "test kirildi" gibi gorunur.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Test veritabani kilidi (tests/yardimcilar/db_kilidi.py) bu adresi
+      # dogruluyor: host beyaz listede (localhost), port 5432, ad ai_triage_test.
+      # Uclerinden biri degisirse kilit paketi pytest.exit ile durdurur.
+      DATABASE_URL: postgresql://triage:triage@localhost:5432/ai_triage_test
+      #
+      # JWT_SECRET_KEY ve OLLAMA_BASE_URL BILEREK VERILMIYOR. tests/conftest.py
+      # ikisini de `os.environ.setdefault` ile kuruyor ve bir test conftest'in
+      # DEGERINI dogrudan iddia ediyor (test_config.py: jwt_secret_key ==
+      # "test-anahtari-sadece-testler-icin"). Burada bir deger verirsek
+      # setdefault hicbir sey yapmaz, conftest'in degeri gecmez ve o test
+      # KIRILIR. Ilk CI kosusunda tam bu oldu.
+      #
+      # Genel kural: test isinin ortami, conftest'in sahiplendigi degiskenleri
+      # ezmemeli. DATABASE_URL istisna cunku servis konteynerini gostermek
+      # zorunda - ve conftest'in varsayilani zaten birebir ayni deger.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          # Varsayilan anahtar requirements.txt'tir - yani CI'in HIC kurmadigi
+          # dosya. Gercekten kurulan iki dosyaya baglaniyor ki onlar degisince
+          # onbellek gecersizlessin.
+          cache-dependency-path: |
+            requirements-ci.txt
+            requirements-dev.txt
+
+      # ChromaDB servisi GEREKMIYOR: entegrasyon testlerinde Chroma sahte,
+      # yalnizca Postgres gercek.
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt -r requirements-dev.txt
+
+      # Kapsama kapisi pytest.ini'den geliyor (--cov-branch --cov-fail-under);
+      # burada ayrica bayrak verilmiyor ki CI ile yerel ayni esigi kullansin.
+      - name: Testler
+        run: pytest -m "not yavas"
+
+  migration:
+    name: Alembic zinciri
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: triage
+          POSTGRES_PASSWORD: triage
+          POSTGRES_DB: ai_triage
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Bilerek uretimdeki ad (ai_triage), test veritabani DEGIL: test isi
+      # conftest uzerinden drop_all cagiriyor, ayni adi paylasmak iki isi
+      # birbirine baglardi. Ayrica bu, Gun 27 kurulum provasinin provasi.
+      #
+      # Test veritabani kilidi burada DEVREDE DEGIL ve bu bilinclidir: kilit
+      # yalnizca pytest fixture'inin yolunda, alembic'i korumuyor (tasarim K8).
+      DATABASE_URL: postgresql://triage:triage@localhost:5432/ai_triage
+      # JWT_SECRET_KEY gerekmiyor: alembic yalnizca database_url'i kullaniyor ve
+      # ayarin zaten bir varsayilani var. Test isindeki dersle ayni yonde -
+      # gereksiz ortam degiskeni vermeyin.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      # Zincir bos bir veritabanindan kurulabiliyor mu, ve geri alinabiliyor mu?
+      # Yerel testler semayi create_all ile kuruyor, yani migration'lar pytest
+      # altinda HIC kosmuyor; bu is o boslugu kapatiyor.
+      - name: upgrade head
+        run: alembic upgrade head
+
+      - name: downgrade base
+        run: alembic downgrade base
+
+      - name: tekrar upgrade head
+        run: alembic upgrade head

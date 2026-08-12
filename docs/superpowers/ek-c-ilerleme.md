@@ -98,8 +98,8 @@ seçimin sonucu, ihmal değil:
 
 | Modül | Neden düşük | Bilinçli mi |
 |---|---|---|
-| `llm_service.py` %24 | Ollama'ya HTTP isteği atan gövde. Testlerde `sahte_llm.py` ile değiştiriliyor; gerçek çağrı hiçbir testte yapılmıyor. | Evet — Global Kısıt: dış servis çalıştırılmaz |
-| `stt_service.py` %37 | faster-whisper modelini yükleyen gövde. `sahte_stt.py` ile değiştiriliyor. | Evet |
+| `llm_service.py` %24 **(bu sayı artık geçersiz — Gün 22'den beri kapsamadan hariç, bkz. aşağıdaki Gün 22 ikinci yarı bölümü)** | Ollama'ya HTTP isteği atan gövde. Testlerde `sahte_llm.py` ile değiştiriliyor; gerçek çağrı hiçbir testte yapılmıyor. | Evet — Global Kısıt: dış servis çalıştırılmaz |
+| `stt_service.py` %37 **(bu sayı artık geçersiz — aynı sebeple hariç)** | faster-whisper modelini yükleyen gövde. `sahte_stt.py` ile değiştiriliyor. | Evet |
 | `chroma_service.py` %50 | `get_collection()` içindeki tembel `HttpClient` kurulumu; ChromaDB ayakta olmadan çalışamaz. | Evet |
 | `document.py` %17 | `/document/upload` gövdesi PDF/DOCX ayrıştırıp ChromaDB'ye upsert ediyor. Bugün yalnızca **yetki kapısı** test edildi (403/401), gövde değil. | Evet, ama boşluk olarak kayıtlı (aşağıda) |
 | `database.py` %64 | `get_db()` gövdesi testlerde `dependency_overrides` ile değiştiriliyor; test oturumu onun yerine geçiyor. | Evet |
@@ -1775,10 +1775,13 @@ yazılı gerekçeyle seçilmiş bir kararı sessizce iptal etmek olurdu.
 
 **B — Test ve şema borcu**
 
-6. **Migration zinciri pytest altında hiç koşmuyor.** `conftest.py` şemayı
-   `create_all` ile kuruyor, yani `6922a872c59d`'nin doğruluğu yalnızca elle
-   round-trip'e dayanıyor. **Gün 22'nin ikinci yarısı için kritik:** CI şemayı
-   `create_all` ile kurarsa, kırık bir migration zinciriyle yeşil kalır.
+6. ~~**Migration zinciri pytest altında hiç koşmuyor.**~~ **KAPATILDI** (Gün 22
+   ikinci yarısı). `conftest.py` şemayı hâlâ `create_all` ile kuruyor — yani
+   *pytest altında* migration'lar koşmuyor ve bu bilinçli, testler hızlı kalsın
+   diye. Boşluğu CI'ın ayrı bir `migration` işi kapatıyor: boş bir veritabanında
+   `upgrade head` → `downgrade base` → `upgrade head`. Zincir push'tan önce
+   yerelde tek kullanımlık bir şemada da prova edildi ve dört revision her iki
+   yönde de geçti.
 7. **Unique kısıt modelde adsız**, yani adı ortama göre değişiyor (`create_all` →
    `ai_recommendations_visit_id_key`, migration → `uq_ai_recommendations_visit_id`).
    Bugün zararsız; `IntegrityError` mesajına bakıp `409` üreten bir kod yazılırsa
@@ -1854,3 +1857,153 @@ değiştirmedi** — Görev 1 yalnızca `tests/`, Görev 3 yalnızca veri ve öl
 Değişen tek üretim satırı Görev 2'nin şema kısıtı. Buna karşılık iki gerçek
 güvenlik/veri kaybı yolu kapandı ve bir tıbbi belgedeki klinik hata düzeltildi.
 Borç kapatma günlerinin çıktısı böyle görünüyor: az satır, çok gerekçe.
+
+---
+
+## Gün 22 · İkinci yarı — tembel import, kapsama kapısı ve CI (11–12 Ağustos 2026)
+
+Yol haritasının Gün 22'si buydu: *test derinleştirme, coverage kapısı, CI*.
+Birinci yarı (borç kapatma) onun **ön koşuluydu** — speech testlerinin gerçek
+faster-whisper'a ulaşması ve test veritabanı kilidinin host doğrulamaması, ikisi
+de CI'ı kurulamaz kılıyordu.
+
+Tasarım: `docs/superpowers/specs/2026-08-11-gun22-ci-kapsama-design.md` (K1–K11).
+
+### Bu gün ne yapıldı
+
+**Tembel import.** `app.main` import'u **28,5 saniye** sürüyor ve torch,
+transformers, sentence_transformers, chromadb, faster_whisper dahil **5215
+modül** yüklüyordu. Yol haritası CI tuzağını önceden kaydetmişti ("CI'da testler
+10 dakikayı geçiyor — çözüm: minimal gereksinim listesi") ama o çözüm
+uygulanamıyordu: `torch` modül düzeyinde import ediliyordu ve `app.main` onu
+zincirle çekiyordu, yani minimal bir listeyle testler **toplanamıyordu** bile.
+
+Ağır import'lar üç servis modülünde fonksiyon gövdesine taşındı. Dördüncü ve
+**dolaylı** bir yol da çıktı: `document.py` → `langchain_text_splitters` → o
+paketin `__init__.py`'si koşulsuz olarak kendi `sentence_transformers` shim'ini
+import ediyor → transformers → torch. Kontrolcünün ön-uçuş taraması yalnızca
+doğrudan import'lara bakmıştı ve bunu kaçırmıştı; uygulayıcı ölçerek buldu.
+
+**Kapsama kapısı.** `--cov-branch` açıldı (kapsama artık satır değil dal bazlı)
+ve `--cov-fail-under=87` dayatıldı. İki dış servis adaptörü ölçümden çıkarıldı.
+
+**CI.** `.github/workflows/ci.yml`, iki iş: `test` (Postgres servisi,
+`requirements-ci.txt`, kapsama kapısı) ve `migration` (alembic zinciri).
+
+### Ölçümler
+
+| | Önce | Sonra |
+|---|---|---|
+| Test sayısı | 153 | **157** |
+| Kapsama | %85 (satır) | **%87,42 (dal)** |
+| `app.main` import süresi | **28,5 sn** | **1,85 sn** |
+| Yüklenen modül | **5215** | **1077** |
+| Ortam boyutu | 1694 MB | **498 MB** (torch tek başına 497 MB) |
+| CI | yok | **iki iş** |
+
+**Ölçülmeyen şeyi söylemek:** kurulum **süresi** karşılaştırması hiç yapılmadı.
+Minimal liste iki kez ölçüldü (6 dk 53 sn, 6 dk 19 sn) ama tam listenin kurulumu
+koşulmadı. Planın ilk hâlindeki "2,5 GB'lık kurulum" ve "dakikalardan saniyelere"
+ifadeleri **tahmindi** ve dördü de (plan, `rag_service.py`, muhafız testi,
+`requirements-ci.txt`) ölçülen değerlerle değiştirildi.
+
+**Yerel paket hızlanmadı** ve bu da açıkça yazılıyor. İlk bakışta 59,6 → 101 sn
+gerileme göründü; uygulayıcı gizlemek yerine araştırdı ve ölçüm artefaktı
+olduğunu gösterdi: ağır import'lar kök `conftest.py`'den (pytest'in *saymadığı*
+yer) toplama aşamasına (*saydığı* yer) taşındı. Duvar saati neredeyse aynı.
+Kazanç CI ortam boyutunda ve `app.main` import süresinde, test koşusunda değil.
+
+### Kapsamadan hariç tutulanlar — ve neden bunu yazmak zorundayız
+
+`.coveragerc` iki dosyayı ölçümden çıkarıyor: `app/services/llm_service.py` ve
+`app/services/stt_service.py`. İkisi de testlerde **hiç çalıştırılmıyor**;
+yerlerine `sahte_llm.py` ve `sahte_stt.py` geçiyor.
+
+Gerekçe: ölçüme dahil edildiklerinde global sayı test kalitesini değil **o iki
+dosyanın boyutunu** izler. `llm_service`'e elli satır eklemek kapsamayı test
+kalitesiyle ilgisiz bir sebeple düşürür; tersine auth testleri boşaltılsa ölü
+ağırlık sayıyı maskeleyebilir.
+
+Bedeli dürüstlüktür: **neyin ölçülmediği yazılmadan "kapsama %87" iddiası
+eksiktir.** Bu yüzden burada yazıyor. Bir yan etkisi daha var: `stt_service.py`
+bu dalda *değiştirilen* üç modülden biri, ve ölçümden çıkarıldığı için oradaki
+tembelleştirme çalışmasının kapsama tarafında hiçbir koruması yok — tek muhafızı
+alt süreçte koşan import testi.
+
+Eski ölçüm tablolarındaki `llm_service.py (%24)` ve `stt_service.py (%37)`
+satırları artık **geçersiz**: o dosyalar ölçülmüyor.
+
+### Muhafız testinin CI'a özgü kör noktası
+
+Tüm-dal incelemesinin en değerli bulgusu buydu. Muhafız testi `app.main`'i alt
+süreçte import edip ağır kütüphanelerin `sys.modules`'e düşmediğini iddia ediyor.
+Ama `langchain_text_splitters` listede yoktu, ve o paketin shim'i
+`sentence_transformers` import'unu `try/except ImportError` ile sarıyor.
+
+Sonuç: biri `document.py`'deki import'u modül düzeyine geri koysa, **yerelde**
+muhafız yakalardı (sentence_transformers kurulu, zincir yüklenir) ama **torch'suz
+CI'da** shim sessizce yutardı, listedeki hiçbir ad görünmezdi ve muhafız **yeşil**
+kalırdı. Gerileme fark edilmeden, sentence_transformers'ın kurulu *olduğu*
+üretime giderdi. Muhafız, korumak için var olduğu ortamda en zayıftı.
+Tek dizeyle kapatıldı.
+
+### CI ne koşuyor, ne koşmuyor
+
+`test` işi: `requirements-ci.txt` + `requirements-dev.txt`, Postgres servisi,
+`pytest -m "not yavas"`. Kapsama kapısı `pytest.ini`'den geliyor — workflow
+ayrıca bayrak vermiyor ki CI ile yerel **aynı** eşiği kullansın. ChromaDB servisi
+yok: `entegrasyon` testlerinde Chroma sahte, yalnızca Postgres gerçek.
+
+`migration` işi: boş bir `ai_triage` veritabanında `upgrade head` →
+`downgrade base` → `upgrade head`. Yerel testler şemayı `create_all` ile kuruyor,
+yani migration'lar pytest altında hiç koşmuyor; bu iş o boşluğu kapatıyor.
+Zincir push'tan **önce** yerelde tek kullanımlık bir şemada prova edildi ve dört
+revision her iki yönde de geçti.
+
+`yavas` testler CI'da **hiç** koşmaz: gerçek bge-m3 (~2,2 GB), cross-encoder ve
+ayakta bir ChromaDB isterler. Bunun faydalı bir sonucu var — CI'ın ölçtüğü
+kapsama yereldekiyle **aynı**, yani eşik iki ortamda da aynı anlama geliyor.
+
+### Gün 23'e devredilenler (bu günden)
+
+1. **`requirements-ci.txt` yalnızca 21 doğrudan bağımlılığı pinliyor**, ~100
+   geçişli paket yüzüyor (`numpy`, `onnxruntime`, `grpcio`, `protobuf`,
+   `cryptography`…). İki bilinen sonucu var: bir geçişli sürüm CI'ı kodla
+   ilgisiz bir sebeple kırabilir, ya da CI üretimin hiç koşmadığı bir bağımlılık
+   kümesinde yeşil kalabilir. En olası hedef `onnxruntime` ve `pyarrow`:
+   kullanılabilir sdist yayınlamıyorlar, yani manylinux tekerleği yoksa kurulum
+   sert biçimde patlar. 21 pin `tests/birim/test_ci_gereksinimleri.py` ile bağlı.
+2. **`--cov-fail-under` her koşuya uygulanıyor**, yani odaklı bir koşu sahte
+   kırmızı verir. `CLAUDE.md`'de `--no-cov` notu var. Kapının `pytest.ini`'de
+   olması bilinçli: yalnızca CI'ın hatırladığı bir kapı, unutulabilen bir kapıdır.
+3. **`migration` işi zincirin *koştuğunu* kanıtlıyor, modeldeki şemayı
+   ürettiğini değil.** `alembic check` bunu kapatırdı ama bugün kırmızı olması
+   muhtemel — madde 7'deki adsız unique kısıt (`create_all` →
+   `ai_recommendations_visit_id_key`, migration → `uq_...`) tam da bu sınıfta.
+   Önce ölçülmeli, sonra eklenmeli.
+4. **Aktivasyon testi artık enjekte edilen sahte Sigmoid'i doğruluyor.**
+   "Argüman geçiliyor mu" hâlâ bağlı (Tanh, `None` ve sınıf-yerine-örnek
+   varyantlarının üçü de kırılır); kaybolan tek şey "`torch.nn.Sigmoid` kurulu
+   torch'ta gerçekten var mı", o da `yavas` testlerde duruyor.
+5. **İlk `/document/upload` artık ~25 saniyeyi olay döngüsünde ödüyor**,
+   açılışta değil. Admin'e kapalı ve süreç başına bir kez; depo bu deseni zaten
+   kabul ediyor (`get_reranker()` istek yolunda 2 GB model yüklüyor).
+
+### Süreç notu
+
+Bu günün dersi bütçeyle ilgili ve dürüstçe yazılması gerekiyor: **iki subagent
+art arda harcama limitine takıldı** (biri işin ortasında, biri hiç
+başlayamadan). Kontrolcü kalan işi (kapsama kapısı ve CI workflow'u) kendisi
+yürüttü ve kalan bütçeyi **tek ve güçlü bir tüm-dal incelemesine** sakladı.
+
+Bu, metodolojiden bilinçli bir sapmaydı ve karşılığını verdi: o inceleme, hiç
+bağımsız göz görmemiş iki görevde altı Important buldu — muhafızın CI'a özgü kör
+noktası, kapıyı ölçen aracın (`coverage`) pinlenmemiş olması, ve `.coveragerc`'nin
+"Ek C'ye de yazılıyor" derken yazılmamış olması dahil. Sonuncusu bu bölümün
+varlık sebebi.
+
+İkinci ders birinciyle bağlantılı: **ölçmediğini iddia etme.** Bu dal üç ayrı
+turda dört yerden "2,5 GB" ve "dakikalardan saniyelere" ifadelerini temizlemek
+zorunda kaldı, ve son turda kaynak olan **plan dosyası** da düzeltildi — çünkü
+düzeltilmeyen kaynak, bir sonraki turda geri kopyalanır. Aynı desen Gün 22'nin
+birinci yarısında `yanik.txt` için de yaşanmıştı.

@@ -3,8 +3,10 @@
 Bu kapı bilinçli bir maliyet/güvenlik kontrolüdür (CLAUDE.md); bug değildir.
 """
 
+import sys
+import types
+
 import pytest
-import torch
 
 from app.services import rag_service
 from tests.yardimcilar.sahte_rag import SahteKoleksiyon, sahte_reranker_uret
@@ -102,22 +104,40 @@ def test_reranker_skoru_ikinci_kez_ezilmez(monkeypatch):
 def test_reranker_aktivasyonu_acikca_kuruluyor(monkeypatch):
     # Skor ölçeğinin tamamı predict()'in olasılık döndürmesine bağlı; bu da
     # CrossEncoder'a açıkça verilen Sigmoid aktivasyonundan geliyor. Argüman
-    # silinirse predict() modelin config dosyasındaki varsayılana düşer ve ham
-    # logit döndürebilir — o an bütün eşikler sessizce anlamsızlaşır. Diğer
-    # testler get_reranker()'ı sahteyle değiştirdiği için yapıcıyı hiç görmüyor;
-    # aktivasyonu donduran tek test budur.
+    # silinirse predict() modelin config dosyasındaki varsayılana düşer ve HAM
+    # LOGIT döndürür — o an bütün eşikler sessizce anlamsızlaşır. Bu ölçüldü
+    # (Gün 20, çift sigmoid hatası): 0.90'lık bir skor 0.711'e düşüp eşiği
+    # geçemiyordu. Diğer testler get_reranker()'ı sahteyle değiştirdiği için
+    # yapıcıyı hiç görmüyor; aktivasyonu donduran TEK test budur, bu yüzden
+    # sadeleştirilmemeli.
     yakalanan = {}
+
+    class _SahteSigmoid:
+        """torch.nn.Sigmoid yerine geçer; isinstance kontrolünün hedefi budur."""
 
     def sahte_cross_encoder(*args, **kwargs):
         yakalanan["args"] = args
         yakalanan["kwargs"] = kwargs
         return object()
 
+    # torch ve sentence_transformers sys.modules'e SAHTE modül olarak
+    # enjekte ediliyor. Sebebi: get_reranker() ikisini de artık fonksiyon içinde
+    # import ediyor (tembelleştirme, tasarım K2), dolayısıyla adları modül
+    # düzeyinde yamalamak imkânsız. Enjeksiyon ayrıca testi torch KURULU
+    # OLMAYAN CI ortamında da koşabilir kılıyor; alternatifi testi `yavas`
+    # işaretlemekti ve o durumda tek aktivasyon muhafızı CI'dan düşerdi (K9).
+    sahte_torch = types.ModuleType("torch")
+    sahte_torch.nn = types.SimpleNamespace(Sigmoid=_SahteSigmoid)
+    sahte_torch.cuda = types.SimpleNamespace(is_available=lambda: False)
+    sahte_st = types.ModuleType("sentence_transformers")
+    sahte_st.CrossEncoder = sahte_cross_encoder
+
+    monkeypatch.setitem(sys.modules, "torch", sahte_torch)
+    monkeypatch.setitem(sys.modules, "sentence_transformers", sahte_st)
     # Modül tekili önceki testlerden dolu kalmış olabilir; None'a çekilmezse
     # get_reranker() yapıcıyı hiç çağırmaz ve test yanlışlıkla yeşil kalır.
     monkeypatch.setattr(rag_service, "_reranker", None)
-    monkeypatch.setattr(rag_service, "CrossEncoder", sahte_cross_encoder)
 
     rag_service.get_reranker()
 
-    assert isinstance(yakalanan["kwargs"].get("activation_fn"), torch.nn.Sigmoid)
+    assert isinstance(yakalanan["kwargs"].get("activation_fn"), _SahteSigmoid)
