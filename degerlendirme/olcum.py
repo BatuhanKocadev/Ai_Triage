@@ -22,6 +22,10 @@ GECERLI_KODLAR = {"Kırmızı", "Sarı", "Yeşil", "Belirsiz"}
 # dayatması olurdu — onun yerine reddedip senaryoyu yazana doğrusunu söylüyoruz.
 GECERLI_CINSIYETLER = {"Erkek", "Kadın", "Diğer"}
 
+# Ucun kaynak dizelerine taktığı önek (`app/services/rag_service.py:92`);
+# `kaynak_adlarini_ayikla` dosya adını bunun ardından okur.
+KAYNAK_ONEKI = "[Kaynak: "
+
 # Senaryo sözlüğünde bulunması zorunlu alanlar; eksiği yükleme anında patlar.
 ZORUNLU_ALANLAR = (
     "id",
@@ -101,12 +105,11 @@ class Sonuc:
     cikan_bolum: str | None = None
     # Sistemin önerdiği tetkikler; beklenen_tetkikler ile karşılaştırılır.
     cikan_tetkikler: list[str] = field(default_factory=list)
-    # RAG'in döndürdüğü kaynak dosya ADLARI; kaynak doğruluğu bununla ölçülür.
-    # Görev 7 uyarısı: uç bu alanı dosya adı olarak DÖNDÜRMÜYOR, `"[Kaynak: x.txt]
-    # ...belge metni..."` biçiminde döndürüyor (app/services/rag_service.py:92,
-    # tests/api/test_ai_analiz_api.py:73). Sürücü dosya adını ayıklamazsa
-    # `beklenen_kaynak not in sources` her zaman doğru çıkar: her yanlış cevap A
-    # kutusuna, her doğru cevap "şanslı doğru"ya yazılır ve Gün 24 retrieval'a koşar.
+    # AYIKLANMIŞ kaynak dosya adları (`["gogus_agrisi.txt"]`), ham önekli belge
+    # dizeleri değil; kaynak doğruluğu ve A/B ayrımı bununla ölçülür. Sürücü bu
+    # alanı uçtan gelen listeyi `kaynak_adlarini_ayikla`'dan geçirerek doldurmak
+    # zorunda — ham yazılırsa beklenen kaynak hiçbir zaman bulunamaz ve ölçüm
+    # sessizce her şeyi A kutusuna yazar (bkz. kaynak_adlarini_ayikla docstring'i).
     sources: list[str] = field(default_factory=list)
     # Koşumun yarattığı ziyaret; silinmiyor, video demosunda kullanılacak (K14).
     visit_id: str | None = None
@@ -303,6 +306,19 @@ def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
     return _sadelestir(beklenen) == _sadelestir(cikan)
 
 
+def bolum_dogru_mu(beklenen: str, cikan: str | None) -> bool:
+    """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı.
+
+    `triyaj_dogru_mu` ile aynı desende ve bilerek ayrı bir fonksiyon: bölüm
+    karşılaştırması ileride eş anlamlıları ("Acil" ~ "Acil Servis") tanımak
+    zorunda kalabilir, triyaj kodu kalmaz. Tek yerde durmasının sebebi
+    `kok_neden`'in C kutusu ile Görev 5'in bölüm oranının ayrışmaması.
+    """
+    if cikan is None:
+        return False
+    return _sadelestir(beklenen) == _sadelestir(cikan)
+
+
 def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
     """Beklenen ve önerilen tetkik kümeleri arasındaki Jaccard benzerliği."""
     # Çıkan taraf modelin ham çıktısı, yani güvenilmeyen girdi: boş adlar
@@ -315,6 +331,35 @@ def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
     if not b or not c:
         return 0.0
     return len(b & c) / len(b | c)
+
+
+def kaynak_adlarini_ayikla(sources: list[str]) -> list[str]:
+    """Ucun döndürdüğü `"[Kaynak: dosya] belge metni"` dizelerinden dosya adını çıkarır.
+
+    Ölçümün en sessiz tuzağı burada: uç `sources` alanını dosya adı olarak
+    döndürmüyor (`app/services/rag_service.py:92`, biçimi
+    `tests/api/test_ai_analiz_api.py:73` kilitliyor). Ham dizeler ayıklanmadan
+    karşılaştırılırsa `beklenen_kaynak` hiçbir zaman bulunamaz; her yanlış cevap
+    A kutusuna, her doğru cevap "şanslı doğru"ya yazılır ve hiçbir test kırılmaz.
+    Ayrıştırma bu yüzden sürücüde değil, testli çekirdekte duruyor (K6).
+
+    Tanınmayan biçim atılmaz, olduğu gibi geçer: uç sözleşmesi değişirse
+    eşleşmeyen bir değer görünür kalsın, sessizce boş liste üretilmesin.
+    """
+    adlar: list[str] = []
+    for kayit in sources:
+        ad = kayit
+        if kayit.startswith(KAYNAK_ONEKI):
+            govde = kayit[len(KAYNAK_ONEKI):]
+            kapanis = govde.find("]")
+            # Kapanış yoksa önek yarım kalmış demektir; uydurmak yerine ham bırakılır.
+            if kapanis != -1:
+                ad = govde[:kapanis].strip()
+        # Aynı protokolün birden çok chunk'ı gelir; soru "hangi protokoller geldi",
+        # kaç parça geldiği değil. Sıra korunuyor: ilk sıra en yüksek rerank skoru.
+        if ad and ad not in adlar:
+            adlar.append(ad)
+    return adlar
 
 
 def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
@@ -341,9 +386,7 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
         return "B"
 
     # Kod doğru: bölüm ya da tetkikler tutmuyorsa biçim/kapsam hatası.
-    bolum_dogru = _sadelestir(senaryo.beklenen_bolum) == _sadelestir(
-        sonuc.cikan_bolum or ""
-    )
+    bolum_dogru = bolum_dogru_mu(senaryo.beklenen_bolum, sonuc.cikan_bolum)
     tetkikler_tam = tetkik_ortusmesi(
         senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler
     ) == 1.0

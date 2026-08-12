@@ -12,6 +12,8 @@ from degerlendirme.olcum import (
     Senaryo,
     SenaryoHatasi,
     Sonuc,
+    bolum_dogru_mu,
+    kaynak_adlarini_ayikla,
     kok_neden,
     sansli_dogru_mu,
     senaryolari_yukle,
@@ -365,6 +367,21 @@ def test_cevapsiz_senaryo_dogru_sayilmaz():
     assert triyaj_dogru_mu("Belirsiz", "Belirsiz") is True
 
 
+def test_bolum_karsilastirmasi_yazim_farkina_dayanikli():
+    """Bölüm de triyaj kodu gibi karşılaştırılır: katlanan yazım, güvenli None.
+
+    Karşılaştırma `kok_neden` içinde satır içi durursa Görev 5 onu kopyalamak
+    zorunda kalır; iki kopya ayrışınca C kutusu ile özet tablosundaki bölüm
+    oranı sessizce birbirini tutmaz.
+    """
+    assert bolum_dogru_mu("Acil Servis", "acil servis") is True
+    assert bolum_dogru_mu("Kardiyoloji", "kardıyolojı") is True
+    assert bolum_dogru_mu("Acil Servis", "Dahiliye") is False
+    # Cevapsızlık bölüm doğruluğu sayılmaz.
+    assert bolum_dogru_mu("Acil Servis", None) is False
+    assert bolum_dogru_mu("Acil Servis", "") is False
+
+
 def test_tetkik_ortusme_orani_hesaplanir():
     """Jaccard: kesişim / birleşim."""
     # {EKG, Troponin} ∩ {EKG, Troponin, D-Dimer} = 2, birleşim = 3
@@ -599,3 +616,99 @@ def test_sansli_dogru_yalnizca_dogru_cevapta_isaretlenir():
         senaryo_id="t01", cikan_triage_code="Kırmızı", sources=["bas_agrisi.txt"]
     )
     assert sansli_dogru_mu(_senaryo(beklenen_kaynak=None), kaynaksiz) is False
+
+
+# --- Kaynak adı ayıklama: uç dosya adı değil, önekli belge metni döndürüyor ---
+
+
+def test_kaynak_adlari_onekten_ayiklanir():
+    """`app/services/rag_service.py:92` biçimi: `[Kaynak: dosya] belge metni`."""
+    ham = [
+        "[Kaynak: gogus_agrisi.txt] Göğüs ağrısında ilk 10 dakika: EKG çekilir.",
+        "[Kaynak: yanik.txt] Yanık protokolü: TBSA hesaplanır.",
+    ]
+
+    assert kaynak_adlarini_ayikla(ham) == ["gogus_agrisi.txt", "yanik.txt"]
+
+
+def test_ayni_protokolun_chunklari_sirasiyla_tekillestirilir():
+    """`sources` "hangi protokoller geldi" sorusunun cevabı, chunk sayımı değil.
+
+    Aynı protokolün birden çok parçası gelir; tekilleştirilmezse liste
+    okunamaz hâle gelir ve Görev 5'in kaynak isabeti chunk sayısına bakar.
+    Sıra korunuyor çünkü ilk sıra rerank'in en yüksek skorlu belgesi.
+    """
+    ham = [
+        "[Kaynak: yanik.txt] Birinci parça",
+        "[Kaynak: gogus_agrisi.txt] Başka protokol",
+        "[Kaynak: yanik.txt] İkinci parça",
+    ]
+
+    assert kaynak_adlarini_ayikla(ham) == ["yanik.txt", "gogus_agrisi.txt"]
+
+
+def test_onegi_olmayan_kaynak_oldugu_gibi_kalir():
+    """Sözleşme değişirse değer görünür kalmalı, sessizce düşmemeli.
+
+    Atmak, boş bir liste üretip her senaryoyu A kutusuna yazmak demekti —
+    yani ölçümün manşetini sessizce bozan tam olarak o hata sınıfı.
+    """
+    assert kaynak_adlarini_ayikla(["gogus_agrisi.txt"]) == ["gogus_agrisi.txt"]
+    assert kaynak_adlarini_ayikla(["Kaynak: x.txt"]) == ["Kaynak: x.txt"]
+
+
+def test_kapanis_parantezi_olmayan_onek_ayiklanmaz():
+    """Yarım kalmış önek ayrıştırılamaz; uydurmak yerine olduğu gibi bırakılır."""
+    bozuk = "[Kaynak: yanik.txt Yanık protokolü"
+
+    assert kaynak_adlarini_ayikla([bozuk]) == [bozuk]
+
+
+def test_bilinmeyen_kaynak_gercek_bir_dosya_adi_gibi_islenir():
+    """`rag_service.py:91` üstveri yoksa 'Bilinmeyen Kaynak' yazıyor — gerçek değer."""
+    ham = ["[Kaynak: Bilinmeyen Kaynak] Üstverisi olmayan belge"]
+
+    assert kaynak_adlarini_ayikla(ham) == ["Bilinmeyen Kaynak"]
+
+
+def test_bosluklu_dosya_adi_korunur_bos_ad_dusurulur():
+    """Dosya adında boşluk meşru; boş ad ise hiçbir protokolü göstermez."""
+    assert kaynak_adlarini_ayikla(["[Kaynak: gogus agrisi.txt] metin"]) == [
+        "gogus agrisi.txt"
+    ]
+    assert kaynak_adlarini_ayikla(["[Kaynak: ] metin"]) == []
+
+
+def test_bos_kaynak_listesi_bos_doner():
+    """Eşik altı yanıtta uç `sources=[]` döndürüyor (app/api/ai.py:159)."""
+    assert kaynak_adlarini_ayikla([]) == []
+
+
+def test_ayiklanmamis_kaynaklar_a_kutusunu_sisirir():
+    """Ayıklama adımının neden taşıyıcı olduğunun kanıtı — regresyon muhafızı.
+
+    Uç `sources`'u dosya adı olarak döndürmüyor; sürücü ham dizeleri olduğu gibi
+    yazarsa `beklenen_kaynak` hiçbir zaman bulunamaz, her yanlış cevap A kutusuna
+    yazılır ve Gün 24 retrieval'a koşar. İlk iddia o bozuk hâli gösteriyor
+    (istenen davranış değil), ikincisi ayıklamanın onu düzelttiğini.
+    """
+    senaryo = _senaryo()
+    ham = ["[Kaynak: gogus_agrisi.txt] Göğüs ağrısı protokolü: EKG çekilir."]
+
+    ayiklanmamis = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Yeşil",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=ham,
+    )
+    assert kok_neden(senaryo, ayiklanmamis) == "A"
+
+    ayiklanmis = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Yeşil",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=kaynak_adlarini_ayikla(ham),
+    )
+    assert kok_neden(senaryo, ayiklanmis) == "B"
