@@ -4,6 +4,7 @@ Bu testler saf fonksiyonları sınar: Ollama, backend, ChromaDB hiçbirinde
 çağrılmaz. Ölçümün kendisi `degerlendirme/calistir.py` ile ayrıca koşulur.
 """
 import json
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +14,7 @@ from degerlendirme.olcum import (
     Senaryo,
     SenaryoHatasi,
     Sonuc,
+    _sadelestir,
     bolum_dogru_mu,
     kaynak_adlarini_ayikla,
     kok_neden,
@@ -23,6 +25,10 @@ from degerlendirme.olcum import (
     triyaj_dogru_mu,
     wer,
 )
+
+# Gerçek ölçüm setinin yaşadığı dizin; aşağıdaki üç test tmp_path değil bu
+# dosyaları okur, çünkü sınanan şey yükleyici değil verinin kendisidir.
+DEGERLENDIRME = Path(__file__).resolve().parents[2] / "degerlendirme"
 
 
 def _senaryo_sozlugu(**degisiklikler):
@@ -1292,3 +1298,47 @@ def test_bos_kumede_sifira_bolunmez():
     assert yalniz_kapsam_disi.jaccard_ortalama == 0.0
     assert yalniz_kapsam_disi.kapsam_disi_toplam == 1
     assert yalniz_kapsam_disi.kapsam_disi_dogru == 1
+
+
+def test_senaryo_dosyalari_semaya_uyar():
+    """Üç veri dosyasının ikisi ölçüm setidir ve şemaya uymak zorundadır."""
+    kor = senaryolari_yukle(DEGERLENDIRME / "kor_senaryolar.json")
+    turetilmis = senaryolari_yukle(DEGERLENDIRME / "senaryolar.json")
+
+    assert len(kor) >= 8
+    assert len(turetilmis) >= 15
+    # Yol haritası 20-30 senaryo istiyor.
+    assert len(kor) + len(turetilmis) >= 20
+    # Kör senaryoların hepsinin ses dosyası olmalı — WER onlardan hesaplanıyor.
+    assert all(s.ses_dosyasi for s in kor)
+
+
+def test_few_shot_havuzu_olcum_setiyle_kesismiyor():
+    """Sızıntı kuralı (K4): ölçüm setindeki hiçbir senaryo prompt'a örnek olamaz.
+
+    Kural yorumla değil testle dayatılıyor; Gün 21'in dersi, kodun işlediği
+    kuraldan başka bir şey anlatan yorumun sonradan yanlış ayarlandığıydı.
+    """
+    kor = senaryolari_yukle(DEGERLENDIRME / "kor_senaryolar.json")
+    turetilmis = senaryolari_yukle(DEGERLENDIRME / "senaryolar.json")
+    havuz = json.loads(
+        (DEGERLENDIRME / "few_shot_havuzu.json").read_text(encoding="utf-8")
+    )
+
+    olcum_metinleri = {_sadelestir(s.sikayet) for s in kor + turetilmis}
+    havuz_metinleri = {_sadelestir(k["sikayet"]) for k in havuz}
+
+    assert olcum_metinleri & havuz_metinleri == set()
+
+    olcum_idleri = {s.id for s in kor + turetilmis}
+    havuz_idleri = {k["id"] for k in havuz}
+    assert olcum_idleri & havuz_idleri == set()
+
+
+def test_kor_ve_turetilmis_setler_ayri_dosyada():
+    """K2: iki setin sayıları ayrı raporlanabilsin diye fiziksel ayrım şart."""
+    kor = senaryolari_yukle(DEGERLENDIRME / "kor_senaryolar.json")
+    turetilmis = senaryolari_yukle(DEGERLENDIRME / "senaryolar.json")
+
+    assert {s.id for s in kor} & {s.id for s in turetilmis} == set()
+    assert all(s.id.startswith("kor_") for s in kor)

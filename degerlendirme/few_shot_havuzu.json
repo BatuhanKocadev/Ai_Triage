@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fs_01",
+    "sikayet": "arı soktu, kolum şişti ama nefesim rahat",
+    "beklenen_cikti": {
+      "triage_code": "Yeşil",
+      "department": "Acil Servis",
+      "onerilen_tetkikler": []
+    }
+  },
+  {
+    "id": "fs_02",
+    "sikayet": "buzda kaydım, omzum çıktı, kolumu hiç oynatamıyorum",
+    "beklenen_cikti": {
+      "triage_code": "Sarı",
+      "department": "Acil Servis",
+      "onerilen_tetkikler": ["Bölgeye yönelik grafi"]
+    }
+  },
+  {
+    "id": "fs_03",
+    "sikayet": "atölyede elimi makineye kaptırdım, işaret parmağım koptu",
+    "beklenen_cikti": {
+      "triage_code": "Kırmızı",
+      "department": "Acil Servis",
+      "onerilen_tetkikler": ["Tam kan sayımı", "Kan grubu"]
+    }
+  },
+  {
+    "id": "fs_04",
+    "sikayet": "ekmek keserken parmağımı hafif kestim, kanama durdu",
+    "beklenen_cikti": {
+      "triage_code": "Yeşil",
+      "department": "Acil Servis",
+      "onerilen_tetkikler": []
+    }
+  }
+]
