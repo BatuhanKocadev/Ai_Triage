@@ -85,7 +85,7 @@ def jeton_al(kullanici: str, parola: str) -> str:
     return yanit.json()["access_token"]
 
 
-def on_ucus() -> tuple[str, str]:
+def on_ucus() -> tuple[str, str, list[dict]]:
     """Koşum öncesi dört kontrol; biri düşerse hiç başlamayız.
 
     Gün 20'nin dersi: `/health/` 200 dönmesi kimlik doğrulamasının çalıştığını
@@ -144,9 +144,14 @@ def on_ucus() -> tuple[str, str]:
         f"Ön uçuş tamam: {len(kayitlar)} dosya / {toplam_chunk} chunk, "
         f"Ollama {MODEL} hazır"
     )
-    # Derlemenin dosya kırılımı rapora yazılıyor: Ek C'nin "yanik.txt 6 chunk"
-    # gibi iddiaları aksi hâlde depoda hiçbir kanıta dayanmıyor (M8).
-    return hasta_jetonu, admin_jetonu
+    # Dosya kırılımı çağırana veriliyor ve rapora basılıyor: bilgi tabanının
+    # hangi sürümüne karşı ölçtüğümüz aksi hâlde hiçbir yerde kayıtlı olmuyor,
+    # ve "yanik.txt 6 chunk" gibi iddialar depoda kanıtsız kalıyor (M8).
+    kirilim = sorted(
+        ({"kaynak": k["kaynak"], "chunk_sayisi": k["chunk_sayisi"]} for k in kayitlar),
+        key=lambda k: k["kaynak"],
+    )
+    return hasta_jetonu, admin_jetonu, kirilim
 
 
 def _429_bekleyerek_gonder(gonder, aciklama: str, deneme_sayisi: int = 4):
@@ -385,7 +390,10 @@ def _kirilim_tablosu(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> list[s
     return satirlar
 
 
-def rapor_yaz(bloklar: list[tuple[str, list[Senaryo], list[Sonuc]]]) -> Path:
+def rapor_yaz(
+    bloklar: list[tuple[str, list[Senaryo], list[Sonuc]]],
+    kirilim: list[dict] | None = None,
+) -> Path:
     """Markdown raporu ve ham JSON'u sonuclar/ altına yazar."""
     SONUCLAR.mkdir(parents=True, exist_ok=True)
     bugun = date.today().isoformat()
@@ -394,6 +402,22 @@ def rapor_yaz(bloklar: list[tuple[str, list[Senaryo], list[Sonuc]]]) -> Path:
     md.append("")
 
     ham: dict = {"tarih": bugun, "bloklar": {}}
+
+    # Bilgi tabanının parmak izi: bu sayılar HANGİ derlemeye karşı ölçüldü.
+    # Derleme değişince retrieval de değişir, yani parmak izi olmayan bir ölçüm
+    # sonradan başka bir ölçümle kıyaslanamaz (Gün 24 tam bunu yapacak).
+    if kirilim:
+        toplam = sum(k["chunk_sayisi"] for k in kirilim)
+        md.append("## Ölçülen bilgi tabanı")
+        md.append("")
+        md.append(f"{len(kirilim)} dosya / {toplam} chunk.")
+        md.append("")
+        md.append("| Protokol | chunk |")
+        md.append("|---|---|")
+        for k in kirilim:
+            md.append(f"| {k['kaynak']} | {k['chunk_sayisi']} |")
+        md.append("")
+        ham["bilgi_tabani"] = {"dosya": len(kirilim), "chunk": toplam, "kirilim": kirilim}
 
     for etiket, senaryolar, sonuclar in bloklar:
         o = ozet(senaryolar, sonuclar)
@@ -485,7 +509,7 @@ def main() -> int:
     """Ön uçuş → iki seti koş → rapor yaz. Ön uçuş düşerse hiçbir şey koşulmaz."""
     _konsolu_utf8_yap()
     try:
-        hasta_jetonu, _admin_jetonu = on_ucus()
+        hasta_jetonu, _admin_jetonu, kirilim = on_ucus()
     except OnUcusHatasi as exc:
         print(f"ÖN UÇUŞ DÜŞTÜ: {exc}")
         return 1
@@ -505,7 +529,8 @@ def main() -> int:
         [
             ("Kör set", kor, kor_sonuclari),
             ("Türetilmiş set", turetilmis, turetilmis_sonuclari),
-        ]
+        ],
+        kirilim,
     )
     print(f"\nRapor yazıldı: {yol}")
     return 0

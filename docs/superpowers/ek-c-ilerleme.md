@@ -2021,25 +2021,27 @@ sistemin ta kendisi.
 
 ### Ölçülen sayılar (13 Ağustos 2026)
 
-Ham çıktı `degerlendirme/sonuclar/2026-08-13.{md,json}`. Bu, tüm-dal
-incelemesinin düzeltmeleri uygulandıktan **sonraki** ikinci koşumdur; birinci
-koşumun sayıları artık üretilemez, çünkü ölçüm aracı değişti (aşağıda).
+Ham çıktı `degerlendirme/sonuclar/2026-08-13.{md,json}`, ölçülen bilgi
+tabanının parmak iziyle birlikte (15 dosya / 51 chunk, dosya kırılımı raporun
+başında). Aşağıdaki tablo **üçüncü ve commit'li koşumdur**; ilk koşumun sayıları
+artık üretilemez çünkü ölçüm aracı değişti, ikinci ve üçüncü koşum ise aynı
+araçla yapıldı ve gürültü tabanını ölçmeyi mümkün kıldı (Bulgu 7).
 
 | Ölçü | Kör set | Türetilmiş set |
 |---|---|---|
 | Sette senaryo | 9 | 20 |
 | Ölçülen (kapsam içi) | 8 | 19 |
-| **Genel doğruluk (tüm)** | **%37,5** | **%84,2** |
-| Genel doğruluk (cevaplananlar) | %37,5 | %88,9 |
+| **Genel doğruluk (tüm)** | **%37,5** | **%78,9** |
+| Genel doğruluk (cevaplananlar) | %37,5 | %83,3 |
 | **Kırmızı duyarlılık** | **n/d (0/0)** | **%100,0 (10/10)** |
 | Eşik altı oranı | %0,0 (0) | %5,3 (1) |
-| Tetkik Jaccard (ort.) | 0,10 (8 senaryodan) | 0,26 (18 senaryodan) |
-| Kök neden A/B/C | 1 / 4 / 3 | 2 / 2 / 14 |
+| Tetkik Jaccard (ort.) | 0,15 (8 senaryodan) | 0,26 (18 senaryodan) |
+| Kök neden A/B/C | 1 / 4 / 3 | 2 / 3 / 13 |
 | Şanslı doğru | 0 | 0 |
 | Ölçülemedi / sonucu yazılmamış | 0 / 0 | 0 / 0 |
 | Kapsam dışı (doğru/toplam) | 1/1 | 0/1 |
 
-Ses tanıma: **ortalama WER 0,150** (9 kayıt), hizalama eşiğinin (0,6) çok
+Ses tanıma: **ortalama WER 0,143** (9 kayıt), hizalama eşiğinin (0,6) çok
 altında — ses-metin eşleşmesi doğru.
 
 **Klinik olarak en önemli tek cümle:** türetilmiş setteki 10 Kırmızı vakanın
@@ -2048,15 +2050,15 @@ bunların yalnızca **ikisi alt-triyaj** (`kor_07` ve `tur_17`, ikisi de Sarı �
 Yeşil); beşi üst-triyaj (sistem daha temkinli davranmış), biri cevapsızlık
 (`tur_07` eşik altında kaldı). Ayrıca kapsam dışı `tur_20` sızdı.
 
-### Bulgu 1 — kör set ile türetilmiş set ayrışıyor: %37,5'e karşı %84,2
+### Bulgu 1 — kör set ile türetilmiş set ayrışıyor: %37,5'e karşı %78,9
 
 **Bu, günün asıl sonucu ve iki yazarlı set kuralının (K2/K3) varlık sebebi.**
 Türetilmiş 20 senaryoyu protokolleri okuyan kişi yazdı; kör 9 senaryoyu
 kullanıcı, protokol metnini **hiç görmeden**, gerçek hasta diliyle yazdı. İki
 küme aynı sistemi ölçüyor ve arada iki katından fazla fark var.
 
-Doğru okuma: **%84,2 sistemin doğruluğu değil, sorusunu belgeden türeten bir
-ölçüm setinin ürettiği tavan.** Tek yazarlıkla ölçülseydi rapor "%84 doğruluk"
+Doğru okuma: **%78,9 sistemin doğruluğu değil, sorusunu belgeden türeten bir
+ölçüm setinin ürettiği tavan.** Tek yazarlıkla ölçülseydi rapor "%79 doğruluk"
 derdi ve bu sayı kendi kendini doğrulardı.
 
 Üç dürüst çekince, üçü de sayıyla birlikte okunmalı:
@@ -2118,7 +2120,7 @@ fonksiyonu, yani sıfır bilgi ekler. Bölüm ölçümden atılmadı, **ölçül
 sıkıştırılacak.
 
 **Ama düzeltme C kutusunu kurtarmadı ve bu da bir bulgu.** Bölüm kapısı
-kapatılınca türetilmiş C yalnızca 15'ten **14**'e indi. Demek ki doygunluğun
+kapatılınca türetilmiş C 15'ten **13**'e indi (koşum 3). Demek ki doygunluğun
 baskın sebebi bölüm değil, aşağıdaki adlandırma artefaktı: tetkik karşılaştırması
 tam eşitlik istiyor ve neredeyse hiçbir senaryoda 1,00 tutmuyor, dolayısıyla
 triyaj kodu doğru olan her senaryo yine C'ye düşüyor. **A/B/C tasnifi bugün Gün
@@ -2177,25 +2179,37 @@ burada "sistem iyi çalıştı"dan çok "bilgi tabanında yok" demek.
 
 ### Bulgu 7 — ölçümün gürültü tabanı ölçüldü: bir senaryo = 5,3 puan
 
-İnceleme düzeltmelerinden sonra ölçüm ikinci kez koşuldu. Düzeltmeler triyaj
-kodlarına dokunmuyordu, ama iki koşum karşılaştırıldığında:
+Ölçüm **üç kez** koşuldu (biri araç düzeltilmeden önce, ikisi sonra). Düzeltmeler
+triyaj kodlarına dokunmuyordu. Üç koşumun karşılaştırması:
 
-- **29 senaryonun 1'inde** çıkan triyaj kodu değişti (`tur_04`: Kırmızı → Sarı,
-  yani yanlıştan doğruya).
-- **Kaynak listesi hiçbir senaryoda değişmedi** — retrieval tam kararlı; oynayan
-  yalnızca LLM.
-- Bu tek dönüş türetilmiş doğruluğu **%78,9 → %84,2** taşıdı.
+| | koşum 1 | koşum 2 | koşum 3 |
+|---|---|---|---|
+| Kör doğruluk | %37,5 | %37,5 | %37,5 |
+| Türetilmiş doğruluk | %78,9 | **%84,2** | %78,9 |
+| Kırmızı duyarlılık (türetilmiş) | %100 | %100 | %100 |
+| Kaynak listesi değişen senaryo | — | 0 | 0 |
+| Triyaj kodu değişen senaryo | — | 1 | 1 |
+
+**Değişen senaryo her seferinde aynı:** `tur_04`, ve kodu Kırmızı → Sarı →
+Kırmızı diye salındı. Geri kalan 28 senaryonun kodu üç koşumda da aynı çıktı,
+**kör set üç koşumda da birebir aynı**, ve **retrieval üç koşumda da tam
+kararlıydı** — hiçbir senaryonun kaynak listesi değişmedi. Yani oynayan tek şey
+LLM, ve pratikte tek bir senaryoda oynuyor.
 
 **Gün 24 için bağlayıcı sonuç:** payda 19 iken bir senaryonun oynaması manşeti
-5,3 puan değiştiriyor. Tek koşumluk bir önce/sonra tablosu, few-shot'ın
-etkisiyle Ollama'nın belirlenimsizliğini **ayırt edemez**. Gün 24 ya aynı
-koşulda birkaç kez koşup ortalama almalı, ya da iddiasını "fark gürültü
-tabanının üstünde mi" sorusuna göre kurmalı. Ölçülmemiş olsaydı Gün 24, hiçbir
-şey yapmadan "+5 puan iyileşme" raporlayabilirdi.
+**5,3 puan** değiştiriyor. Tek koşumluk bir önce/sonra tablosu, few-shot'ın
+etkisiyle Ollama'nın belirlenimsizliğini **ayırt edemez**; +5 puanlık bir
+"iyileşme" hiçbir şey yapmadan da elde edilebilir. Gün 24 ya aynı koşulda birkaç
+kez koşup ortalama almalı ya da iddiasını "fark gürültü tabanının üstünde mi"
+sorusuna göre kurmalı.
+
+İyi haber: gürültü **her yere dağılmış değil, tek senaryoda toplanmış** ve
+klinik olarak en kritik sayı (Kırmızı duyarlılık %100) üç koşumda da sabit. Yani
+taban güvenilir, oynayan yalnızca genel doğruluğun ondalık hanesi.
 
 ### Bulgu 8 — WER'de rakam normalizasyonu artefaktı (önceden ilan edilmişti)
 
-Ortalama WER 0,150. Görev 4'ün incelemesi bunu önceden söylemişti ve sürücü
+Ortalama WER 0,143 (koşum 3; üç koşumda 0,150–0,143 arasında). Görev 4'ün incelemesi bunu önceden söylemişti ve sürücü
 kendisi işaretliyor: kullanıcı *"Üç gündür"* yazmış, whisper *"3 gündür"* yazıyor.
 Tanıma hatası değil, normalizasyon sınırı; sayı düzeltilmedi, sınır raporlandı.
 
@@ -2281,8 +2295,8 @@ Test 265 → **269**, kapsama %87,42 dal (kapı yeşil).
 
 ### Gün 24'e devredilenler
 
-1. **Ölçümün gürültü tabanı 5,3 puan** (Bulgu 7). Önce/sonra tablosu tek
-   koşumla kurulamaz.
+1. **Ölçümün gürültü tabanı 5,3 puan ve kaynağı `tur_04`** (Bulgu 7). Önce/sonra
+   tablosu tek koşumla kurulamaz; en azından o senaryo ayrıca izlenmeli.
 2. **Tetkik adı normalizasyonu** (`Hemogram (Tam kan sayımı)` ≡ `Tam kan
    sayımı`, `TİT` ≡ `Tam İdrar Tetkiki`). C kutusunun doygunluğunun baskın
    sebebi bu; Jaccard bu yapılmadan iyileşemez.
