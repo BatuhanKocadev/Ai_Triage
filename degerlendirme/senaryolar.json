@@ -49,7 +49,7 @@
     "beklenen_bolum": "Acil Servis",
     "beklenen_tetkikler": ["Tam kan sayımı", "Biyokimya", "Tam İdrar Tetkiki", "EKG"],
     "beklenen_kaynak": "karin_agrisi.txt",
-    "gerekce": "karin_agrisi.txt Sarı: 'Yaşlı hastalarda ortaya çıkan akut karın ağrısı vakaları (ESI 2. Seviye olarak kabul edilir)' — hasta 71 yaşında ve ağrı akut. Aynı bölümdeki 'akut batın tablosu ile başvuran, bekleyemeyecek yüksek riskli hastalar' maddesi de tutuyor: dokundurtmama (defans/periton irritasyonu), kusma, gaz çıkaramama. Kırmızı hipotansiyon/taşikardi ile şok tablosu istiyor, tarif edilmiyor. EKG protokolde orta-ileri yaş için isteniyor."
+    "gerekce": "karin_agrisi.txt Sarı, YAŞTAN BAĞIMSIZ dal: 'Akut batın tablosu ile başvuran, bekleyemeyecek durumdaki yüksek riskli hastalar' — dokundurtmama (defans/periton irritasyonu), kusma ve gaz çıkaramama akut batın tablosudur. Aynı bölümdeki 'Yaşlı hastalarda ortaya çıkan akut karın ağrısı vakaları (ESI 2. Seviye)' maddesi etiketi ayrıca destekliyor ama tek dayanağı değil; sıralama bilinçli, çünkü etiket yaş seçimimin artefaktı olmamalı. Kırmızı hipotansiyon/taşikardi ile şok tablosu istiyor, tarif edilmiyor. YAŞ EŞİĞİ (71, uygulayıcı seçimi): derlemenin tek sayısal yaşlılık eşiği ates_sepsis.txt'nin '>65'i; 71 bunun üstünde, ±2 oynatmak (69) tarafı değiştirmiyor. Marj derlemedeki en incesi (6 yıl) ama etiket yukarıdaki yaştan bağımsız dala dayandığı için yaş düşse de Sarı kalır. EKG protokolde orta-ileri yaş için isteniyor, 71 bu tarafta tartışmasız."
   },
   {
     "id": "tur_05",
