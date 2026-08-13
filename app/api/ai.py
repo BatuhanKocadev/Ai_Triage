@@ -1,4 +1,6 @@
+import json
 import uuid
+from pathlib import Path
 from fastapi import APIRouter, status, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
@@ -23,9 +25,80 @@ router = APIRouter(
 # bunların dışına çıkabildiği için yanıt normalize ediliyor.
 GECERLI_TRIYAJ_KODLARI = {"Kırmızı", "Sarı", "Yeşil"}
 
+# Derlemenin desteklediği yönlendirme dağarcığı (akuite alanı). Hastane bölümü
+# adı (Pulmonoloji vb.) hiçbir protokolde yok; model uydurmasın diye kapalı tutulur.
+GECERLI_DEPARTMANLAR = {
+    "Kırmızı Alan",
+    "Sarı Alan",
+    "Yeşil Alan",
+    "Resüsitasyon",
+    "Şok Odası",
+    "Triyaj Bankosu",
+}
+
+# Triyaj kodundan varsayılan akuite alanı — dağarcık dışı department indirmesi.
+_TRIYAJ_DEPARTMAN = {
+    "Kırmızı": "Kırmızı Alan",
+    "Sarı": "Sarı Alan",
+    "Yeşil": "Yeşil Alan",
+    "Belirsiz": "Triyaj Bankosu",
+}
+
 KLINIK_UYARI = (
     "Bu öneri klinik karar destek amaçlıdır; kesin tanı ve tedavi hekim onayına tabidir."
 )
+
+# Few-shot havuzu bir kez okunur; dosya yoksa boş liste (LLM yine çalışır).
+_few_shot_ornekleri: list[dict] | None = None
+
+
+def _few_shot_dosya_yolu() -> Path:
+    """Repo kökündeki few-shot havuzunun yolu (`app/api/ai.py` → kök = parents[2])."""
+    return Path(__file__).resolve().parents[2] / "degerlendirme" / "few_shot_havuzu.json"
+
+
+def few_shot_orneklerini_yukle(yol: Path | None = None) -> list[dict]:
+    """Few-shot JSON'unu okur; süreç ömrü boyunca önbelleğe alır.
+
+    Yol verilirse önbellek atlanır (testler tmp havuz basabilsin diye).
+    """
+    global _few_shot_ornekleri
+    if yol is None and _few_shot_ornekleri is not None:
+        return _few_shot_ornekleri
+    hedef = yol if yol is not None else _few_shot_dosya_yolu()
+    try:
+        ornekler = json.loads(hedef.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        logger.warning("Few-shot havuzu bulunamadı: %s", hedef)
+        ornekler = []
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Few-shot havuzu okunamadı (%s): %s", hedef, exc)
+        ornekler = []
+    if yol is None:
+        _few_shot_ornekleri = ornekler
+    return ornekler
+
+
+def few_shot_prompt_metni(ornekler: list[dict] | None = None) -> str:
+    """Havuz kayıtlarını prompt'a yapıştırılacak örnek blokuna çevirir.
+
+    Tetkik listesi havuzda bilerek boş bırakılır (K6); burada da yazılmaz ki
+    model ölçülen tetkik adlarını ezberlemesin.
+    """
+    if ornekler is None:
+        ornekler = few_shot_orneklerini_yukle()
+    if not ornekler:
+        return ""
+    satirlar = ["Örnekler (yalnızca biçim ve akuite alanı için; kopyalama):"]
+    for ornek in ornekler:
+        cikti = ornek.get("beklenen_cikti") or {}
+        satirlar.append(
+            f'- Şikayet: "{ornek.get("sikayet", "")}" → '
+            f'{{"triage_code": "{cikti.get("triage_code", "")}", '
+            f'"department": "{cikti.get("department", "")}", '
+            f'"onerilen_tetkikler": []}}'
+        )
+    return "\n".join(satirlar)
 
 class GenderEnum(str, Enum):
     male = "Erkek"
@@ -90,6 +163,21 @@ def _normalize_tetkikler(raw_tetkikler) -> list[str]:
         return []
 
     return [str(t).strip() for t in raw_tetkikler if str(t).strip()]
+
+
+def _normalize_department(raw_department, triage_code: str) -> str:
+    """Modelin department çıktısını kapalı akuite dağarcığına indirger.
+
+    Dağarcıkta varsa kanonik yazımı döner; yoksa (Pulmonoloji, Dahiliye, …)
+    triyaj kodunun varsayılan alanına düşer. Eşik altı yolu zaten
+    'Triyaj Bankosu' yazar; bu fonksiyon LLM yolunu aynı sözleşmeye çeker.
+    """
+    if isinstance(raw_department, str) and raw_department.strip():
+        sade = _sadelestir(raw_department)
+        for gecerli in GECERLI_DEPARTMANLAR:
+            if sade == _sadelestir(gecerli):
+                return gecerli
+    return _TRIYAJ_DEPARTMAN.get(triage_code, "Triyaj Bankosu")
 
 
 def _kaydet(db: Session, request_data: "AnalysisRequest", sonuc: AnalysisResponse) -> uuid.UUID:
@@ -166,6 +254,7 @@ def analyze_symptoms(
     fever_info = request_data.vitals.fever if request_data.vitals and request_data.vitals.fever else 'Bilinmiyor'
     pulse_info = request_data.vitals.pulse if request_data.vitals and request_data.vitals.pulse else 'Bilinmiyor'
     chronic_info = request_data.chronic_disease if request_data.chronic_disease else 'Yok'
+    ornek_blogu = few_shot_prompt_metni()
 
     system_prompt = f"""
     Sen uzman bir tıbbi triyaj yapay zekasısın.
@@ -175,12 +264,17 @@ def analyze_symptoms(
     Referans dokümanlar:
     {source_text}
 
+    {ornek_blogu}
+
     Sadece JSON formatında döndür:
-    {{"status": "success", "triage_code": "Kırmızı/Sarı/Yeşil", "department": "Bölüm Adı",
+    {{"status": "success", "triage_code": "Kırmızı/Sarı/Yeşil", "department": "Kırmızı Alan/Sarı Alan/Yeşil Alan/Resüsitasyon/Şok Odası",
       "onerilen_tetkikler": ["Tam kan sayımı", "..."], "ai_note": "Açıklama"}}
 
     Kurallar:
     - triage_code yalnızca "Kırmızı", "Sarı" veya "Yeşil" olabilir.
+    - department yalnızca şu değerlerden biri olabilir: "Kırmızı Alan", "Sarı Alan",
+      "Yeşil Alan", "Resüsitasyon", "Şok Odası". Hastane bölümü adı (Pulmonoloji,
+      Ortopedi, Kardiyoloji vb.) YAZMA — protokoller akuite alanına yönlendirir.
     - onerilen_tetkikler sadece yukarıdaki referans dokümanlarda geçen veya
       onlarla desteklenen tetkikleri içersin; uydurma tetkik yazma.
     - Referans dokümanlar tetkik önermek için yeterli değilse onerilen_tetkikler
@@ -201,10 +295,11 @@ def analyze_symptoms(
     if KLINIK_UYARI not in ai_note:
         ai_note = f"{ai_note} {KLINIK_UYARI}".strip()
 
+    triage_code = _normalize_triage_code(result_dict.get("triage_code"))
     sonuc = AnalysisResponse(
         status="success",
-        triage_code=_normalize_triage_code(result_dict.get("triage_code")),
-        department=str(result_dict.get("department") or "Triyaj Bankosu").strip(),
+        triage_code=triage_code,
+        department=_normalize_department(result_dict.get("department"), triage_code),
         onerilen_tetkikler=_normalize_tetkikler(result_dict.get("onerilen_tetkikler")),
         ai_note=ai_note,
         sources=relevant_documents,

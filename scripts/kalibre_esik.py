@@ -107,15 +107,32 @@ ALAKASIZ = [
 ]
 
 
-def en_yuksek_skor(sorgu: str) -> float:
-    """Sorgu için bilgi tabanındaki en iyi eşleşmenin normalize skorunu döndürür."""
-    sonuc = get_collection().query(query_texts=[sorgu], n_results=10)
+def en_iyi_eslesme(sorgu: str, n_results: int | None = None) -> tuple[float, str | None]:
+    """Sorgu için en yüksek rerank skorunu ve kazanan kaynak dosya adını döndürür.
+
+    Gün 23'te bu script yalnızca skora bakıyordu; `kor_08` gibi vakalarda
+    yanlış protokol (yanik.txt) kazansa bile 'GEÇER' yazılıyordu. Kaynak
+    olmadan eşik kalibrasyonu komşu protokol gaspını göremez.
+    """
+    if n_results is None:
+        n_results = settings.top_k_initial
+    sonuc = get_collection().query(query_texts=[sorgu], n_results=n_results)
     dokumanlar = sonuc["documents"][0]
     if not dokumanlar:
-        return 0.0
-    # predict() olasılık döndürüyor; ek dönüşüm yok.
+        return 0.0, None
+    metadatas = (sonuc.get("metadatas") or [[]])[0]
     skorlar = get_reranker().predict([[sorgu, d] for d in dokumanlar])
-    return max(float(s) for s in skorlar)
+    en_iyi_i = max(range(len(skorlar)), key=lambda i: float(skorlar[i]))
+    kaynak = None
+    if en_iyi_i < len(metadatas) and isinstance(metadatas[en_iyi_i], dict):
+        kaynak = metadatas[en_iyi_i].get("source")
+    return float(skorlar[en_iyi_i]), kaynak
+
+
+def en_yuksek_skor(sorgu: str) -> float:
+    """Geriye uyum: yalnızca skoru döndürür (eski çağrı noktaları için)."""
+    skor, _ = en_iyi_eslesme(sorgu)
+    return skor
 
 
 def main() -> None:
@@ -125,23 +142,26 @@ def main() -> None:
 
     print(f"Model: {settings.reranker_model}")
     print(f"Mevcut eşik: {settings.rerank_threshold}")
+    print(f"top_k_initial: {settings.top_k_initial}")
     print(f"Bilgi tabanındaki parça sayısı: {get_collection().count()}\n")
 
     print("=== İLGİLİ sorgular (geçmeli) ===")
     ilgili_skorlar = []
     for sorgu in ILGILI:
-        skor = en_yuksek_skor(sorgu)
+        skor, kaynak = en_iyi_eslesme(sorgu)
         ilgili_skorlar.append(skor)
         durum = "GEÇER" if skor >= settings.rerank_threshold else "elenir"
-        print(f"  [{durum}] {skor:.4f}  {sorgu[:60]}")
+        kaynak_yazi = kaynak or "?"
+        print(f"  [{durum}] {skor:.4f}  kaynak={kaynak_yazi}  {sorgu[:50]}")
 
     print("\n=== ALAKASIZ sorgular (elenmeli) ===")
     alakasiz_skorlar = []
     for sorgu in ALAKASIZ:
-        skor = en_yuksek_skor(sorgu)
+        skor, kaynak = en_iyi_eslesme(sorgu)
         alakasiz_skorlar.append(skor)
         durum = "GEÇER" if skor >= settings.rerank_threshold else "elenir"
-        print(f"  [{durum}] {skor:.4f}  {sorgu[:60]}")
+        kaynak_yazi = kaynak or "?"
+        print(f"  [{durum}] {skor:.4f}  kaynak={kaynak_yazi}  {sorgu[:50]}")
 
     print("\n=== ÖZET ===")
     print(f"  ilgili   -> min={min(ilgili_skorlar):.4f}  max={max(ilgili_skorlar):.4f}")

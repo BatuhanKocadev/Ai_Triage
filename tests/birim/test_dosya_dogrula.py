@@ -7,6 +7,9 @@ IMZALAR sözlüğünde bir yazım hatası (ör. b"%PDFX") olsa paket yine de ye�
 kalırdı — bu dosya tam da o boşluğu kapatıyor.
 """
 
+import io
+import zipfile
+
 import pytest
 from fastapi import HTTPException
 
@@ -20,8 +23,49 @@ def test_gecerli_pdf_kabul_edilir():
 
 
 def test_gecerli_docx_kabul_edilir():
-    uzanti = dosyayi_dogrula("rapor.docx", b"PK\x03\x04 gecerli docx icerigi")
+    # Yalnızca PK imzası yetmez; gerçek DOCX Content_Types taşıyan ZIP olmalı.
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types/>')
+        zf.writestr("word/document.xml", "<w:document/>")
+    uzanti = dosyayi_dogrula("rapor.docx", buf.getvalue())
     assert uzanti == "docx"
+
+
+def test_duz_zip_docx_diye_reddedilir():
+    # Herhangi bir ZIP PK ile başlar; Office Open XML değilse reddedilmeli.
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("readme.txt", "bu bir docx degil")
+    with pytest.raises(HTTPException) as exc_info:
+        dosyayi_dogrula("sahte.docx", buf.getvalue())
+    assert exc_info.value.status_code == 400
+
+
+def test_bozuk_zip_docx_reddedilir():
+    # PK imzası var ama ZipFile açılamaz → BadZipFile dalı.
+    with pytest.raises(HTTPException) as exc_info:
+        dosyayi_dogrula("bozuk.docx", b"PK\x03\x04" + b"\x00" * 20)
+    assert exc_info.value.status_code == 400
+
+
+def test_asiri_buyuk_dosya_reddedilir():
+    asiri = b"a" * (settings.max_upload_mb * 1024 * 1024 + 1)
+    with pytest.raises(HTTPException) as exc_info:
+        dosyayi_dogrula("buyuk.txt", asiri)
+    assert exc_info.value.status_code == 413
+
+
+def test_gecersiz_utf8_txt_reddedilir():
+    with pytest.raises(HTTPException) as exc_info:
+        dosyayi_dogrula("bozuk.txt", b"\xff\xfe gecersiz")
+    assert exc_info.value.status_code == 400
+
+
+def test_dosya_adi_yoksa_reddedilir():
+    with pytest.raises(HTTPException) as exc_info:
+        dosyayi_dogrula(None, b"metin")  # type: ignore[arg-type]
+    assert exc_info.value.status_code == 400
 
 
 def test_gecerli_txt_kabul_edilir():

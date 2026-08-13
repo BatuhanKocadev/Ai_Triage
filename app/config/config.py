@@ -90,6 +90,11 @@ class Settings(BaseSettings):
     # Reranker modeli, gömme modeli ya da derleme değişirse YENİDEN ÖLÇÜLMELİ.
     rerank_threshold: float = 0.005
 
+    # Chroma'dan reranker'a giden ilk aday sayısı. 51 chunk'lık derlemede 10,
+    # doğru protokolü aday dışına itiyordu (Gün 23: zehirlenme / ateş). Gün 24
+    # varsayılanı 20; reranker / derleme değişince yeniden ölçülmeli.
+    top_k_initial: int = 20
+
     # Ses tanıma (STT) — faster-whisper
     whisper_model_size: str = "medium"
     whisper_device: str = "auto"

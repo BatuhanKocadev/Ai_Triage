@@ -3,9 +3,9 @@
 Kullanım (proje kökünden):
     .venv\\Scripts\\python.exe scripts/seed_users.py
 
-Tekrar çalıştırılabilir: var olan kullanıcıyı yeniden eklemez. Ancak rolü aşağıdaki
-listedekinden farklıysa mevcut satırın rolünü YAZAR (günceller) — yani script salt
-okunur değildir, canlı `ai_triage` veritabanında rol değiştirebilir.
+Tekrar çalıştırılabilir: var olan kullanıcının rolü ve parolası listedeki
+değerlerle senkronize edilir (idempotent seed). Canlı `ai_triage` veritabanında
+bu üç hesabın rol/parolasını bilinçli olarak yeniden yazar.
 """
 
 import io
@@ -15,7 +15,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 from app.db.database import SessionLocal
 from app.models.user import User
-from app.services.auth_service import hash_password
+from app.services.auth_service import hash_password, verify_password
 
 BASLANGIC_KULLANICILARI = [
     {"username": "admin", "password": "admin123", "role": "admin"},
@@ -32,14 +32,27 @@ def main() -> None:
         for veri in BASLANGIC_KULLANICILARI:
             mevcut = db.query(User).filter(User.username == veri["username"]).first()
             if mevcut:
+                degisiklikler: list[str] = []
                 # Rol listedekinden farklıysa düzeltilir: "doctor" hesabı Gün 17
                 # öncesinde "user" rolüyle yazılmıştı.
                 if mevcut.role != veri["role"]:
                     eski_rol = mevcut.role
                     mevcut.role = veri["role"]
-                    print(f"  güncellendi: {veri['username']} (rol {eski_rol} -> {veri['role']})")
+                    degisiklikler.append(f"rol {eski_rol} -> {veri['role']}")
+                # Parola listedekinden farklıysa düzeltilir — aksi hâlde seed
+                # "atlandı" derken giriş bilinmeyen bir hash'le kırılır kalır.
+                if not verify_password(veri["password"], mevcut.hashed_password):
+                    mevcut.hashed_password = hash_password(veri["password"])
+                    degisiklikler.append("parola senkron")
+                if degisiklikler:
+                    print(
+                        f"  güncellendi: {veri['username']} ({', '.join(degisiklikler)})"
+                    )
                 else:
-                    print(f"  atlandı    : {veri['username']} (zaten var, rol={mevcut.role})")
+                    print(
+                        f"  atlandı    : {veri['username']} "
+                        f"(zaten var, rol={mevcut.role}, parola uyumlu)"
+                    )
                 continue
 
             db.add(User(

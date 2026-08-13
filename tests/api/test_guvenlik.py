@@ -23,13 +23,15 @@ def test_ardarda_istek_hiz_sinirina_takilir(istemci, yetkili_baslik, esik_alti):
     # ihtimali var — o durumda test yanlış sebeple kırılır ve hız sınırı hakkında
     # hiçbir şey kanıtlamaz. `esik_alti` fixture'ı gerçek LLM'e gidilmesini önlüyor.
     baslik = yetkili_baslik(kullanici_adi="hasta_ayse", rol="user")
-    son_durum = None
+    son_yanit = None
     for _ in range(settings.rate_limit_genel + 1):
-        son_durum = istemci.post(
+        son_yanit = istemci.post(
             "/ai/analiz", json=ziyaret_verisi(), headers=baslik
-        ).status_code
+        )
 
-    assert son_durum == 429
+    assert son_yanit.status_code == 429
+    # Retry-After istemciye pencere uzunluğunu söyler (nezaket; koruma sunucuda).
+    assert son_yanit.headers.get("retry-after") == str(settings.rate_limit_pencere_sn)
 
 
 @pytest.mark.entegrasyon
@@ -95,10 +97,11 @@ def test_ip_katmani_basarili_girisleri_de_sayar(istemci, kullanici_uret):
     # olacak; o değişiklik geçerli tek bir hesabı olan saldırgana sınırsız
     # istek hakkı verir (parola serpme ve sözlük büyütme yeniden açılır).
     kullanici_uret(kullanici_adi="ayse", parola="dogru-parola")
-    # Kova bilerek limitin BİR ALTINA kadar ucuz denemelerle dolduruluyor:
-    # kullanıcı adları yok, bu yüzden bcrypt hiç çalışmıyor. Her deneme FARKLI
-    # bir ada gittiği için kullanıcı adı katmanı (5 başarısızlık) tetiklenmiyor
-    # ve aşağıdaki 429'un tek olası kaynağı IP katmanı kalıyor.
+    # Kova bilerek limitin BİR ALTINA kadar ucuz denemelerle dolduruluyor.
+    # Her deneme FARKLI bir ada gittiği için kullanıcı adı katmanı (5
+    # başarısızlık) tetiklenmiyor ve aşağıdaki 429'un tek olası kaynağı IP
+    # katmanı kalıyor. (Var olmayan adlarda da bcrypt çalışır — zamanlama
+    # oracle kapatması; maliyet bilinçli.)
     for sira in range(settings.rate_limit_giris_ip - 1):
         istemci.post(
             "/auth/login", data={"username": f"dolgu{sira}", "password": "yanlis"}
@@ -246,6 +249,32 @@ def test_hata_mesajinda_yigin_izi_yok(istemci, yetkili_baslik, monkeypatch):
     assert "RuntimeError" not in govde
     # İzleme kodu, sızıntı yaratmadan log'daki satırla eşleşmeyi sağlıyor.
     assert yanit.json()["izleme_kodu"]
+
+
+@pytest.mark.entegrasyon
+def test_500_yaniti_izinli_origin_icin_cors_basligi_tasir(
+    istemci, yetkili_baslik, monkeypatch
+):
+    # Global handler CORS middleware'inin dışında doğar; tarayıcı istemcisi
+    # aksi hâlde izleme_kodu'nu okuyamaz.
+    from app.api import document as document_modulu
+
+    def _patlat():
+        raise RuntimeError("cors-icin-patlama")
+
+    monkeypatch.setattr(document_modulu, "get_collection", _patlat)
+    izinli = [k.strip() for k in settings.cors_origins.split(",") if k.strip()][0]
+
+    yanit = istemci.get(
+        "/document/liste",
+        headers={
+            **yetkili_baslik(kullanici_adi="yonetici", rol="admin"),
+            "Origin": izinli,
+        },
+    )
+
+    assert yanit.status_code == 500
+    assert yanit.headers.get("access-control-allow-origin") == izinli
 
 
 @pytest.mark.entegrasyon

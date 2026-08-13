@@ -2345,3 +2345,86 @@ incelemeden değil, incelemeden sonra yapılan bir ölçümden geldi. **Belge, k
 kaydettiği sayıyı üreten koddan sonra güncellenmek zorunda:** araç değişince
 birinci koşumun sayıları üretilemez hâle geldi ve bu bölüm yeniden koşulan
 ölçümle baştan yazıldı.
+
+## Gün 24 · Prompt iyileştirme + ölçüm tekrarı (13–14 Ağustos 2026)
+
+Tasarım: `docs/superpowers/specs/2026-08-13-gun24-prompt-olcum-design.md`.
+Plan: `docs/superpowers/plans/2026-08-13-gun24-prompt-olcum.md`. Dal:
+`gun24-prompt-olcum`.
+
+### Bu günde ne yapıldı
+
+Üç önkoşul + few-shot enjeksiyonu + üç tam koşumluk önce/sonra tablosu.
+
+1. **Tetkik alias** (`degerlendirme/olcum.py`): `Hemogram (Tam kan sayımı)` ≡
+   `Tam kan sayımı`, `TİT` ≡ `Tam İdrar Tetkiki`, `EKG` ≡ `Elektrokardiyografi`.
+2. **`department` akuite dağarcığı** (`app/api/ai.py`): kapalı kelime dağarcığı +
+   `_normalize_department`; altın `beklenen_bolum` akuite alanına çekildi;
+   `kok_neden` C kapısında `bolum_dogru_mu` yeniden açıldı.
+3. **`yanik` aşırı-getirme:** `kalibre_esik` kaynak raporlar; `top_k_initial=20`
+   ayara alındı; `yanik.txt` 6→3 chunk; `ates_sepsis.txt`'e hasta-dili eklendi
+   (kor_08 gömme sırası 26 → top-20 içi). Ölçüm: `kor_08` kazanan kaynak
+   **`ates_sepsis.txt`** (skor 0,85); üç yanık senaryosu `yanik.txt` kaldı.
+4. **Few-shot** havuzu prompt'a enjekte edildi (tetkik adı öğretilmiyor).
+5. **Ölçüm:** baseline `2026-08-13.json` + üç koşum
+   (`2026-08-13-kosum1`, `2026-08-14-kosum2/3`); rapor
+   `degerlendirme/sonuclar/gun24-once-sonra.md`.
+
+Test: **290** passed (`-m "not yavas"`), dal kapsaması **%87,29** (kapı 87).
+
+### Önce / sonra (üç koşum ortalaması)
+
+| Ölçü | Önce (kör) | Sonra ort. (kör) | Önce (tür.) | Sonra ort. (tür.) |
+|---|---|---|---|---|
+| Genel doğruluk | %37,5 | %37,5 | %78,9 | **%80,7** |
+| Kırmızı duyarlılık | n/d | n/d | %100 | **%90,0** |
+| Eşik altı | %0 | %0 | %5,3 | %0 |
+| Jaccard (tür.) | 0,26 | — | 0,26 | **0,28** |
+
+Tek koşumlar (tür. doğruluk): %73,7 / %84,2 / %84,2. `tur_04` üç koşumda da
+**Sarı** (önce Kırmızı↔Sarı salınıyordu).
+
+**Dürüst okuma:** türetilmiş doğruluk farkı **+1,8 puan** — gürültü tabanının
+(5,3) **içinde**. Manşet “few-shot doğruluğu yükseltti” diye yazılamaz.
+Jaccard ve C kutusu (13 → ort. 12,3) adlandırma/bölüm düzeltmelerinden
+beklenen yönde kıpırdadı. Kırmızı duyarlılığı ortalama %90’a indi (10’dan 9);
+klinik manşette gerileme — raporlanmalı. Tetkik sayısı 2,47 → 2,32 (few-shot
+bastırma zayıf).
+
+**Retrieval kazanımı (sayı dışı ama ölçülmüş):** `kor_08` artık
+`ates_sepsis.txt` alıyor; Gün 23’teki tek kör A kutusu kaynağı kapandı.
+
+### Bilgi tabanı parmak izi
+
+15 dosya / **49** chunk (`yanik` 3, `ates_sepsis` 4). `calistir.BEKLENEN_CHUNK=49`.
+
+### Açık kalanlar
+
+- `kor_10` (kullanıcı ses + metin)
+- Kırmızı duyarlılık düşüşünün senaryo kırılımı (hangi vaka kaçtı) raporda
+  tek tek izlenmeli
+- Altın standart etik borçları (Gün 23 listesi)
+
+## Borç kapatma turu — DEVIR §9 gerçek defektler (14 Ağustos 2026)
+
+Devir brief §9’daki **kod defektleri** `gun24-prompt-olcum` worktree’sinde
+kapatıldı (ölçüm/etiket borçları ve bilinçli tasarım sınırları ayrı):
+
+| Madde | Kapanış |
+|---|---|
+| `istek_at` log yok | `logging.exception` |
+| Giriş 401/422/500/429 ayrımı + `.strip()` | frontend + `/auth/login` strip |
+| `safe_filename.lower()` çakışması | yalnızca boşluk→`_`; harf durumu korunur |
+| Boyut `read()` sonrası | `file.size` ön kontrol + doğrulayıcı |
+| Zamanlama oracle | yok kullanıcıda da `SAHTE_PAROLA_HASH` bcrypt |
+| `500` CORS | handler’a izinli `Origin` başlığı |
+| DOCX = herhangi ZIP | `[Content_Types].xml` zorunlu |
+| `PGHOSTADDR`/`PGSERVICE` | kilit reddeder; conftest temizler |
+| `seed_users` kısmi idempotent | rol **ve** parola senkron |
+| `429` `Retry-After` | pencere sn sabit başlık |
+| K5 aşama mesajları / `filename=None` / geçersiz UTF-8 | genel ret + testler |
+
+**Hâlâ “bilinen sınır” (rapor maddesi, bu turda kodlanmadı):** altın standart
+etik tartışmaları, `zehirlenme` bilinmeyen madde dalı, zip-bomb/chunk üst sınırı
+kararı, Streamlit otomatik test, uçtan uca gerçek PDF fixture, paket geneli
+`raise_server_exceptions=False`, klinik giriş hacmi ölçümü.

@@ -26,6 +26,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+# Var olmayan kullanıcıda da bcrypt maliyeti ödemek için sabit hash
+# ("timing-oracle-pad"). Import'ta hash üretilmez — app.main açılışı yavaşlamasın.
+SAHTE_PAROLA_HASH = (
+    "$2b$12$N/foJk/tMRglJHd7PRt9OOeutbWqq4UnL.kXgZJrgqoefehHaBRmK"
+)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_context.verify(plain_password, hashed_password)

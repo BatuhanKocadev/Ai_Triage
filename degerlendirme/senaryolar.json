@@ -7,7 +7,7 @@
     "kronik_hastalik": "Hipertansiyon",
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "EKG",
       "Tam kan sayımı",
@@ -25,7 +25,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "EKG",
       "Tam kan sayımı",
@@ -43,7 +43,7 @@
     "kronik_hastalik": "Astım",
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Göğüs Radyografisi",
       "Kan Gazı Analizi"
@@ -59,7 +59,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı",
       "Biyokimya",
@@ -77,7 +77,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Nörolojik değerlendirme",
       "Bilgisayarlı Tomografi",
@@ -95,7 +95,7 @@
     "kronik_hastalik": "Hipertansiyon",
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı"
     ],
@@ -110,7 +110,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Parmak ucu kan şekeri",
       "Rutin laboratuvar testleri",
@@ -127,7 +127,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "e-FAST",
       "Tam kan sayımı",
@@ -145,7 +145,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Karboksihemoglobin",
       "Kan gazı"
@@ -161,7 +161,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [],
     "beklenen_kaynak": "yanik.txt",
     "gerekce": "yanik.txt Yeşil: 'Kızarıklık şeklinde olan, bül içermeyen (cilt yalnızca kızarmış, kabarcık oluşmamış) 1. derece epidermal yanıklar (güneş yanığı benzeri)' — avuç içi kadar (yaklaşık %1 TVYA) kızarıklık, kabarcık yok. Sarı'nın kritik bölge dalı yüz/el/ayak/perine sayıyor; önkol bunların dışında ve bül de yok. Kırmızı dallarının hiçbiri (inhalasyon, majör TVYA, elektrik/kimyasal, tam kalınlık) geçerli değil. TETKİK DÜZELTMESİ (13 Ağu 2026, inceleme I3): 'Yanık alanı değerlendirmesi' hiçbir protokolde geçmiyor; yanik.txt'nin üç tetkiki de inhalasyon/rabdomiyoliz/elektrik koşuluna bağlı ve Yeşil kod alan bu vakada hiçbiri geçerli değil."
@@ -174,7 +174,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Kapiller kan şekeri",
       "EKG",
@@ -191,7 +191,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Kapiller kan şekeri",
       "EKG",
@@ -208,7 +208,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Klinik değerlendirme ve fizik muayene"
     ],
@@ -223,7 +223,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Kan laktat düzeyi",
       "Kan kültürü",
@@ -241,7 +241,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı",
       "Kan grubu",
@@ -259,7 +259,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı"
     ],
@@ -274,7 +274,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Beta-hCG",
       "Yatak başı obstetrik USG",
@@ -293,7 +293,7 @@
       "fever": 38.5
     },
     "beklenen_triage_code": "Kırmızı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Kırmızı Alan",
     "beklenen_tetkikler": [
       "Kapiller kan şekeri",
       "Tam kan sayımı",
@@ -310,7 +310,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Parmak ucu kan şekeri",
       "Tam kan sayımı",

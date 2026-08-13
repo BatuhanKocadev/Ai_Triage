@@ -326,6 +326,29 @@ def _sadelestir(metin: str) -> str:
     return sade.lower().strip()
 
 
+# Tetkik adı eşanlamları → tek kanonik biçim (`_sadelestir` sonrası anahtar).
+# Gün 23 ölçümü: model "Hemogram (Tam kan sayımı)" derken altın "Tam kan sayımı"
+# bekliyordu; Jaccard klinik 4/4 iken 0,33 yazıyordu. Bu sözlük yalnızca ölçüm
+# tarafında (K2); üretim çıktısını yeniden adlandırmaz.
+_TETKIK_ALIAS: dict[str, str] = {
+    "tam kan sayimi": "tam kan sayimi",
+    "hemogram": "tam kan sayimi",
+    "hemogram (tam kan sayimi)": "tam kan sayimi",
+    "tam idrar tetkiki": "tam idrar tetkiki",
+    "tit": "tam idrar tetkiki",
+    "tam idrar tetkiki (tit)": "tam idrar tetkiki",
+    "ekg": "ekg",
+    "elektrokardiyografi": "ekg",
+    "elektrokardiyografi (ekg)": "ekg",
+}
+
+
+def _tetkik_kanonik(metin: str) -> str:
+    """Tetkik adını sadeleştirir ve bilinen eşanlamı kanonik forma indirger."""
+    sade = _sadelestir(metin)
+    return _TETKIK_ALIAS.get(sade, sade)
+
+
 def _ad_esit_mi(beklenen: str, cikan: str | None) -> bool:
     """İki adı yazım farkını katlayarak karşılaştırır; cevapsızlık asla eşleşmez."""
     if cikan is None:
@@ -341,16 +364,10 @@ def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
 def bolum_dogru_mu(beklenen: str, cikan: str | None) -> bool:
     """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı.
 
-    **BUGÜN HİÇBİR YERDEN ÇAĞRILMIYOR ve bu bilinçli.** 13 Ağustos 2026'da
-    bölüm `kok_neden`'in C kapısından çıkarıldı: derlemedeki 15 protokolün
-    hiçbiri bir hastane bölümü adı içermiyor, dolayısıyla bölüm karşılaştırması
-    sistemin değil altın standardı yazanın seçimini ölçüyordu (gerekçenin tamamı
-    `kok_neden` içinde). Fonksiyon silinmedi çünkü Gün 24 `department` çıktısını
-    derlemenin desteklediği kapalı kelime dağarcığına sıkıştırdığında kapı geri
-    açılacak; o gün eş anlamlıları ("Acil" ~ "Acil Servis", "Acil Servisi") de
-    tanıması gerekecek ve `_ad_esit_mi` delegasyonu silinip gövde buraya yazılır.
-
-    Not: `Ozet` bir bölüm oranı RAPORLAMIYOR, bugün hiç raporlamıyor.
+    Gün 24'te `department` kapalı akuite dağarcığına sıkıştırıldıktan sonra
+    `kok_neden` C kapısı bu fonksiyonu yeniden çağırıyor. Eşanlam için
+    `_ad_esit_mi` yeterli: altın standart ve üretim aynı kanonik adları kullanır
+    (`Kırmızı Alan` / `Sarı Alan` / …).
     """
     return _ad_esit_mi(beklenen, cikan)
 
@@ -360,8 +377,9 @@ def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
     # Çıkan taraf modelin ham çıktısı, yani güvenilmeyen girdi: boş adlar
     # birleşimi şişirip skoru haksız yere düşürmesin diye burada eleniyor.
     # Beklenen tarafta boş ad zaten yükleme anında reddediliyor (yazım hatası).
-    b = {_sadelestir(t) for t in beklenen if t and t.strip()}
-    c = {_sadelestir(t) for t in cikan if t and t.strip()}
+    # Alias kanonikleştirmesi (Gün 24): eşanlamlı yazımlar aynı kümeye düşer.
+    b = {_tetkik_kanonik(t) for t in beklenen if t and t.strip()}
+    c = {_tetkik_kanonik(t) for t in cikan if t and t.strip()}
     if not b and not c:
         return 1.0
     if not b or not c:
@@ -467,30 +485,17 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
     if senaryo.beklenen_triage_code == "Belirsiz":
         return None
 
-    # Kod doğru: tetkikler tutmuyorsa biçim/kapsam hatası.
+    # Kod doğru: bölüm veya tetkikler tutmuyorsa biçim/kapsam hatası (C).
     #
-    # BÖLÜM BU KAPIDA DEĞİL (13 Ağustos 2026, ölçümle alınan karar). Derlemenin
-    # 15 protokolünün hiçbiri hastayı bir hastane bölümüne yönlendirmiyor;
-    # hepsinin "— Yönlendirme" tablosu akuite ALANI söylüyor (`sarı alan` 25,
-    # `yeşil alan` 24, `kırmızı alan` 18, `resüsitasyon` 14 kez). Modelin
-    # ürettiği `Pulmonoloji`, `Gastroloji`, `Ortopedi`, `Pediyatri`,
-    # `Acil Cerrahi` adlarının hiçbiri hiçbir protokolde geçmiyor.
-    #
-    # Sonucu: bölüm kapısı açıkken 29 senaryonun 27'sinin `"Acil Servis"`
-    # beklentisi karşısında model neredeyse her seferinde başka bir şey diyordu
-    # ve triyaj kodu DOĞRU olan her senaryo otomatik C'ye düşüyordu (13 Ağustos
-    # koşumu: türetilmiş sette C=15/19; `tur_16` Jaccard 1,00 iken bile C).
-    # Kutu böylece sistemi değil ölçüm setini ölçüyordu.
-    #
-    # Akuite alanını beklenti yapmak da çare değil: o, triyaj kodunun birebir
-    # fonksiyonu, yani sıfır bilgi ekler. Bölüm ölçümden çıkarılmadı, ÖLÇÜLEBİLİR
-    # bir şeye dönüştürülmek üzere Gün 24'ün sistem hedefine taşındı — modelin
-    # `department` çıktısı derlemenin desteklediği kapalı kelime dağarcığına
-    # sıkıştırılacak. O gelene kadar burada puanlanması dayanaksız.
+    # Bölüm kapısı Gün 24'te geri açıldı: üretim `department` çıktısı kapalı
+    # akuite dağarcığına (`Kırmızı Alan` / …) sıkıştırılıyor ve altın standart
+    # aynı dağarcığı bekliyor. 13 Ağustos'ta kapı kapatılmıştı çünkü model
+    # hastane bölümü uyduruyor ve ölçüm seti "Acil Servis" bekliyordu.
+    bolum_tam = bolum_dogru_mu(senaryo.beklenen_bolum, sonuc.cikan_bolum)
     tetkikler_tam = tetkik_ortusmesi(
         senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler
     ) == 1.0
-    if not tetkikler_tam:
+    if not bolum_tam or not tetkikler_tam:
         return "C"
 
     return None

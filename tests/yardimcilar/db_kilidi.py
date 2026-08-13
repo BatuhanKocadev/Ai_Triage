@@ -17,19 +17,16 @@ nitekim `dbname` gözden kaçtı. Bu depo dosya doğrulamasında bilinçli olara
 fail-**closed** davranıyor (`IMZALAR`'da kaydı olmayan uzantı reddedilir); kilit de
 aynı disipline getirildi: hedefi çözüyoruz, çözemezsek reddediyoruz.
 
-**Kilidin bilinen sınırı — burada yalan söylememek önemli.** Bu doğrulama
-yalnızca ADRESİ kapsıyor. Süreç ortamındaki `PGHOSTADDR`, `PGSERVICE` ve
-(portsuz adreslerde) `PGPORT`, libpq'yu kilidin onayladığı DSN'le başka bir
-sunucuya götürebilir; kilit o kanala hiç bakmıyor. Ölçüldü: `PGHOSTADDR` ayarlı
-bir ortamda bağlantı onaylı adrese rağmen o adrese gidiyor. Yıkım yarıçapını
-sınırlayan şey `dbname` sabiti — nereye giderse gitsin `ai_triage_test` adlı bir
-veritabanına gidiyor. Ek C'de Gün 23 borcu 8b olarak kayıtlı.
+**Ortam değişkenleri:** libpq `PGHOSTADDR` / `PGSERVICE` / (portsuz URL'de)
+`PGPORT` ile DSN'i ezer. Kilit bu kanalları da reddeder (Gün 23 borcu 8b).
 
 Fonksiyon adı bilerek `test_` ile BAŞLAMIYOR: bir test modülüne import edilen
 `test_*` adlı her fonksiyonu pytest test sanıp toplamaya çalışır ve parametresi
 olduğu için `fixture 'url_metni' not found` diye kırılır. Adı "daha açıklayıcı"
 diye `test_hedefi_...` biçimine çevirmeyin.
 """
+
+import os
 
 from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 from sqlalchemy.engine import make_url
@@ -47,9 +44,27 @@ TEST_VERITABANI = "ai_triage_test"
 # kontrolü tek başına yetmez.
 IZINLI_PORT = 5432
 
+# libpq'nun onaylı DSN'i ezmesine yol açan ortam değişkenleri.
+_TEHLIKELI_ORTAM = ("PGHOSTADDR", "PGSERVICE")
+
+
+def _ortam_guvenli_mi() -> tuple[bool, str]:
+    """Süreç ortamı libpq hedefini DSN dışından değiştirmesin."""
+    for ad in _TEHLIKELI_ORTAM:
+        if os.environ.get(ad):
+            return False, f"{ad} ayarlı; libpq DSN hedefini ezer"
+    pgport = os.environ.get("PGPORT")
+    if pgport is not None and str(pgport) != str(IZINLI_PORT):
+        return False, f"PGPORT {pgport!r} hedef portunu ezer"
+    return True, ""
+
 
 def hedef_guvenli_mi(url_metni: str) -> tuple[bool, str]:
     """Adres test veritabanına mı işaret ediyor; (guvenli, sebep) döndürür."""
+    ortam_ok, ortam_sebep = _ortam_guvenli_mi()
+    if not ortam_ok:
+        return False, ortam_sebep
+
     try:
         url = make_url(url_metni)
     except Exception:

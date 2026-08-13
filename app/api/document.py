@@ -14,7 +14,7 @@ from app.utils.logger import logger
 from app.models.user import User
 from app.services.chroma_service import get_collection
 from app.services.auth_service import require_admin_role
-from app.utils.dosya_dogrula import dosyayi_dogrula
+from app.utils.dosya_dogrula import GENEL_RET, dosyayi_dogrula, max_upload_bayt
 
 router = APIRouter(
     prefix="/document",
@@ -75,30 +75,44 @@ async def upload_document(
     current_user: User = Depends(require_admin_role)
 ):
     try:
+        # Starlette UploadFile.size gövde çalışmadan önce dolu olabilir; 413'ü
+        # 2 GB RAM tahsis etmeden önce vermek için read()'ten ÖNCE bakıyoruz.
+        # size None ise (bazı istemciler) yalnızca read sonrası kontrol kalır.
+        if file.size is not None and file.size > max_upload_bayt():
+            logger.warning(
+                f"Dosya reddedildi (boyut asimi, read oncesi): "
+                f"dosya_adi={file.filename!r} boyut={file.size}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Dosya çok büyük",
+            )
+
         file_content = await file.read()
         extracted_text = ""
         # Uzantı, boyut ve gerçek içerik imzası burada doğrulanıyor (Gün 21).
         file_extension = dosyayi_dogrula(file.filename, file_content)
-        
+
         if file_extension == "pdf":
             try:
                 extracted_text = process_pdf_content(file_content)
             except Exception as e:
                 logger.error(f"PDF processing error: {str(e)}")
-                raise HTTPException(status_code=400, detail="PDF processing error")
+                # Ayrıntılı aşama mesajı K5'i deler; ayrım yalnızca log'da.
+                raise HTTPException(status_code=400, detail=GENEL_RET)
         elif file_extension == "docx":
             try:
                 extracted_text = process_docx_content(file_content)
             except Exception as e:
                 logger.error(f"DOCX processing error: {str(e)}")
-                raise HTTPException(status_code=400, detail="DOCX processing error")
+                raise HTTPException(status_code=400, detail=GENEL_RET)
         elif file_extension == "txt":
             try:
                 extracted_text = file_content.decode("utf-8")
             except UnicodeDecodeError:
-                raise HTTPException(status_code=400, detail="Encoding error")
+                raise HTTPException(status_code=400, detail=GENEL_RET)
         else:
-            raise HTTPException(status_code=400, detail="Unsupported file format")
+            raise HTTPException(status_code=400, detail=GENEL_RET)
 
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Empty content")
@@ -128,7 +142,9 @@ async def upload_document(
         metadata_list = []
         id_list = []
         
-        safe_filename = file.filename.replace(" ", "_").lower()
+        # .lower() YOK: Yanik.txt ile yanik.txt aynı chunk id'ye düşüp birbirinin
+        # üzerine yazmasın (kaynak metadata'sı orijinal adı korur).
+        safe_filename = file.filename.replace(" ", "_")
         current_date = datetime.now().strftime("%Y-%m-%d")
         
         for index, chunk in enumerate(text_chunks):

@@ -144,6 +144,8 @@ def hiz_siniri(sinirlayici: HizSinirlayici):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Çok fazla istek. Lütfen biraz bekleyin.",
+                # Pencere sabit; istemci ne kadar bekleyeceğini bilsin.
+                headers={"Retry-After": str(sinirlayici.pencere_sn)},
             )
 
     return _kontrol

@@ -49,7 +49,7 @@ MODEL = "qwen2.5:7b-instruct"
 BURASI = Path(__file__).resolve().parent
 SONUCLAR = BURASI / "sonuclar"
 # Ön uçuşun beklediği bilgi tabanı; Gün 20'de kurulan derlemenin boyutu.
-BEKLENEN_CHUNK = 51
+BEKLENEN_CHUNK = 49
 BEKLENEN_DOSYA = 15
 # WER bu eşiğin üstüne çıkarsa sorun tanıma değil, ses-metin eşleşmesidir.
 WER_HIZALAMA_ESIGI = 0.6
@@ -393,15 +393,24 @@ def _kirilim_tablosu(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> list[s
 def rapor_yaz(
     bloklar: list[tuple[str, list[Senaryo], list[Sonuc]]],
     kirilim: list[dict] | None = None,
+    etiket: str | None = None,
 ) -> Path:
-    """Markdown raporu ve ham JSON'u sonuclar/ altına yazar."""
+    """Markdown raporu ve ham JSON'u sonuclar/ altına yazar.
+
+    `etiket` verilirse dosya adı `YYYY-AA-GG-<etiket>.{md,json}` olur; Gün 24
+    çoklu koşumları aynı güne çakışmadan yazar.
+    """
     SONUCLAR.mkdir(parents=True, exist_ok=True)
     bugun = date.today().isoformat()
-    md = [f"# Gün 23 değerlendirme sonuçları — {bugun}", ""]
-    md.append("Tek koşum. Ollama belirlenimsizdir; Gün 24 aynı etiketle kıyaslanacak.")
+    dosya_kok = f"{bugun}-{etiket}" if etiket else bugun
+    md = [f"# Gün 24 değerlendirme sonuçları — {dosya_kok}", ""]
+    if etiket:
+        md.append(f"Koşum etiketi: `{etiket}`. Ollama belirlenimsizdir; ortalama alınır.")
+    else:
+        md.append("Tek koşum. Ollama belirlenimsizdir; birden fazla koşum ortalaması gerekir.")
     md.append("")
 
-    ham: dict = {"tarih": bugun, "bloklar": {}}
+    ham: dict = {"tarih": bugun, "kosum_etiketi": etiket, "bloklar": {}}
 
     # Bilgi tabanının parmak izi: bu sayılar HANGİ derlemeye karşı ölçüldü.
     # Derleme değişince retrieval de değişir, yani parmak izi olmayan bir ölçüm
@@ -419,9 +428,9 @@ def rapor_yaz(
         md.append("")
         ham["bilgi_tabani"] = {"dosya": len(kirilim), "chunk": toplam, "kirilim": kirilim}
 
-    for etiket, senaryolar, sonuclar in bloklar:
+    for blok_etiket, senaryolar, sonuclar in bloklar:
         o = ozet(senaryolar, sonuclar)
-        md.append(f"## {etiket}")
+        md.append(f"## {blok_etiket}")
         md.append("")
         md.append(f"Sette {len(senaryolar)} senaryo var. Aşağıdaki paydalar bunun "
                   "alt kümeleridir; hangi senaryonun hangi kovaya düştüğü "
@@ -452,7 +461,7 @@ def rapor_yaz(
         md.extend(_kirilim_tablosu(senaryolar, sonuclar))
         md.append("")
 
-        ham["bloklar"][etiket] = {
+        ham["bloklar"][blok_etiket] = {
             "ozet": o.__dict__,
             "sonuclar": [s.__dict__ for s in sonuclar],
         }
@@ -497,16 +506,26 @@ def rapor_yaz(
         md.append("")
         ham["bloklar"][etiket]["wer_ortalama"] = ortalama
 
-    md_yolu = SONUCLAR / f"{bugun}.md"
+    md_yolu = SONUCLAR / f"{dosya_kok}.md"
     md_yolu.write_text("\n".join(md), encoding="utf-8")
-    (SONUCLAR / f"{bugun}.json").write_text(
+    (SONUCLAR / f"{dosya_kok}.json").write_text(
         json.dumps(ham, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     return md_yolu
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Ön uçuş → iki seti koş → rapor yaz. Ön uçuş düşerse hiçbir şey koşulmaz."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Gün 23/24 değerlendirme sürücüsü")
+    parser.add_argument(
+        "--etiket",
+        default=None,
+        help="Çıktı dosya adına eklenen koşum etiketi (ör. kosum1)",
+    )
+    args = parser.parse_args(argv)
+
     _konsolu_utf8_yap()
     try:
         hasta_jetonu, _admin_jetonu, kirilim = on_ucus()
@@ -531,6 +550,7 @@ def main() -> int:
             ("Türetilmiş set", turetilmis, turetilmis_sonuclari),
         ],
         kirilim,
+        etiket=args.etiket,
     )
     print(f"\nRapor yazıldı: {yol}")
     return 0

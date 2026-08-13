@@ -6,6 +6,11 @@ Acil Servis Triyaj Rehberi ESI/MTS.
 Kapsam
 Bu protokol, acil servise ateş, enfeksiyon veya sepsis şüphesi ile başvuran hastaların değerlendirilmesini ve önceliklendirilmesini düzenler.
 
+Ateş ve Sepsis — Hastanın Anlattığı Belirtiler
+- Hastalar sıklıkla şöyle anlatır: ateşim çıktı, ateşim düşmüyor, üşüyorum, titriyorum, alnım yanıyor, kırgınlık, halsizlik, eklemlerim sızlıyor, bütün vücudum ağrıyor.
+- Viral sendrom / üst solunum yolu enfeksiyonu dilinde: boğazım ağrıyor, burun akıyor, öksürüyorum ama nefesim rahat, genel durumum idare eder.
+- Ağır seyir ipuçları hasta dilinde: başım çok dönüyor, ayağa kalkınca bayılacak gibi oluyorum, nefese yetişemiyorum, cildimde basmakla solmayan mor-kırmızı döküntü, ense sertliği, kendimi bilmiyorum.
+
 Ateş ve Sepsis — İlk Değerlendirme
 - Hastalarda ateşten ziyade organ disfonksiyonu göstergelerine (bilinç, solunum sayısı, tansiyon, cilt perfüzyonu) odaklanılır.
 - qSOFA (Solunum sayısı >=22, SKB <=100, bilinç değişikliği) ve laktat ölçümü kullanılarak hızlıca sepsis taraması yapılır.

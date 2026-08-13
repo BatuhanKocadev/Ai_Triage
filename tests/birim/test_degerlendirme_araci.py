@@ -40,7 +40,7 @@ def _senaryo_sozlugu(**degisiklikler):
         "yas": 58,
         "cinsiyet": "Erkek",
         "beklenen_triage_code": "Kırmızı",
-        "beklenen_bolum": "Acil Servis",
+        "beklenen_bolum": "Kırmızı Alan",
         "beklenen_tetkikler": ["EKG", "Troponin"],
         "beklenen_kaynak": "gogus_agrisi.txt",
     }
@@ -394,12 +394,12 @@ def test_bolum_karsilastirmasi_yazim_farkina_dayanikli():
     zorunda kalır; iki kopya ayrışınca C kutusu ile özet tablosundaki bölüm
     oranı sessizce birbirini tutmaz.
     """
-    assert bolum_dogru_mu("Acil Servis", "acil servis") is True
+    assert bolum_dogru_mu("Kırmızı Alan", "kirmizi alan") is True
     assert bolum_dogru_mu("Kardiyoloji", "kardıyolojı") is True
-    assert bolum_dogru_mu("Acil Servis", "Dahiliye") is False
+    assert bolum_dogru_mu("Kırmızı Alan", "Sarı Alan") is False
     # Cevapsızlık bölüm doğruluğu sayılmaz.
-    assert bolum_dogru_mu("Acil Servis", None) is False
-    assert bolum_dogru_mu("Acil Servis", "") is False
+    assert bolum_dogru_mu("Kırmızı Alan", None) is False
+    assert bolum_dogru_mu("Kırmızı Alan", "") is False
 
 
 def test_tetkik_ortusme_orani_hesaplanir():
@@ -422,6 +422,40 @@ def test_tetkik_ortusmesi_yazim_farkina_dayanikli():
     ) == 1.0
 
 
+def test_tetkik_ortusmesi_es_anlam_aliaslari():
+    """Gün 24: parantezli/kısa yazımlar klinik olarak aynı tetkiği saymalı.
+
+    Ölçüm setinde beklenen 'Tam kan sayımı' iken model 'Hemogram (Tam kan
+    sayımı)' dönünce Jaccard 0,33 oluyordu — adlandırma artefaktı, klinik hata
+    değil. Alias kanonikleştirmesi bu üç çifti eşitlemek zorunda.
+    """
+    assert tetkik_ortusmesi(
+        ["Tam kan sayımı"], ["Hemogram (Tam kan sayımı)"]
+    ) == 1.0
+    assert tetkik_ortusmesi(
+        ["Tam İdrar Tetkiki"], ["TİT"]
+    ) == 1.0
+    assert tetkik_ortusmesi(
+        ["EKG"], ["Elektrokardiyografi (EKG)"]
+    ) == 1.0
+    # kor_03 tipi: dört beklenen, dört çıkan (alias'lı) → tam örtüşme
+    assert tetkik_ortusmesi(
+        ["Tam kan sayımı", "Biyokimya", "Tam İdrar Tetkiki", "Beta-hCG"],
+        [
+            "Hemogram (Tam kan sayımı)",
+            "Biyokimya",
+            "Tam İdrar Tetkiki (TİT)",
+            "Beta-hCG",
+        ],
+    ) == 1.0
+
+
+def test_tetkik_ortusmesi_bilinmeyen_ad_hala_tam_esitlik():
+    """Alias sözlüğünde olmayan adlar hâlâ yalnızca sadeleştirilmiş eşitlikle eşleşir."""
+    assert tetkik_ortusmesi(["Troponin"], ["Troponin I"]) == 0.0
+    assert tetkik_ortusmesi(["Troponin"], ["troponin"]) == 1.0
+
+
 def test_cikan_taraftaki_bos_tetkik_adi_yok_sayilir():
     """Model çıktısı güvenilmeyen girdi: boş bir ad birleşimi şişirip örtüşmeyi
     haksız yere düşürmemeli. Yazarın elindeki tarafta ise aynı şey hatadır
@@ -440,7 +474,7 @@ def _senaryo(**degisiklikler) -> Senaryo:
         "yas": 58,
         "cinsiyet": "Erkek",
         "beklenen_triage_code": "Kırmızı",
-        "beklenen_bolum": "Acil Servis",
+        "beklenen_bolum": "Kırmızı Alan",
         "beklenen_tetkikler": ["EKG", "Troponin"],
         "beklenen_kaynak": "gogus_agrisi.txt",
     }
@@ -467,7 +501,7 @@ def test_kok_neden_retrieval_ve_muhakeme_ayrilir():
     b = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Yeşil",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
@@ -477,7 +511,7 @@ def test_kok_neden_retrieval_ve_muhakeme_ayrilir():
     c = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG"],
         sources=["gogus_agrisi.txt"],
     )
@@ -487,7 +521,7 @@ def test_kok_neden_retrieval_ve_muhakeme_ayrilir():
     tam = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
@@ -532,7 +566,7 @@ def test_altyapi_hatasi_muhakeme_kutusunu_sisirmez():
     dusen = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Yeşil",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         sources=["gogus_agrisi.txt"],
         hata="500 Internal Server Error",
     )
@@ -577,7 +611,7 @@ def test_kapsam_disi_senaryo_dogru_reddedilirse_eksik_sayilmaz():
     bolum_tutmuyor = _senaryo(
         id="t02",
         beklenen_triage_code="Belirsiz",
-        beklenen_bolum="Acil Servis",
+        beklenen_bolum="Triyaj Bankosu",
         beklenen_tetkikler=["EKG"],
         beklenen_kaynak=None,
     )
@@ -599,7 +633,7 @@ def test_sansli_dogru_isaretlenir():
     sansli = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["bas_agrisi.txt"],
     )
@@ -609,33 +643,28 @@ def test_sansli_dogru_isaretlenir():
     durust = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
     assert sansli_dogru_mu(senaryo, durust) is False
 
 
-def test_bolum_yanlisligi_tek_basina_c_kutusu_yaratmaz():
-    """C'nin tek kapısı tetkikler; bölüm 13 Ağustos 2026'da ölçümden çıkarıldı.
+def test_bolum_yanlisligi_c_kutusu_uretır():
+    """Gün 24: bölüm kapısı geri açıldı — yanlış/eksik bölüm C üretir.
 
-    Sebep `kok_neden` içinde yazılı: derlemedeki 15 protokolün hiçbiri hastane
-    bölümü adı içermiyor, dolayısıyla bölüm karşılaştırması sistemin değil altın
-    standardı yazanın seçimini ölçüyordu ve triyaj kodu doğru olan her senaryoyu
-    C'ye dolduruyordu.
-
-    Bu test kapının geri açılmasını engelliyor: bölüm eklenirse iki assert de
-    kırılır ve kırılma "ölçüm yeniden dayanaksız hâle geldi" haberi olur.
+    Üretim `department` artık kapalı akuite dağarcığında; altın standart da
+    aynı dili bekliyor. Tetkikler tam olsa bile bölüm tutmazsa C.
     """
-    senaryo = _senaryo()
+    senaryo = _senaryo(beklenen_bolum="Kırmızı Alan")
     yanlis_bolum = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Dahiliye",
+        cikan_bolum="Sarı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
-    assert kok_neden(senaryo, yanlis_bolum) is None
+    assert kok_neden(senaryo, yanlis_bolum) == "C"
 
     bolumsuz = Sonuc(
         senaryo_id="t01",
@@ -644,18 +673,25 @@ def test_bolum_yanlisligi_tek_basina_c_kutusu_yaratmaz():
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
-    assert kok_neden(senaryo, bolumsuz) is None
+    assert kok_neden(senaryo, bolumsuz) == "C"
 
-    # Buna karşılık tetkik kapısı açık: eksik tetkik hâlâ C üretiyor. Bu assert
-    # olmadan yukarıdaki ikisi "C kutusu tamamen öldü" ile de yeşil kalırdı.
     eksik_tetkik = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG"],
         sources=["gogus_agrisi.txt"],
     )
     assert kok_neden(senaryo, eksik_tetkik) == "C"
+
+    tam = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Kırmızı Alan",
+        cikan_tetkikler=["EKG", "Troponin"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, tam) is None
 
 
 def test_kaynagi_yazilmamis_senaryoda_yanlis_kod_muhakemeye_yazilir():
@@ -669,7 +705,7 @@ def test_kaynagi_yazilmamis_senaryoda_yanlis_kod_muhakemeye_yazilir():
     yanlis = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Yeşil",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
@@ -789,7 +825,7 @@ def test_ham_kaynak_dizeleri_kok_nedeni_yaniltmaz():
         return Sonuc(
             senaryo_id="t01",
             cikan_triage_code="Yeşil",
-            cikan_bolum="Acil Servis",
+            cikan_bolum="Kırmızı Alan",
             cikan_tetkikler=["EKG", "Troponin"],
             sources=sources,
         )
@@ -810,7 +846,7 @@ def test_ham_kaynak_dizeleri_sansli_dogruyu_yaniltmaz():
     dogru = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=ham,
     )
@@ -843,7 +879,7 @@ def test_beklenen_kaynak_yuklemede_kirpilir(tmp_path):
     dogru = Sonuc(
         senaryo_id="t01",
         cikan_triage_code="Kırmızı",
-        cikan_bolum="Acil Servis",
+        cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["[Kaynak: gogus_agrisi.txt] Göğüs ağrısı protokolü"],
     )
@@ -930,12 +966,12 @@ def test_kirmizi_kacirma_ayri_raporlanir():
     ]
     sonuclar = [
         Sonuc(senaryo_id="k1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="k2", cikan_triage_code="Yeşil",
-              cikan_bolum="Acil Servis", sources=["gogus_agrisi.txt"]),
+              cikan_bolum="Kırmızı Alan", sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="y1", cikan_triage_code="Yeşil",
-              cikan_bolum="Acil Servis", sources=["gogus_agrisi.txt"]),
+              cikan_bolum="Kırmızı Alan", sources=["gogus_agrisi.txt"]),
     ]
 
     o = ozet(senaryolar, sonuclar)
@@ -957,14 +993,14 @@ def test_esik_alti_yanitlar_ayri_sayilir():
     ]
     sonuclar = [
         Sonuc(senaryo_id="s1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="s2", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="s3", cikan_triage_code="Belirsiz", sources=[]),
         Sonuc(senaryo_id="s4", cikan_triage_code="Yeşil",
-              cikan_bolum="Acil Servis", sources=["gogus_agrisi.txt"]),
+              cikan_bolum="Kırmızı Alan", sources=["gogus_agrisi.txt"]),
     ]
 
     o = ozet(senaryolar, sonuclar)
@@ -988,7 +1024,7 @@ def test_kapsam_disi_senaryolar_dogruluga_karismaz():
     ]
     sonuclar = [
         Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[]),
     ]
@@ -1010,7 +1046,7 @@ def test_altyapi_hatasi_paydadan_dusulur():
     senaryolar = [_senaryo(id="h1"), _senaryo(id="h2")]
     sonuclar = [
         Sonuc(senaryo_id="h1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="h2", hata="500 Sunucu hatası"),
     ]
@@ -1038,7 +1074,7 @@ def test_kapsam_disi_senaryo_esik_alti_ve_cevaplanan_paydalarina_girmez():
     ]
     sonuclar = [
         Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="i2", cikan_triage_code="Belirsiz", sources=[]),
         Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[]),
@@ -1080,7 +1116,7 @@ def test_jaccard_yalnizca_cevap_verilen_kapsam_ici_senaryolardan_hesaplanir():
     ]
     sonuclar = [
         Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="i2", cikan_triage_code="Belirsiz", sources=[]),
         Sonuc(senaryo_id="d1", cikan_triage_code="Sarı",
@@ -1119,14 +1155,13 @@ def test_kok_neden_dagilimi_kutulara_ayrilir():
         Sonuc(senaryo_id="b1", cikan_triage_code="Yeşil",
               cikan_bolum="Dahiliye", cikan_tetkikler=[],
               sources=["gogus_agrisi.txt"]),
-        # C: kod doğru, tetkikler eksik. (Bölüm artık kapıda değil; buradaki
-        # "Dahiliye" bilerek duruyor ve tek başına C üretmediğini gösteriyor.)
+        # C: kod doğru ama bölüm veya tetkik tutmuyor (Gün 24'te ikisi de kapı).
         Sonuc(senaryo_id="c1", cikan_triage_code="Kırmızı",
               cikan_bolum="Dahiliye", cikan_tetkikler=["EKG"],
               sources=["gogus_agrisi.txt"]),
         # None: her şey doğru.
         Sonuc(senaryo_id="n1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         # HATA: ölçülemedi.
         Sonuc(senaryo_id="h1", hata="timeout"),
@@ -1155,11 +1190,11 @@ def test_sansli_dogru_ozette_sayilir():
     sonuclar = [
         # Doğru cevap, beklenen protokol hiç gelmemiş → şanslı doğru.
         Sonuc(senaryo_id="s1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["bas_agrisi.txt"]),
         # Doğru cevap, doğru protokol → şanslı değil.
         Sonuc(senaryo_id="s2", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
     ]
 
@@ -1179,7 +1214,7 @@ def test_altyapi_hatasi_kirmizi_duyarliligi_paydasindan_da_dusulur():
     senaryolar = [_senaryo(id="k1"), _senaryo(id="k2")]
     sonuclar = [
         Sonuc(senaryo_id="k1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="k2", hata="timeout"),
     ]
@@ -1208,7 +1243,7 @@ def test_sonucu_olmayan_senaryo_sayilir_ama_paydaya_girmez():
     senaryolar = [_senaryo(id="v1"), _senaryo(id="sorulmadi")]
     sonuclar = [
         Sonuc(senaryo_id="v1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
     ]
 
@@ -1236,7 +1271,7 @@ def test_tam_kosumda_sayilar_senaryo_sayisiyla_denklesir():
     ]
     sonuclar = [
         Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Kırmızı Alan", cikan_tetkikler=["EKG", "Troponin"],
               sources=["gogus_agrisi.txt"]),
         Sonuc(senaryo_id="h1", hata="500 Sunucu hatası"),
         Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[]),
@@ -1283,7 +1318,7 @@ def test_bos_hata_dizesi_altyapi_hatasi_sayilmaz():
     """
     senaryo = _senaryo(id="b1")
     bos_hata = Sonuc(
-        senaryo_id="b1", cikan_triage_code="Kırmızı", cikan_bolum="Acil Servis",
+        senaryo_id="b1", cikan_triage_code="Kırmızı", cikan_bolum="Kırmızı Alan",
         cikan_tetkikler=["EKG", "Troponin"], sources=["gogus_agrisi.txt"], hata="",
     )
 
@@ -1393,15 +1428,28 @@ def test_few_shot_havuzu_olcum_setiyle_kesismiyor():
     }
     assert olcum_tetkikleri & havuz_tetkikleri == set()
 
-    # Bölüm alanı da aynı kanal: 29 senaryonun 27'si "Acil Servis" bekliyordu ve
-    # havuzun dördü de aynı dizeyi öğretiyordu.
+    # Bölüm: Gün 24'te ölçüm ve havuz aynı kapalı akuite dağarcığını konuşuyor;
+    # kesişim artık sızıntı değil, müfredat. Tehlike, havuzun dağarcık DIŞI bir
+    # ad öğretmesiydi — onu burada bağlıyoruz.
+    KAPALI_BOLUM = {
+        _sadelestir(a)
+        for a in (
+            "Kırmızı Alan",
+            "Sarı Alan",
+            "Yeşil Alan",
+            "Resüsitasyon",
+            "Şok Odası",
+            "Triyaj Bankosu",
+        )
+    }
     olcum_bolumleri = {_sadelestir(s.beklenen_bolum) for s in kor + turetilmis}
     havuz_bolumleri = {
         _sadelestir(k["beklenen_cikti"]["department"])
         for k in havuz
         if k["beklenen_cikti"].get("department")
     }
-    assert olcum_bolumleri & havuz_bolumleri == set()
+    assert olcum_bolumleri <= KAPALI_BOLUM
+    assert havuz_bolumleri <= KAPALI_BOLUM
 
 
 def test_kor_ve_turetilmis_setler_ayri_dosyada():

@@ -2,11 +2,14 @@ import streamlit as st
 import requests
 import io
 import os
+import logging
 import hashlib  # aynı ses kaydının her etkileşimde yeniden transkript edilmesini önlemek için içerik imzası
 from datetime import datetime
 
 # Docker network için dinamik backend URL'i alınır
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+# Bağlantı hataları Streamlit ekranında kaybolmasın diye ayrı logger.
+_logger = logging.getLogger("ai_triage.frontend")
 
 API_LOGIN_URL = f"{BACKEND_URL}/auth/login"
 API_ME_URL = f"{BACKEND_URL}/auth/me"
@@ -52,7 +55,8 @@ def istek_at(metot: str, yol: str, jeton: str, **kwargs):
     """Backend'e yetkili istek atar; adres kurma ve başlık ekleme tek yerde toplanır.
 
     Bağlantı kurulamazsa None döndürür — çağıran taraf kullanıcıya anlaşılır bir
-    mesaj gösterir, ham istisna arayüze sızmaz.
+    mesaj gösterir, ham istisna arayüze sızmaz. İstisna loglanır; aksi hâlde
+    bağlantı hatası hiçbir iz bırakmazdı (Gün 22 borcu).
     """
     try:
         return requests.request(
@@ -63,6 +67,7 @@ def istek_at(metot: str, yol: str, jeton: str, **kwargs):
             **kwargs,
         )
     except requests.exceptions.RequestException:
+        _logger.exception("Backend isteği başarısız: %s %s", metot, yol)
         return None
 
 
@@ -463,7 +468,11 @@ if st.session_state.access_token is None or st.session_state.user_role is None:
         submit_button = st.form_submit_button("Giriş Yap")
 
         if submit_button:
-            login_data = {"username": username_input, "password": password_input}
+            # Baş/son boşluk sessiz 401 üretmesin ("doctor " ≠ "doctor").
+            login_data = {
+                "username": username_input.strip(),
+                "password": password_input,
+            }
             try:
                 response = requests.post(API_LOGIN_URL, data=login_data)
                 if response.status_code == 200:
@@ -481,8 +490,16 @@ if st.session_state.access_token is None or st.session_state.user_role is None:
                     else:
                         st.session_state.access_token = None
                         st.error("Kullanıcı bilgisi alınamadı.")
-                else:
+                elif response.status_code == 401:
                     st.error("Kullanıcı adı veya şifre hatalı!")
+                elif response.status_code == 422:
+                    st.error("Giriş bilgileri geçersiz. Kullanıcı adı ve şifreyi kontrol edin.")
+                elif response.status_code == 429:
+                    st.error("Çok fazla deneme. Lütfen bir süre bekleyip tekrar deneyin.")
+                elif response.status_code >= 500:
+                    st.error("Sunucu hatası. Lütfen daha sonra tekrar deneyin.")
+                else:
+                    st.error(f"Giriş başarısız (kod {response.status_code}).")
             except Exception as e:
                 # Bağlantı yarıda koptuysa token'lı ama rolsüz oturum kalmasın.
                 st.session_state.access_token = None

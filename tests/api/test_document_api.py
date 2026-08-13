@@ -218,3 +218,29 @@ def test_yeniden_yukleme_baska_dosyanin_chunklarina_dokunmaz(istemci, sahte_kole
     kalan_b = sahte_koleksiyon.get(where={"source": "dosya_b.txt"})
     assert len(kalan_b["ids"]) == b_chunk_sayisi
     assert sahte_koleksiyon.sayac() == a_chunk_sayisi + b_chunk_sayisi
+
+
+@pytest.mark.entegrasyon
+def test_buyuk_kucuk_harf_dosya_adlari_ayri_chunk_id(istemci, sahte_koleksiyon, yetkili_baslik):
+    # safe_filename .lower() yaparsa Yanik.txt ile yanik.txt aynı id'ye düşer
+    # ve birbirinin üzerine yazar; kaynak metadata orijinal adı korusa bile.
+    baslik = yetkili_baslik(kullanici_adi="yonetici", rol="admin")
+    metin = "Yanik protokolu ornek metin.".encode("utf-8")
+
+    a = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("Yanik.txt", metin, "text/plain")},
+        headers=baslik,
+    )
+    b = istemci.post(
+        "/document/upload",
+        data={"category": "protokol"},
+        files={"file": ("yanik.txt", metin, "text/plain")},
+        headers=baslik,
+    )
+    assert a.status_code == 201
+    assert b.status_code == 201
+    assert sahte_koleksiyon.sayac() == a.json()["total_chunks"] + b.json()["total_chunks"]
+    assert sahte_koleksiyon.get(where={"source": "Yanik.txt"})["ids"]
+    assert sahte_koleksiyon.get(where={"source": "yanik.txt"})["ids"]

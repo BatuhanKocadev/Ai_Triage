@@ -8,6 +8,13 @@ import os
 os.environ.setdefault("DATABASE_URL", "postgresql://triage:triage@localhost:5432/ai_triage_test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-anahtari-sadece-testler-icin")
 os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434")
+# libpq DSN'i ezen ortam değişkenleri: kilit reddeder ama conftest yine de
+# drop_all öncesi temizler — geliştirici makinesinde kalıntı PGHOSTADDR yüzünden
+# tüm paket pytest.exit(3) ile düşmesin.
+for _ortam_adi in ("PGHOSTADDR", "PGSERVICE"):
+    os.environ.pop(_ortam_adi, None)
+if os.environ.get("PGPORT") not in (None, "5432"):
+    os.environ.pop("PGPORT", None)
 
 import pytest  # noqa: E402
 

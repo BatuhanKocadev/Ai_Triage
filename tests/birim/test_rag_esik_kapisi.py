@@ -141,3 +141,24 @@ def test_reranker_aktivasyonu_acikca_kuruluyor(monkeypatch):
     rag_service.get_reranker()
 
     assert isinstance(yakalanan["kwargs"].get("activation_fn"), _SahteSigmoid)
+
+
+def test_top_k_initial_ayardan_okunur(monkeypatch):
+    """Gün 24: aday havuzu ayardan gelir; 10 sabit varsayılan derlemeyi eziyordu."""
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
+    monkeypatch.setattr(rag_service.settings, "top_k_initial", 20)
+    koleksiyon = SahteKoleksiyon(["Metin"])
+    rag_service.retrieve_and_rerank(query="q", collection=koleksiyon)
+    assert koleksiyon.son_cagri["n_results"] == 20
+
+
+def test_top_k_initial_acik_arguman_ayari_ezer(monkeypatch):
+    """Çağıran n_results'ı bilinçli verirken ayar sessizce ezmemeli."""
+    monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
+    monkeypatch.setattr(rag_service.settings, "top_k_initial", 20)
+    koleksiyon = SahteKoleksiyon(["Metin"])
+    rag_service.retrieve_and_rerank(
+        query="q", collection=koleksiyon, top_k_initial=7
+    )
+    assert koleksiyon.son_cagri["n_results"] == 7
+

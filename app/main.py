@@ -50,6 +50,25 @@ app.add_middleware(
 )
 
 
+def _cors_basliklari(request: Request) -> dict[str, str]:
+    """Global 500 handler CORS middleware'inin dışında doğduğu için başlıkları elle ekler.
+
+    ServerErrorMiddleware CORS'un dışında çalışır; tarayıcı istemcisi aksi hâlde
+    izleme_kodu'nu okuyamaz. allow_credentials=False ile uyumlu tutuluyor.
+    """
+    origin = request.headers.get("origin")
+    if not origin:
+        return {}
+    izinliler = [k.strip() for k in settings.cors_origins.split(",") if k.strip()]
+    if origin not in izinliler and "*" not in izinliler:
+        return {}
+    # "*" + credentials yasak deseni; credentials kapalı, yine de açık origin yaz.
+    return {
+        "Access-Control-Allow-Origin": origin if "*" not in izinliler else "*",
+        "Vary": "Origin",
+    }
+
+
 @app.exception_handler(Exception)
 async def beklenmeyen_hata_yakalayici(request: Request, hata: Exception):
     """Beklenmeyen istisnada tam izi log'a yazar, istemciye yalnızca kod döner.
@@ -65,6 +84,7 @@ async def beklenmeyen_hata_yakalayici(request: Request, hata: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Sunucu hatası", "izleme_kodu": izleme_kodu},
+        headers=_cors_basliklari(request),
     )
 
 

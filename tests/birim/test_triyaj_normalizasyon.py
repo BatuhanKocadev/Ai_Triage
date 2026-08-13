@@ -3,7 +3,12 @@ normalizasyon fonksiyonlarının davranışını dondurur."""
 
 import pytest
 
-from app.api.ai import _normalize_tetkikler, _normalize_triage_code, _sadelestir
+from app.api.ai import (
+    _normalize_department,
+    _normalize_tetkikler,
+    _normalize_triage_code,
+    _sadelestir,
+)
 
 
 @pytest.mark.parametrize(
@@ -69,3 +74,53 @@ def test_liste_olmayan_tetkik_bos_liste_doner(ham):
 def test_tetkik_elemanlari_stringe_cevrilir():
     # Model sayı döndürürse string'e çevrilmeli, çökmemeli.
     assert _normalize_tetkikler([1, 2]) == ["1", "2"]
+
+
+def test_few_shot_prompt_metni_sikayet_ve_akuite_icerir():
+    """Few-shot metni şikayeti ve akuite alanını taşır; tetkik adı öğretmez."""
+    from app.api.ai import few_shot_prompt_metni
+
+    metin = few_shot_prompt_metni(
+        [
+            {
+                "sikayet": "arı soktu, kolum şişti ama nefesim rahat",
+                "beklenen_cikti": {
+                    "triage_code": "Yeşil",
+                    "department": "Yeşil Alan",
+                    "onerilen_tetkikler": [],
+                },
+            }
+        ]
+    )
+    assert "arı soktu, kolum şişti ama nefesim rahat" in metin
+    assert "Yeşil Alan" in metin
+    assert "Tam kan" not in metin
+
+
+@pytest.mark.parametrize(
+    "ham, triage, beklenen",
+    [
+        ("Kırmızı Alan", "Kırmızı", "Kırmızı Alan"),
+        ("sarı alan", "Sarı", "Sarı Alan"),
+        ("  YESIL ALAN  ", "Yeşil", "Yeşil Alan"),
+        ("Resüsitasyon", "Kırmızı", "Resüsitasyon"),
+        ("Şok Odası", "Kırmızı", "Şok Odası"),
+        ("Triyaj Bankosu", "Belirsiz", "Triyaj Bankosu"),
+        # Hastane bölümü uydurması → triyaj kodundan akuite alanına
+        ("Pulmonoloji", "Kırmızı", "Kırmızı Alan"),
+        ("Dahiliye", "Sarı", "Sarı Alan"),
+        ("Ortopedi", "Yeşil", "Yeşil Alan"),
+        ("İnsan Hakkında", "Yeşil", "Yeşil Alan"),
+        (None, "Sarı", "Sarı Alan"),
+        ("", "Kırmızı", "Kırmızı Alan"),
+        ("Dahiliye", "Belirsiz", "Triyaj Bankosu"),
+    ],
+)
+def test_department_kapali_kelime_dagarcigina_indirgenir(ham, triage, beklenen):
+    """Gün 24: model hastane bölümü uydurmasın; çıktı derleme dağarcığında kalsın."""
+    assert _normalize_department(ham, triage) == beklenen
+
+
+def test_department_dagarcik_disi_triyaj_belirsizde_banko():
+    """Triyaj Belirsiz iken dağarcık dışı her şey Triyaj Bankosu'na düşer."""
+    assert _normalize_department("Kardiyoloji", "Belirsiz") == "Triyaj Bankosu"

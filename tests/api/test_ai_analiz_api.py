@@ -67,17 +67,37 @@ def test_basarili_analiz_200_ve_sema_alanlari(istemci, yetkili_baslik, esik_ustu
     assert yanit.status_code == 200
     govde = yanit.json()
     assert govde["triage_code"] == "Sarı"
-    assert govde["department"] == "Dahiliye"
+    assert govde["department"] == "Sarı Alan"
     assert govde["onerilen_tetkikler"] == ["Tam kan sayımı"]
     assert govde["visit_id"] is not None
     assert govde["sources"] == ["[Kaynak: protokol.pdf] Göğüs ağrısı protokolü"]
 
 
 @pytest.mark.entegrasyon
-def test_klinik_uyari_nota_eklenir(istemci, yetkili_baslik, esik_ustu):
-    # Model uyarıyı yazmasa bile yanıt onu içermeli (hukuki/klinik gereklilik).
+def test_few_shot_ornekleri_prompta_enjekte_edilir(
+    istemci, yetkili_baslik, monkeypatch
+):
+    """Gün 24: havuzdaki şikayet örnekleri system_prompt'ta görünmeli."""
+    yakalanan = {}
+
+    def _yakala(system_prompt: str, user_prompt: str, **kwargs):
+        yakalanan["system_prompt"] = system_prompt
+        return dict(GECERLI_YANIT)
+
+    monkeypatch.setattr(ai_modulu, "get_collection", lambda: object())
+    monkeypatch.setattr(
+        ai_modulu,
+        "retrieve_and_rerank",
+        lambda **kwargs: ["[Kaynak: protokol.pdf] Göğüs ağrısı protokolü"],
+    )
+    monkeypatch.setattr(ai_modulu, "get_structured_completion", _yakala)
+
     yanit = istemci.post("/ai/analiz", json=ziyaret_verisi(), headers=yetkili_baslik())
-    assert "hekim onayına tabidir" in yanit.json()["ai_note"]
+    assert yanit.status_code == 200
+    prompt = yakalanan["system_prompt"]
+    # Havuzdaki bilinen bir örnek (tetkik öğretmeyen Yeşil lokal reaksiyon).
+    assert "arı soktu, kolum şişti ama nefesim rahat" in prompt
+    assert "Kırmızı Alan" in prompt or "Yeşil Alan" in prompt
 
 
 @pytest.mark.entegrasyon

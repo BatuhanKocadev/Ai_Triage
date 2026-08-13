@@ -7,7 +7,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [
       "Nörolojik değerlendirme"
     ],
@@ -23,7 +23,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [
       "Tüm vücut veya bölgeye yönelik Bilgisayarlı Tomografi (BT) ve travma serisi grafiler"
     ],
@@ -39,7 +39,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı",
       "Biyokimya",
@@ -58,7 +58,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [
       "Göğüs Radyografisi"
     ],
@@ -74,7 +74,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [],
     "beklenen_kaynak": "yanik.txt",
     "gerekce": "yanik.txt Sarı: 'Yüz, el, ayak veya perine gibi kritik bölge yanığı olup (elini veya yüzünü haşlamış, bu bölgede su toplamış ya da derisi soyulmuş) vital bulguları tamamen stabil olanlar' — kaynar su eli haşlamış, su toplama (bül) başlamış: kritik bölge + bül. Aynı bölümdeki 'şiddetli ağrısı olan, yanma ve ağrıdan belirgin biçimde yakınan' maddesi de tutuyor. Kırmızı dalları (inhalasyon, TVYA >%20, elektrik/kimyasal, sirkumferansiyel, ağrısız tam kalınlık, şok) yok. Tetkik: protokolün üç laboratuvar maddesi inhalasyon/elektrik/kas yıkımı içindir; bu vakada İlk Değerlendirme'nin TVYA hesabı geçerli olan. YAŞ EŞİĞİ (41, uygulayıcı seçimi): yanik.txt majör yanık eşiğini yaşa bağlıyor — 'Erişkinde TVYA >%20, çocuk/yaşlıda TVYA >%10'. 41 tartışmasız erişkin tarafında. Üstelik el haşlanması yaklaşık %1-2 TVYA olduğu için yaş hangi tarafa çekilirse çekilsin (%20 ya da %10 eşiği) Kırmızı'ya geçmiyor; etiket yaşa karşı iki kat korumalı. TETKİK DÜZELTMESİ (13 Ağu 2026, inceleme I3): önceki 'Yanık alanı değerlendirmesi' hiçbir protokolde geçmiyordu. yanik.txt'nin ÜÇ tetkiki de koşullu — Karboksihemoglobin+Kan Gazı 'inhalasyon şüphesinde', Tam Kan Sayımı+BFT 'kas yıkımı/rabdomiyoliz takibi için', EKG 'elektrik yanıklarında'. Bilek düzeyinde haşlanmada üçünün de koşulu yok, dolayısıyla protokolün dayattığı tetkik YOK ve doğru beklenti boş listedir.",
@@ -88,7 +88,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Klinik değerlendirme ve fizik muayene",
       "Tam kan sayımı"
@@ -105,7 +105,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Sarı",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Sarı Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı",
       "Biyokimya",
@@ -123,7 +123,7 @@
     "kronik_hastalik": null,
     "vitals": null,
     "beklenen_triage_code": "Yeşil",
-    "beklenen_bolum": "Acil Servis",
+    "beklenen_bolum": "Yeşil Alan",
     "beklenen_tetkikler": [
       "Tam kan sayımı",
       "Rutin biyokimya"

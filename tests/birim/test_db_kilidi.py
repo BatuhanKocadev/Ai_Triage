@@ -146,6 +146,27 @@ def test_service_parametresi_reddedilir():
     assert "service" in sebep
 
 
+def test_pghostaddr_ortami_reddedilir(monkeypatch):
+    # URL onaylı olsa bile PGHOSTADDR libpq'yu başka adrese götürür (ölçülmüş).
+    monkeypatch.setenv("PGHOSTADDR", "192.0.2.7")
+    guvenli, sebep = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test"
+    )
+
+    assert guvenli is False
+    assert "PGHOSTADDR" in sebep
+
+
+def test_pgservice_ortami_reddedilir(monkeypatch):
+    monkeypatch.setenv("PGSERVICE", "prod")
+    guvenli, sebep = hedef_guvenli_mi(
+        "postgresql://triage:triage@localhost:5432/ai_triage_test"
+    )
+
+    assert guvenli is False
+    assert "PGSERVICE" in sebep
+
+
 def test_portsuz_yerel_adres_kabul_edilir():
     # Port belirtilmemesi meşrudur (varsayılan 5432); kilit fazla sıkı olmamalı.
     guvenli, _ = hedef_guvenli_mi("postgresql://triage:triage@localhost/ai_triage_test")

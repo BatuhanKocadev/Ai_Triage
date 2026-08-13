@@ -44,7 +44,7 @@ def get_reranker() -> CrossEncoder:
 def retrieve_and_rerank(
     query: str,
     collection,
-    top_k_initial: int = 10,
+    top_k_initial: int | None = None,
     top_k_final: int = 3,
     threshold: float | None = None,
     metadata_filter: dict = None,
@@ -55,6 +55,9 @@ def retrieve_and_rerank(
     # Eşik ayarlardan geliyor; reranker modeli değişince eşik de değişmeli.
     if threshold is None:
         threshold = settings.rerank_threshold
+    # Aday sayısı da ayardan; None = settings.top_k_initial (Gün 24: 20).
+    if top_k_initial is None:
+        top_k_initial = settings.top_k_initial
 
     query_kwargs = {
         "query_texts": [query],
