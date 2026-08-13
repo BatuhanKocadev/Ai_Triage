@@ -60,3 +60,7 @@ hata_logu.txt
 # Gün 23 değerlendirme seti ses kayıtları: kullanıcının kendi sesi, yani kişisel
 # veri — public depoya girmez. Senaryo metinleri (JSON) commit'lenir, ses girmez.
 degerlendirme/ses/
+# Kosum ortasinda cokerse kaybolmasin diye her senaryodan sonra yazilan ara
+# dosyalar (K15). Kosum tamamlaninca icerikleri nihai <tarih>.json raporunda
+# zaten var; her kosumda yeniden uretildikleri icin surumlenmiyorlar.
+degerlendirme/sonuclar/*-ham.json
