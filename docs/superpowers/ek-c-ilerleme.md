@@ -2400,10 +2400,83 @@ bastırma zayıf).
 
 ### Açık kalanlar
 
-- `kor_10` (kullanıcı ses + metin)
-- Kırmızı duyarlılık düşüşünün senaryo kırılımı (hangi vaka kaçtı) raporda
-  tek tek izlenmeli
+- ~~`kor_10` (kullanıcı ses + metin)~~ — **KAPSAM DIŞI BIRAKILDI** (14 Ağustos
+  2026, kullanıcı kararı). Yol haritası 10 ses kaydı istiyordu, elde 9 var;
+  onuncu kayıt **gelecek çalışma** olarak raporlanacak. Sonucu: WER 9 kayıttan
+  hesaplanıyor ve **kör set hiç Kırmızı vaka içermiyor**, yani klinik olarak en
+  kritik sayı yalnızca etiketlerini uygulayıcının seçtiği türetilmiş sette
+  ölçülebiliyor. Bu sınır staj raporunun "bilinen sınırlar" bölümüne yazılmalı,
+  gizlenmemeli.
+- ~~Kırmızı duyarlılık düşüşünün senaryo kırılımı~~ — **KAPANDI**: `tur_11`,
+  sebebi few-shot; aşağıdaki bölüme bak.
 - Altın standart etik borçları (Gün 23 listesi)
+
+### Few-shot GERİ ALINDI — günün asıl bulgusu (14 Ağustos 2026)
+
+Yukarıdaki tablo few-shot **açıkken** çekilmişti ve Kırmızı duyarlılığının
+%90'a inmesini "raporlanmalı" diye kaydetmişti. Kaçan vaka izlendi, sebebi
+izole deneyle bulundu ve **few-shot geri alındı.**
+
+**Kaçan vaka `tur_11`:** *"Oğlum mutfakta çamaşır suyunu su sanıp içmiş. Ağzının
+içi yanmış, sürekli salyası akıyor ve yutkunamıyor."* Beklenen Kırmızı.
+`zehirlenme.txt`'nin Kırmızı satırı birebir *"Kostik madde (**çamaşır suyu**,
+asit) içen ... vakalar"* diyor ve **o belge retrieval'da geliyor** — dört
+koşumun dördünde de `sources = [yanik.txt, zehirlenme.txt]`. Yani model kriteri
+önünde görüyor ve yine Sarı diyor. Retrieval değişmemiş, değişen prompt.
+
+**İzole deney** (aynı senaryo, aynı retrieval çıktısı, aynı prompt iskeleti,
+tek değişken örnek bloğu):
+
+| Kol | `tur_11` Kırmızı |
+|---|---|
+| A — few-shot açık | **0/6** |
+| B — few-shot kapalı | **6/6** |
+| C — açık + "örneklere bakarak seçme, referans doküman kazanır" uyarısı | **1/6** |
+
+**C kolu bu bulgunun en önemli parçası:** sorun ifade değil, örneklerin
+varlığı. Prompt açıkça "referans doküman kazanır" dediğinde bile dört
+illüstratif örnek, getirilmiş ve önünde duran protokol kriterini eziyor. Bir
+klinik karar destek sistemi için bu, RAG dayanağının few-shot tarafından
+geçilebildiği anlamına gelir ve yalnızca bu senaryoya özgü değildir.
+
+**Üçe üç sistem ölçümü:**
+
+| | kör | türetilmiş | Kırmızı duyarlılık | Jaccard | kaçan Kırmızı |
+|---|---|---|---|---|---|
+| few-shot açık | %37,5 | %80,7 | **%90,0** | 0,28 | `tur_11` (3/3) |
+| few-shot kapalı | %33,3 | %82,5 | **%100,0** | 0,28 | yok |
+
+Doğruluk ve Jaccard farkları gürültü tabanının (5,3) içinde. Gürültünün dışında
+kalan tek fark Kırmızı duyarlılığı.
+
+**Mekanizma:** few-shot modeli akuite skalasında **aşağı** çekiyor. Kör sette
+bu işe yarıyordu (model orada yukarı kaçıyor: `kor_02`, `kor_05`, `kor_08`
+kapalıyken Kırmızı'ya fırlıyor), türetilmiş sette zarar veriyordu.
+
+**Karar doğruluk sayısına değil YÖNE dayanıyor.** Few-shot açıkken güvenli bir
+üst-triyaj kazanılıyor, karşılığında tehlikeli bir alt-triyaj veriliyor.
+Triyajda bu takas kabul edilemez: kör setin 4,2 puanı, kaçırılan bir kostik
+madde vakasından ucuzdur. Bu, Gün 23'ün "alt-triyaj ayrıca raporlansın"
+borcunun neden borç olduğunun kanıtı — ham doğrulukla bakılsaydı few-shot
+"nötr" görünüp kalırdı.
+
+Mekanizma silinmedi, **ayara alındı** (`settings.few_shot_aktif`, varsayılan
+`False`); gerekçe ölçüm sayılarıyla birlikte ayarın yanında yazılı ve
+`test_few_shot_ornekleri_prompta_enjekte_edilir` kapının **iki yönünü** de
+bağlıyor (kapalıyken enjekte edilmiyor, açıkken ediliyor). Yalnızca kapalı
+taraf sınansaydı bayrak etkisizleştiğinde hiçbir test kırılmazdı.
+
+Sevk edilen hâlin tablosu `degerlendirme/sonuclar/gun24-once-sonra.md`;
+few-shot açık kolunun tablosu `gun24-fewshot-acik-kolu.md` içinde duruyor.
+
+### Metodolojik not
+
+Gün 24'ün manşeti "few-shot doğruluğu %X'ten %Y'ye çıkardı" olacaktı ve o cümle
+gürültü olurdu. Gerçekte çıkan sonuç daha değerli: **few-shot manşet doğruluğu
+değiştirmedi, ama getirilen protokol kriterini ezerek bir Kırmızı'yı düşürdü;
+ölçüldü, izole edildi, tekrarlandı ve geri alındı.** Negatif sonuç, ölçüm
+altyapısının çalıştığının kanıtıdır — Gün 23'ün gürültü tabanı ölçülmemiş
+olsaydı bu karar verilemezdi.
 
 ## Borç kapatma turu — DEVIR §9 gerçek defektler (14 Ağustos 2026)
 

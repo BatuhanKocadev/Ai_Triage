@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from enum import Enum
 from sqlalchemy.orm import Session
+from app.config.config import settings
 from app.db.database import get_db
 from app.models.user import User
 from app.models.visit import AIRecommendation, Visit
@@ -254,7 +255,8 @@ def analyze_symptoms(
     fever_info = request_data.vitals.fever if request_data.vitals and request_data.vitals.fever else 'Bilinmiyor'
     pulse_info = request_data.vitals.pulse if request_data.vitals and request_data.vitals.pulse else 'Bilinmiyor'
     chronic_info = request_data.chronic_disease if request_data.chronic_disease else 'Yok'
-    ornek_blogu = few_shot_prompt_metni()
+    # Ayardan okunuyor; gerekçe `settings.few_shot_aktif` yanında yazılı.
+    ornek_blogu = few_shot_prompt_metni() if settings.few_shot_aktif else ""
 
     system_prompt = f"""
     Sen uzman bir tıbbi triyaj yapay zekasısın.

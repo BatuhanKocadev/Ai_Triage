@@ -1,0 +1,582 @@
+{
+  "tarih": "2026-08-14",
+  "kosum_etiketi": null,
+  "bloklar": {
+    "Kör set": {
+      "ozet": {
+        "toplam": 8,
+        "dogru": 2,
+        "dogruluk_tum": 0.25,
+        "cevaplanan": 8,
+        "dogruluk_cevaplananlar": 0.25,
+        "kirmizi_toplam": 0,
+        "kirmizi_yakalanan": 0,
+        "kirmizi_duyarlilik": null,
+        "esik_alti": 0,
+        "esik_alti_orani": 0.0,
+        "jaccard_sayisi": 8,
+        "jaccard_ortalama": 0.28125,
+        "kok_neden_dagilimi": {
+          "A": 0,
+          "B": 6,
+          "C": 2
+        },
+        "sansli_dogru": 0,
+        "olculemedi": 0,
+        "sonucsuz": 0,
+        "kapsam_disi_toplam": 1,
+        "kapsam_disi_dogru": 1
+      },
+      "sonuclar": [
+        {
+          "senaryo_id": "kor_01",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Nörolojik değerlendirme ve anamnez",
+            "Bilgisayarlı Tomografi (BT)",
+            "Tam kan sayımı"
+          ],
+          "sources": [
+            "bas_agrisi.txt"
+          ],
+          "visit_id": "a7260fac-051f-4331-b08d-074b1512e31c",
+          "transkript": "Sabah kalktığımdan beri başımın sağ tarafı helaketi zonkluyor ağrısı resmen gözüme vuruyor ışığa falan hiç bakamıyorum midem kalkıyor",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_02",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Şok Odası",
+          "cikan_tetkikler": [
+            "e-FAST (Odaklanmış Travma Ultrasonografisi)",
+            "Tam Kan Sayımı",
+            "Laktat"
+          ],
+          "sources": [
+            "travma.txt"
+          ],
+          "visit_id": "58e00b61-1cbb-4932-835f-ea19ed8ea634",
+          "transkript": "Merdivenden inerken ayağım vurkuldu, bileğim inanılmaz şişti, üstüne kesinlikle basamıyorum, durduğu yerde zonkluyor resmen.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_03",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Biyokimya",
+            "Tam İdrar Tetkiki (TİT)"
+          ],
+          "sources": [
+            "ates_sepsis.txt",
+            "karin_agrisi.txt"
+          ],
+          "visit_id": "88d5b92d-b16a-42c1-8d6a-c215d6e88d1b",
+          "transkript": "Dünden beri karnıma krantlar giriyor, midem sürekli bulanıyor, ağzıma bir lokma bir şey koyamadım, biraz da ateşim çıktı galiba.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_04",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Batın muayenesi",
+            "X-ışığı çekimi (köpük, kemiği)"
+          ],
+          "sources": [
+            "ates_sepsis.txt",
+            "karin_agrisi.txt",
+            "nefes_darligi.txt"
+          ],
+          "visit_id": "b968cad3-1bad-4807-af95-88177d490a31",
+          "transkript": "3 gündür geçmeyen bir öksürüğüm var, yut kururken boğazım jilet gibi kesiliyor, bir de derin derin nefes almaya çalışırken sırtıma garip bir ağrı hesaplanıyor.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_05",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Yanık değerlendirmesi",
+            "Tam kan sayımı"
+          ],
+          "sources": [
+            "yanik.txt"
+          ],
+          "visit_id": "db159dbd-45ff-4aa3-a49d-fdb8b225fac2",
+          "transkript": "Kaynar su elime döküldü, bileğime kadar kırmızı oldu, şimdiden su toplamaya başladı, acısından yerimde duramıyorum.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_06",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı"
+          ],
+          "sources": [
+            "anafilaksi.txt",
+            "yanik.txt"
+          ],
+          "visit_id": "c61a4997-a4cf-4ec6-8f41-24c6a4d09482",
+          "transkript": "Dün akşam içeride bir şeyler yiyemiştim sabahtan beri her yerim deriler gibi kaşınıyor kollarımda kırmızı kırmızı lekeler çıktı yüzümde hafiften şişmeye başladı.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_07",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Resüsitasyon",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Biyokimya",
+            "Tam İdrar Tetkiki (TİT)",
+            "Beta-hCG"
+          ],
+          "sources": [
+            "yanik.txt",
+            "karin_agrisi.txt"
+          ],
+          "visit_id": "32a5520d-d4fa-42fe-b2e4-d804f4ce3821",
+          "transkript": "İki gündür idrala çıkarken çok fena yanmam oluyor. Belimin sağ tarafına, boşluğuma doğru da öyle bir ağır vuruyor ki nefesim kesiliyor.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_08",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Bilgisayar destekli görüntüleme (CT)",
+            "Üst solunum yolu örneklemi"
+          ],
+          "sources": [
+            "ates_sepsis.txt",
+            "yanik.txt"
+          ],
+          "visit_id": "b1b21202-4862-45d6-9186-054363265d63",
+          "transkript": "Kaç gündür üstümde bir kırgınlık var. Bütün eklemlerim sızlıyor, sürekli üşüyorum, ara ara titreme geliyor ama alnım da yanıyor sanki.",
+          "hata": null
+        },
+        {
+          "senaryo_id": "kor_09",
+          "cikan_triage_code": "Belirsiz",
+          "cikan_bolum": "Triyaj Bankosu",
+          "cikan_tetkikler": [],
+          "sources": [],
+          "visit_id": "73dd410a-a068-4d07-b57e-86bedf5a576c",
+          "transkript": "Bu akşam yanlış ilaç içmişim kendimi iyi hissetmiyorum.",
+          "hata": null
+        }
+      ],
+      "wer_ortalama": 0.14346961291817037
+    },
+    "Türetilmiş set": {
+      "ozet": {
+        "toplam": 19,
+        "dogru": 16,
+        "dogruluk_tum": 0.8421052631578947,
+        "cevaplanan": 19,
+        "dogruluk_cevaplananlar": 0.8421052631578947,
+        "kirmizi_toplam": 10,
+        "kirmizi_yakalanan": 10,
+        "kirmizi_duyarlilik": 1.0,
+        "esik_alti": 0,
+        "esik_alti_orani": 0.0,
+        "jaccard_sayisi": 19,
+        "jaccard_ortalama": 0.2675438596491228,
+        "kok_neden_dagilimi": {
+          "A": 2,
+          "B": 2,
+          "C": 16
+        },
+        "sansli_dogru": 0,
+        "olculemedi": 0,
+        "sonucsuz": 0,
+        "kapsam_disi_toplam": 1,
+        "kapsam_disi_dogru": 0
+      },
+      "sonuclar": [
+        {
+          "senaryo_id": "tur_01",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Resüsitasyon",
+          "cikan_tetkikler": [
+            "Elektrokardiyografi (EKG)",
+            "Tam kan sayımı"
+          ],
+          "sources": [
+            "gogus_agrisi.txt"
+          ],
+          "visit_id": "fba6e222-5487-43e9-bb35-a23101f623c5",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_02",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Elektrokardiyografi (EKG)",
+            "Kontrol oksijen saturasyonu (SpO2)"
+          ],
+          "sources": [
+            "nefes_darligi.txt",
+            "gogus_agrisi.txt"
+          ],
+          "visit_id": "f134a0f4-2bec-4729-8f8b-c03caadc6a33",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_03",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Elektrokardiyografi (EKG)",
+            "SpO2 ölçümü",
+            "Tam kan sayımı"
+          ],
+          "sources": [
+            "nefes_darligi.txt",
+            "ates_sepsis.txt",
+            "gogus_agrisi.txt"
+          ],
+          "visit_id": "f4954ba5-9b24-4838-8e19-cf7f9f683598",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_04",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Hemogram (Tam kan sayımı)",
+            "Biyokimya",
+            "Tam İdrar Tetkiki (TİT)",
+            "Beta-hCG"
+          ],
+          "sources": [
+            "karin_agrisi.txt"
+          ],
+          "visit_id": "67f61e32-94a0-4c50-a731-7310d4952d6a",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_05",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Parmak ucu kan şekeri",
+            "Nabız ve ateş ölçümü",
+            "Kapsamlı fizik ve nörolojik muayene"
+          ],
+          "sources": [
+            "bas_agrisi.txt",
+            "bilinc_degisikligi.txt"
+          ],
+          "visit_id": "9aff31a0-132a-40f9-8abb-529bf2226fdf",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_06",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "FAST-ED skorunu belirleme",
+            "Glasgow Koma Skalasını (GKS) ölçme",
+            "Pupilla muayenesi"
+          ],
+          "sources": [
+            "inme.txt",
+            "travma.txt"
+          ],
+          "visit_id": "9df1e31e-3a3a-4115-974e-aeb3bbbb564f",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_07",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Basılansal kan testi",
+            "Nörolojik değerlendirme"
+          ],
+          "sources": [
+            "ates_sepsis.txt"
+          ],
+          "visit_id": "7ad3f39b-b416-4ba0-a056-25686730ce73",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_08",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Şok Odası",
+          "cikan_tetkikler": [
+            "e-FAST",
+            "Tam Kan Sayımı",
+            "Laktat"
+          ],
+          "sources": [
+            "travma.txt"
+          ],
+          "visit_id": "647b972c-f3a0-449f-95f0-d1ddfcd2bf5c",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_09",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Ses ve solunum bulge kontrolü",
+            "Laktat seviyesi"
+          ],
+          "sources": [
+            "yanik.txt",
+            "ates_sepsis.txt"
+          ],
+          "visit_id": "5fc21ff2-e52d-41f3-8b5d-d17f5367baab",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_10",
+          "cikan_triage_code": "Yeşil",
+          "cikan_bolum": "Şok Odası",
+          "cikan_tetkikler": [],
+          "sources": [
+            "yanik.txt"
+          ],
+          "visit_id": "c972285d-a702-4d54-9f47-7d5da01fe9c9",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_11",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Bilirritaryon testi"
+          ],
+          "sources": [
+            "yanik.txt",
+            "zehirlenme.txt"
+          ],
+          "visit_id": "c26e0a07-084d-42ae-9223-4740beec8d19",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_12",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Parasetamol dozunu kontrol etmek için farmakolojik takip"
+          ],
+          "sources": [
+            "zehirlenme.txt"
+          ],
+          "visit_id": "2676fde7-7c7a-47f5-9e46-b82c8bfaf279",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_13",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Şok Odası",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Bilirritaryon testi",
+            "Plasma kloroteli ve sodyum seviyeleri"
+          ],
+          "sources": [
+            "ates_sepsis.txt",
+            "anafilaksi.txt"
+          ],
+          "visit_id": "304af498-0e75-41bf-999d-c3c57e9862ef",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_14",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Kan laktat düzeyi",
+            "Antibiyotik öncesi en az iki set Kan Kültürü ve odak kültürleri",
+            "Tam kan sayımı ve rutin biyokimya"
+          ],
+          "sources": [
+            "ates_sepsis.txt",
+            "pediatrik_ates.txt"
+          ],
+          "visit_id": "44f2589e-e212-4acb-a8ff-cfa1cda0ee8f",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_15",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Kırmızı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı",
+            "Nabız ölçümü"
+          ],
+          "sources": [
+            "gis_kanamasi.txt"
+          ],
+          "visit_id": "60ae119d-838c-48f8-ae0d-bf4af1a57964",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_16",
+          "cikan_triage_code": "Yeşil",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Tam kan sayımı"
+          ],
+          "sources": [
+            "gis_kanamasi.txt"
+          ],
+          "visit_id": "21a0630c-512b-4fab-bc2c-395d689de342",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_17",
+          "cikan_triage_code": "Yeşil",
+          "cikan_bolum": "Resüsitasyon",
+          "cikan_tetkikler": [
+            "Beta-hCG",
+            "Yatak başı obstetrik USG"
+          ],
+          "sources": [
+            "gebelik_acilleri.txt"
+          ],
+          "visit_id": "7c22b24c-7d5c-4433-ad96-3d8ef1d4ded9",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_18",
+          "cikan_triage_code": "Kırmızı",
+          "cikan_bolum": "Resüsitasyon",
+          "cikan_tetkikler": [
+            "Kapiller kan şekeri ölçümü",
+            "Tam kan sayımı ve enfeksiyon belirteçleri (Rutin biyokimya)"
+          ],
+          "sources": [
+            "pediatrik_ates.txt"
+          ],
+          "visit_id": "152811a5-58f1-4b37-bef7-519096f565e1",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_19",
+          "cikan_triage_code": "Sarı",
+          "cikan_bolum": "Sarı Alan",
+          "cikan_tetkikler": [
+            "Psikiyatrik değerlendirme",
+            "Kontrol edilme"
+          ],
+          "sources": [
+            "psikiyatrik_aciller.txt"
+          ],
+          "visit_id": "cdaccbbe-3174-48af-a3ac-cf6c097c3e9b",
+          "transkript": null,
+          "hata": null
+        },
+        {
+          "senaryo_id": "tur_20",
+          "cikan_triage_code": "Yeşil",
+          "cikan_bolum": "Resüsitasyon",
+          "cikan_tetkikler": [],
+          "sources": [
+            "travma.txt",
+            "bas_agrisi.txt"
+          ],
+          "visit_id": "3fdcaee3-8fd9-40c2-ab45-77d7d00e57db",
+          "transkript": null,
+          "hata": null
+        }
+      ]
+    }
+  },
+  "bilgi_tabani": {
+    "dosya": 15,
+    "chunk": 49,
+    "kirilim": [
+      {
+        "kaynak": "anafilaksi.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "ates_sepsis.txt",
+        "chunk_sayisi": 4
+      },
+      {
+        "kaynak": "bas_agrisi.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "bilinc_degisikligi.txt",
+        "chunk_sayisi": 5
+      },
+      {
+        "kaynak": "gebelik_acilleri.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "gis_kanamasi.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "gogus_agrisi.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "inme.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "karin_agrisi.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "nefes_darligi.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "pediatrik_ates.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "psikiyatrik_aciller.txt",
+        "chunk_sayisi": 4
+      },
+      {
+        "kaynak": "travma.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "yanik.txt",
+        "chunk_sayisi": 3
+      },
+      {
+        "kaynak": "zehirlenme.txt",
+        "chunk_sayisi": 3
+      }
+    ]
+  }
+}

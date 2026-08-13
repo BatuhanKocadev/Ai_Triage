@@ -77,7 +77,14 @@ def test_basarili_analiz_200_ve_sema_alanlari(istemci, yetkili_baslik, esik_ustu
 def test_few_shot_ornekleri_prompta_enjekte_edilir(
     istemci, yetkili_baslik, monkeypatch
 ):
-    """Gün 24: havuzdaki şikayet örnekleri system_prompt'ta görünmeli."""
+    """Few-shot enjeksiyonu `settings.few_shot_aktif`e bağlı ve VARSAYILAN KAPALI.
+
+    Kapalı olması ölçümle alınmış bir karardır (14 Ağustos 2026): açıkken model,
+    retrieval'ın getirdiği ve önünde duran protokol kriterini örneklere bakarak
+    eziyordu — `tur_11` izole deneyde açıkken 0/6, kapalıyken 6/6 Kırmızı verdi.
+    Bu test kapının iki yönünü de bağlıyor; yalnızca "kapalı" tarafı sınansaydı
+    bayrak etkisiz hâle geldiğinde (ör. koşul silinince) hiçbir test kırılmazdı.
+    """
     yakalanan = {}
 
     def _yakala(system_prompt: str, user_prompt: str, **kwargs):
@@ -92,12 +99,22 @@ def test_few_shot_ornekleri_prompta_enjekte_edilir(
     )
     monkeypatch.setattr(ai_modulu, "get_structured_completion", _yakala)
 
-    yanit = istemci.post("/ai/analiz", json=ziyaret_verisi(), headers=yetkili_baslik())
+    ORNEK = "arı soktu, kolum şişti ama nefesim rahat"
+    # Başlık bir kez alınıyor: `yetkili_baslik()` her çağrıda kullanıcı yaratıyor
+    # ve ikinci çağrı unique kısıtına takılırdı.
+    baslik = yetkili_baslik()
+
+    # VARSAYILAN: kapalı — örnek prompt'a girmiyor.
+    assert ai_modulu.settings.few_shot_aktif is False
+    yanit = istemci.post("/ai/analiz", json=ziyaret_verisi(), headers=baslik)
     assert yanit.status_code == 200
-    prompt = yakalanan["system_prompt"]
-    # Havuzdaki bilinen bir örnek (tetkik öğretmeyen Yeşil lokal reaksiyon).
-    assert "arı soktu, kolum şişti ama nefesim rahat" in prompt
-    assert "Kırmızı Alan" in prompt or "Yeşil Alan" in prompt
+    assert ORNEK not in yakalanan["system_prompt"]
+
+    # AÇIKKEN: havuz gerçekten enjekte ediliyor (mekanizma sağlam, yalnızca kapalı).
+    monkeypatch.setattr(ai_modulu.settings, "few_shot_aktif", True)
+    yanit = istemci.post("/ai/analiz", json=ziyaret_verisi(), headers=baslik)
+    assert yanit.status_code == 200
+    assert ORNEK in yakalanan["system_prompt"]
 
 
 @pytest.mark.entegrasyon

@@ -20,6 +20,19 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
 
+    # Few-shot örneklerinin prompt'a enjekte edilip edilmeyeceği (Gün 24).
+    # VARSAYILAN KAPALI ve bu ölçümle alınmış bir karardır, tercih değil:
+    # açıkken model, getirilmiş ve önünde duran protokol kriterini örneklere
+    # bakarak eziyordu. `tur_11` (çocuk çamaşır suyu içmiş, salya, yutkunamıyor)
+    # izole deneyde açıkken 0/6, kapalıyken 6/6 Kırmızı verdi — oysa
+    # zehirlenme.txt'nin Kırmızı satırı "Kostik madde (çamaşır suyu, asit) içen"
+    # diyor ve o belge retrieval'da GELİYOR. Prompt'a "örneklere bakarak seçme,
+    # referans doküman kazanır" yazmak da kurtarmadı (1/6), yani sorun ifade
+    # değil örneklerin varlığı. Ölçülen faydası +1,8 puandı, gürültü tabanı ise
+    # 5,3 — yani fayda sıfır, bedel klinik olarak en kritik metrik.
+    # Yeniden açmadan önce: kapatma gerekçesini ölçümle çürüt.
+    few_shot_aktif: bool = False
+
     # --- Güvenlik (Gün 21) ---
     # Hız sınırı: ÜÇ sayacın üçü de `rate_limit_pencere_sn` saniyelik kayan
     # pencerede sayılır ama AYRI kovalardır — ikisi bağlanan uç noktanın IP'sine
