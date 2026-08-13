@@ -32,6 +32,7 @@ import requests
 from degerlendirme.olcum import (
     Ozet,
     Senaryo,
+    SenaryoHatasi,
     Sonuc,
     kaynak_adlarini_ayikla,
     kok_neden,
@@ -42,6 +43,9 @@ from degerlendirme.olcum import (
 )
 
 BACKEND = "http://localhost:8000"
+# Ollama uca değil doğrudan sorulan tek dış servis; `app` import edilmiyor (K5).
+OLLAMA = "http://localhost:11434"
+MODEL = "qwen2.5:7b-instruct"
 BURASI = Path(__file__).resolve().parent
 SONUCLAR = BURASI / "sonuclar"
 # Ön uçuşun beklediği bilgi tabanı; Gün 20'de kurulan derlemenin boyutu.
@@ -118,7 +122,30 @@ def on_ucus() -> tuple[str, str]:
             "scripts/bilgi_tabani_kur.py ile yeniden kurun."
         )
 
-    print(f"Ön uçuş tamam: {len(kayitlar)} dosya / {toplam_chunk} chunk")
+    # Ollama ayakta mı? `/health/` sabit bir dize döndürüyor ve LLM hakkında
+    # HİÇBİR şey kanıtlamıyor — Gün 20'nin dersi tam buydu. Ollama kapalıyken
+    # her senaryo 502 alır, koşum sonuna kadar yanar ve rapor baştan sona
+    # `olculemedi` çıkar; ön uçuş bunu önlemek için var.
+    try:
+        etiketler = requests.get(f"{OLLAMA}/api/tags", timeout=10)
+        etiketler.raise_for_status()
+    except requests.RequestException as exc:
+        raise OnUcusHatasi(
+            f"Ollama'ya ulaşılamıyor ({OLLAMA}): {exc}. `ollama serve` çalışıyor mu?"
+        ) from exc
+    modeller = {m.get("name") for m in etiketler.json().get("models", [])}
+    if MODEL not in modeller:
+        raise OnUcusHatasi(
+            f"Ollama'da {MODEL} yok (bulunanlar: {sorted(modeller)}). "
+            f"`ollama pull {MODEL}` ile indirin."
+        )
+
+    print(
+        f"Ön uçuş tamam: {len(kayitlar)} dosya / {toplam_chunk} chunk, "
+        f"Ollama {MODEL} hazır"
+    )
+    # Derlemenin dosya kırılımı rapora yazılıyor: Ek C'nin "yanik.txt 6 chunk"
+    # gibi iddiaları aksi hâlde depoda hiçbir kanıta dayanmıyor (M8).
     return hasta_jetonu, admin_jetonu
 
 
@@ -126,20 +153,34 @@ def _429_bekleyerek_gonder(gonder, aciklama: str, deneme_sayisi: int = 4):
     """429 alınca artan aralıklarla bekler; sınırı kapatmıyoruz (K10).
 
     Hız sınırı ölçüm için gevşetilirse ölçülen yol üretimdeki yol olmaz.
+
+    Ağ istisnaları burada YAKALANIYOR ve `(None, hata_metni)` olarak dönüyor.
+    Yakalanmasaydı tek bir `ReadTimeout` — yerel Ollama soğuk modelde 90 sn'yi
+    bulabiliyor — `seti_kosur`'u aşıp `main`'den ham traceback olarak çıkardı:
+    kalan senaryolar hiç denenmez, rapor hiç yazılmaz ve saatlerce süren bir
+    koşum yalnızca ara dosyayla kalırdı. Spec'in hata tablosu ve K15 "senaryo
+    hata olarak kaydedilir, koşum devam eder" diyor; bu, o sözü tutan yer.
     """
     bekleme = 20
-    yanit = None
+    son_hata = "tükenen 429 denemesi"
     for deneme in range(deneme_sayisi):
-        yanit = gonder()
+        try:
+            yanit = gonder()
+        except requests.RequestException as exc:
+            # Zaman aşımı/bağlantı kopması tek senaryoyu düşürür, koşumu değil.
+            return None, f"{type(exc).__name__}: {exc}"
         if yanit.status_code != 429:
-            return yanit, deneme
+            return yanit, None
+        # Son denemeden sonra beklemenin anlamı yok; 160 sn boşa gitmesin.
+        if deneme == deneme_sayisi - 1:
+            break
         print(f"  429 alındı ({aciklama}), {bekleme} sn bekleniyor…")
         time.sleep(bekleme)
         bekleme *= 2
-    return yanit, deneme_sayisi
+    return None, son_hata
 
 
-def senaryoyu_sor(senaryo: Senaryo, jeton: str) -> tuple[Sonuc, int]:
+def senaryoyu_sor(senaryo: Senaryo, jeton: str) -> Sonuc:
     """Tek senaryoyu /ai/analiz'e gönderir ve Sonuc'a çevirir."""
     govde = {
         "patient_age": senaryo.yas,
@@ -153,7 +194,7 @@ def senaryoyu_sor(senaryo: Senaryo, jeton: str) -> tuple[Sonuc, int]:
     if senaryo.vitals:
         govde["vitals"] = senaryo.vitals
 
-    yanit, kota_carpma = _429_bekleyerek_gonder(
+    yanit, ag_hatasi = _429_bekleyerek_gonder(
         lambda: requests.post(
             f"{BACKEND}/ai/analiz",
             json=govde,
@@ -163,31 +204,29 @@ def senaryoyu_sor(senaryo: Senaryo, jeton: str) -> tuple[Sonuc, int]:
         senaryo.id,
     )
 
-    if yanit is None or yanit.status_code != 200:
-        durum = "istek gönderilemedi" if yanit is None else yanit.status_code
-        govde_ozeti = "" if yanit is None else f": {yanit.text[:200]}"
-        return (
-            Sonuc(senaryo_id=senaryo.id, hata=f"{durum}{govde_ozeti}"),
-            kota_carpma,
+    if yanit is None:
+        print(f"  Ağ hatası ({senaryo.id}): {ag_hatasi}")
+        return Sonuc(senaryo_id=senaryo.id, hata=ag_hatasi)
+    if yanit.status_code != 200:
+        return Sonuc(
+            senaryo_id=senaryo.id,
+            hata=f"{yanit.status_code}: {yanit.text[:200]}",
         )
 
     veri = yanit.json()
     visit_id = veri.get("visit_id")
-    return (
-        Sonuc(
-            senaryo_id=senaryo.id,
-            cikan_triage_code=veri.get("triage_code"),
-            cikan_bolum=veri.get("department"),
-            cikan_tetkikler=veri.get("onerilen_tetkikler") or [],
-            # ZORUNLU AYIKLAMA: uç `sources`'ı "[Kaynak: dosya] belge" biçiminde
-            # döndürüyor. Ham yazılırsa beklenen kaynak hiçbir zaman bulunamaz,
-            # her yanlış cevap A kutusuna ve her doğru cevap "şanslı doğru"ya
-            # yazılır — ve hiçbir test kırılmaz (Sonuc.sources sözleşmesi).
-            sources=kaynak_adlarini_ayikla(veri.get("sources") or []),
-            # Ziyaret silinmiyor: video demosunun denetim izi buradan bulunacak (K14).
-            visit_id=str(visit_id) if visit_id else None,
-        ),
-        kota_carpma,
+    return Sonuc(
+        senaryo_id=senaryo.id,
+        cikan_triage_code=veri.get("triage_code"),
+        cikan_bolum=veri.get("department"),
+        cikan_tetkikler=veri.get("onerilen_tetkikler") or [],
+        # ZORUNLU AYIKLAMA: uç `sources`'ı "[Kaynak: dosya] belge" biçiminde
+        # döndürüyor. Ham yazılırsa beklenen kaynak hiçbir zaman bulunamaz,
+        # her yanlış cevap A kutusuna ve her doğru cevap "şanslı doğru"ya
+        # yazılır — ve hiçbir test kırılmaz (Sonuc.sources sözleşmesi).
+        sources=kaynak_adlarini_ayikla(veri.get("sources") or []),
+        # Ziyaret silinmiyor: video demosunun denetim izi buradan bulunacak (K14).
+        visit_id=str(visit_id) if visit_id else None,
     )
 
 
@@ -204,7 +243,7 @@ def sesi_transkript_et(senaryo: Senaryo, jeton: str) -> str | None:
 
     icerik = yol.read_bytes()
 
-    yanit, _ = _429_bekleyerek_gonder(
+    yanit, ag_hatasi = _429_bekleyerek_gonder(
         lambda: requests.post(
             f"{BACKEND}/speech/transkript",
             files={"file": (yol.name, icerik, "audio/mp4")},
@@ -213,9 +252,12 @@ def sesi_transkript_et(senaryo: Senaryo, jeton: str) -> str | None:
         ),
         f"{senaryo.id} ses",
     )
-    if yanit is None or yanit.status_code != 200:
-        durum = "istek gönderilemedi" if yanit is None else yanit.status_code
-        print(f"  Transkript hatası ({senaryo.id}): {durum}")
+    if yanit is None:
+        # WER'in düşmesi triyaj ölçümünü durdurmaz; senaryo sesli olmasa da ölçülür.
+        print(f"  Transkript ağ hatası ({senaryo.id}): {ag_hatasi}")
+        return None
+    if yanit.status_code != 200:
+        print(f"  Transkript hatası ({senaryo.id}): {yanit.status_code}")
         return None
     return yanit.json().get("transcript")
 
@@ -228,7 +270,7 @@ def seti_kosur(senaryolar: list[Senaryo], jeton: str, etiket: str) -> list[Sonuc
 
     for sira, senaryo in enumerate(senaryolar, start=1):
         print(f"[{etiket} {sira}/{len(senaryolar)}] {senaryo.id}")
-        sonuc, _ = senaryoyu_sor(senaryo, jeton)
+        sonuc = senaryoyu_sor(senaryo, jeton)
         if senaryo.ses_dosyasi:
             sonuc.transkript = sesi_transkript_et(senaryo, jeton)
         sonuclar.append(sonuc)
@@ -248,6 +290,17 @@ def _yuzde(oran: float, payda: int) -> str:
     "hiç cevaplamamış" (Görev 5 incelemesi, M4).
     """
     return TANIMSIZ if not payda else f"%{oran * 100:.1f}"
+
+
+def _ondalik(deger: float | None, payda: int) -> str:
+    """Ondalık bir ortalamayı biçimler; payda sıfırsa 'n/d' basar.
+
+    Jaccard, `_yuzde`nin kapattığı M4 sınıfının son kalıntısıydı: bütün kapsam
+    içi senaryolar eşik altında kalırsa ortalama hiç hesaplanamaz ve "0.00"
+    basılırsa "model tamamen yanlış tetkik önerdi" diye okunur — oysa anlamı
+    "hiç ölçülmedi".
+    """
+    return TANIMSIZ if not payda or deger is None else f"{deger:.2f}"
 
 
 def _wer_tablosu(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> tuple[list, float]:
@@ -273,12 +326,13 @@ def _ozet_tablosu(o: Ozet) -> list[str]:
         f"| Doğru triyaj | {o.dogru} |",
         f"| **Genel doğruluk (tüm)** | **{_yuzde(o.dogruluk_tum, o.toplam)}** |",
         f"| **Genel doğruluk (cevaplananlar)** | "
-        f"**{_yuzde(o.dogruluk_cevaplananlar, o.toplam - o.esik_alti)}** |",
+        f"**{_yuzde(o.dogruluk_cevaplananlar, o.cevaplanan)}** |",
         f"| **Kırmızı duyarlılık** | "
         f"**{_yuzde(o.kirmizi_duyarlilik, o.kirmizi_toplam)}** "
         f"({o.kirmizi_yakalanan}/{o.kirmizi_toplam}) |",
         f"| Eşik altı oranı | {_yuzde(o.esik_alti_orani, o.toplam)} ({o.esik_alti}) |",
-        f"| Tetkik Jaccard (ort.) | {o.jaccard_ortalama:.2f} |",
+        f"| Tetkik Jaccard (ort.) | {_ondalik(o.jaccard_ortalama, o.jaccard_sayisi)} "
+        f"({o.jaccard_sayisi} senaryodan) |",
         f"| Kök neden A/B/C | {o.kok_neden_dagilimi['A']} / "
         f"{o.kok_neden_dagilimi['B']} / {o.kok_neden_dagilimi['C']} |",
         f"| Şanslı doğru | {o.sansli_dogru} |",
@@ -313,12 +367,20 @@ def _kirilim_tablosu(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> list[s
             else ("evet" if senaryo.beklenen_kaynak in gelen else "HAYIR")
         )
         kutu = kok_neden(senaryo, sonuc) or "doğru"
-        jaccard = tetkik_ortusmesi(senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler)
+        # Kapsam dışı senaryoda tetkik PUANLANMIYOR (kok_neden ile aynı kural):
+        # cevap vermeyi reddetmiş sistemde derecelendirilecek tetkik yoktur.
+        # Sayı basmak, raporun başka yerde "—" dediği şeye değer atfetmek olurdu.
+        kapsam_disi = senaryo.beklenen_triage_code == "Belirsiz"
+        jaccard = (
+            "—"
+            if kapsam_disi
+            else f"{tetkik_ortusmesi(senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler):.2f}"
+        )
         satirlar.append(
             f"| {senaryo.id} | {senaryo.beklenen_triage_code} | "
             f"{sonuc.cikan_triage_code or 'HATA'} | {kaynak_geldi} | {kutu} | "
             f"{', '.join(senaryo.beklenen_tetkikler) or '—'} | "
-            f"{', '.join(sonuc.cikan_tetkikler) or '—'} | {jaccard:.2f} |"
+            f"{', '.join(sonuc.cikan_tetkikler) or '—'} | {jaccard} |"
         )
     return satirlar
 
@@ -336,6 +398,10 @@ def rapor_yaz(bloklar: list[tuple[str, list[Senaryo], list[Sonuc]]]) -> Path:
     for etiket, senaryolar, sonuclar in bloklar:
         o = ozet(senaryolar, sonuclar)
         md.append(f"## {etiket}")
+        md.append("")
+        md.append(f"Sette {len(senaryolar)} senaryo var. Aşağıdaki paydalar bunun "
+                  "alt kümeleridir; hangi senaryonun hangi kovaya düştüğü "
+                  "kırılım tablosunda.")
         md.append("")
         md.extend(_ozet_tablosu(o))
         md.append("")
@@ -424,8 +490,13 @@ def main() -> int:
         print(f"ÖN UÇUŞ DÜŞTÜ: {exc}")
         return 1
 
-    kor = senaryolari_yukle(BURASI / "kor_senaryolar.json")
-    turetilmis = senaryolari_yukle(BURASI / "senaryolar.json")
+    try:
+        kor = senaryolari_yukle(BURASI / "kor_senaryolar.json")
+        turetilmis = senaryolari_yukle(BURASI / "senaryolar.json")
+    except SenaryoHatasi as exc:
+        # Ucuz kontrol pahalı olanlardan sonra geliyordu; en azından temiz düşsün.
+        print(f"SENARYO DOSYASI BOZUK: {exc}")
+        return 1
 
     kor_sonuclari = seti_kosur(kor, hasta_jetonu, "kor")
     turetilmis_sonuclari = seti_kosur(turetilmis, hasta_jetonu, "turetilmis")

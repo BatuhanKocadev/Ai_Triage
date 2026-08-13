@@ -47,6 +47,19 @@ ZORUNLU_METIN_ALANLARI = ("id", "cinsiyet", "beklenen_bolum")
 # iki yolu olması demekti; tek meşru yol None (ya da alanı hiç yazmamak).
 ISTEGE_BAGLI_METIN_ALANLARI = ("beklenen_kaynak", "kronik_hastalik", "ses_dosyasi")
 
+# Senaryo sözlüğünde tanınan BÜTÜN anahtarlar; dışındaki bir anahtar reddedilir.
+# Beyaz liste, çünkü bilinmeyeni sessizce yok saymak isteğe bağlı alanlardaki
+# yazım hatasını görünmez kılıyordu: `beklenen_kaynk` yazılırsa alan `None`
+# okunur, o senaryonun her hatası A kutusundan B'ye kayar ve "şanslı doğru"
+# kontrolü kalıcı olarak kapanır — ne istisna, ne kırmızı test. Zorunlu alanlar
+# varlık kontrolüyle korunuyordu, isteğe bağlılar hiç korunmuyordu.
+# `gerekce` ölçüme girmiyor (Senaryo alanı değil) ama burada tanınıyor: etiketin
+# hangi protokol satırına dayandığını söyleyen tek artefakt o, ve dosyalarda
+# bulunması `test_senaryo_dosyalarinda_gerekce_var` ile ayrıca dayatılıyor.
+TANINAN_ALANLAR = frozenset(
+    ZORUNLU_ALANLAR + ISTEGE_BAGLI_METIN_ALANLARI + ("vitals", "gerekce")
+)
+
 # app/api/ai.py:40 patient_age alanına ge=0 le=120 dayatıyor. Aralık dışı bir
 # senaryo koşum sırasında 422 alır ve boşa gider; koşum yerel Ollama yüzünden
 # dakikalar sürdüğü için geç patlamak pahalı, o yüzden burada yakalanıyor.
@@ -251,6 +264,13 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
                     f"{sira}. kayıtta zorunlu alan eksik: {alan}"
                 )
 
+        bilinmeyen = sorted(set(kayit) - TANINAN_ALANLAR)
+        if bilinmeyen:
+            raise SenaryoHatasi(
+                f"{sira}. kayıtta tanınmayan alan: {', '.join(bilinmeyen)} "
+                f"(tanınanlar: {', '.join(sorted(TANINAN_ALANLAR))})"
+            )
+
         _kaydi_dogrula(kayit, sira)
 
         kod = kayit["beklenen_triage_code"]
@@ -321,16 +341,16 @@ def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
 def bolum_dogru_mu(beklenen: str, cikan: str | None) -> bool:
     """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı.
 
-    Tek çağrı yeri `kok_neden`'in C kutusu; ayrı bir isim olarak duruyor çünkü
-    bölüm karşılaştırması triyaj kodu karşılaştırmasından bağımsız değişebilir.
-    Bugün gövdesi `triyaj_dogru_mu` ile aynı, o yüzden ikisi de `_ad_esit_mi`'ye
-    delege ediyor: aynı karşılaştırmanın ikinci bir birebir kopyası, önlemek
-    için çıkarıldığı kaymayı bir seviye yukarıda geri getirirdi. Bölüm bir gün
-    eş anlamlıları ("Acil" ~ "Acil Servis") tanımak zorunda kalırsa delegasyon
-    silinip gövde buraya yazılır.
+    **BUGÜN HİÇBİR YERDEN ÇAĞRILMIYOR ve bu bilinçli.** 13 Ağustos 2026'da
+    bölüm `kok_neden`'in C kapısından çıkarıldı: derlemedeki 15 protokolün
+    hiçbiri bir hastane bölümü adı içermiyor, dolayısıyla bölüm karşılaştırması
+    sistemin değil altın standardı yazanın seçimini ölçüyordu (gerekçenin tamamı
+    `kok_neden` içinde). Fonksiyon silinmedi çünkü Gün 24 `department` çıktısını
+    derlemenin desteklediği kapalı kelime dağarcığına sıkıştırdığında kapı geri
+    açılacak; o gün eş anlamlıları ("Acil" ~ "Acil Servis", "Acil Servisi") de
+    tanıması gerekecek ve `_ad_esit_mi` delegasyonu silinip gövde buraya yazılır.
 
-    Not: `Ozet` bir bölüm oranı RAPORLAMIYOR — bölüm yalnızca C kutusunun
-    kapısı olarak ölçüme giriyor.
+    Not: `Ozet` bir bölüm oranı RAPORLAMIYOR, bugün hiç raporlamıyor.
     """
     return _ad_esit_mi(beklenen, cikan)
 
@@ -389,6 +409,28 @@ def _gelen_kaynaklar(sonuc: Sonuc) -> list[str]:
     return kaynak_adlarini_ayikla(sonuc.sources)
 
 
+def esik_alti_mi(sonuc: Sonuc) -> bool:
+    """Sistem gerçekten cevap vermekten mi kaçındı — yoksa cevabı mı okunamadı?
+
+    `app/api/ai.py:71-81` iki ayrı duruma **aynı** `"Belirsiz"` kodunu veriyor:
+    (a) eşik kapısı kapandı, LLM hiç çağrılmadı; (b) LLM çağrıldı ama okunamayan
+    bir kod döndürdü ve normalleştirici onu `"Belirsiz"`e indirdi. Yalnızca koda
+    bakmak ikisini birleştirir ve (b)'yi **retrieval hatası** diye raporlar (K8),
+    oysa orada retrieval çalışmış, bozulan muhakeme/biçim tarafıdır — üstelik
+    hiçbir test kırmızıya dönmez.
+
+    Ayırt edici işaret kaynaklardır: eşik altı yolu hiç kaynak döndürmüyor
+    (`app/api/ai.py:152-160`), LLM'e ulaşan yol döndürüyor.
+
+    Karşılaştırma `triyaj_dogru_mu` üzerinden; koda gömülü `== "Belirsiz"`,
+    `_sadelestir`in katlaması değişirse bu kapıyı sessizce hep False yapardı.
+    """
+    return (
+        triyaj_dogru_mu("Belirsiz", sonuc.cikan_triage_code)
+        and not _gelen_kaynaklar(sonuc)
+    )
+
+
 def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
     """Bir sonucu A (retrieval) / B (muhakeme) / C (biçim) kutusuna ayırır.
 
@@ -410,8 +452,10 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
         # Kapsam dışı senaryoda cevap üretmek, eşiğin fazla geçirgen olmasıdır.
         if senaryo.beklenen_triage_code == "Belirsiz":
             return "A"
-        # Eşik altında kalmak retrieval başarısızlığıdır (K8).
-        if sonuc.cikan_triage_code == "Belirsiz":
+        # Eşik altında kalmak retrieval başarısızlığıdır (K8). Kaynak dönmüşse
+        # retrieval çalışmıştır; "Belirsiz" o zaman okunamayan bir LLM cevabıdır
+        # ve aşağıdaki B dalına düşer.
+        if esik_alti_mi(sonuc):
             return "A"
         # Beklenen protokol aday havuzuna hiç girmediyse hata retrieval'dadır.
         beklenen_kaynak = senaryo.beklenen_kaynak
@@ -423,12 +467,30 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
     if senaryo.beklenen_triage_code == "Belirsiz":
         return None
 
-    # Kod doğru: bölüm ya da tetkikler tutmuyorsa biçim/kapsam hatası.
-    bolum_dogru = bolum_dogru_mu(senaryo.beklenen_bolum, sonuc.cikan_bolum)
+    # Kod doğru: tetkikler tutmuyorsa biçim/kapsam hatası.
+    #
+    # BÖLÜM BU KAPIDA DEĞİL (13 Ağustos 2026, ölçümle alınan karar). Derlemenin
+    # 15 protokolünün hiçbiri hastayı bir hastane bölümüne yönlendirmiyor;
+    # hepsinin "— Yönlendirme" tablosu akuite ALANI söylüyor (`sarı alan` 25,
+    # `yeşil alan` 24, `kırmızı alan` 18, `resüsitasyon` 14 kez). Modelin
+    # ürettiği `Pulmonoloji`, `Gastroloji`, `Ortopedi`, `Pediyatri`,
+    # `Acil Cerrahi` adlarının hiçbiri hiçbir protokolde geçmiyor.
+    #
+    # Sonucu: bölüm kapısı açıkken 29 senaryonun 27'sinin `"Acil Servis"`
+    # beklentisi karşısında model neredeyse her seferinde başka bir şey diyordu
+    # ve triyaj kodu DOĞRU olan her senaryo otomatik C'ye düşüyordu (13 Ağustos
+    # koşumu: türetilmiş sette C=15/19; `tur_16` Jaccard 1,00 iken bile C).
+    # Kutu böylece sistemi değil ölçüm setini ölçüyordu.
+    #
+    # Akuite alanını beklenti yapmak da çare değil: o, triyaj kodunun birebir
+    # fonksiyonu, yani sıfır bilgi ekler. Bölüm ölçümden çıkarılmadı, ÖLÇÜLEBİLİR
+    # bir şeye dönüştürülmek üzere Gün 24'ün sistem hedefine taşındı — modelin
+    # `department` çıktısı derlemenin desteklediği kapalı kelime dağarcığına
+    # sıkıştırılacak. O gelene kadar burada puanlanması dayanaksız.
     tetkikler_tam = tetkik_ortusmesi(
         senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler
     ) == 1.0
-    if not bolum_dogru or not tetkikler_tam:
+    if not tetkikler_tam:
         return "C"
 
     return None
@@ -516,28 +578,46 @@ def wer(referans: str, hipotez: str) -> float:
 class Ozet:
     """Bir koşumun bütün raporlanan sayıları — rapor tablosu buradan basılır."""
 
+    # ORAN ALANLARI `None` OLABİLİR ve bu bilinçli: boş kümede oran tanımsızdır,
+    # `0.0` değil. Eskiden `0.0` yazılıyordu ve `Ozet.__dict__` kalıcı JSON
+    # kaydı olduğu için Gün 24 o dosyayı okuyup `0.0 → 0.8`ı "+80 puan iyileşme"
+    # diye görebilirdi; oysa taban hiç ölçülmemişti. Paydası yanında duruyor ama
+    # payda "hatırlanması gereken" bir korumadır, `None` ise unutulamaz.
+
     # Kapsam içi ∧ ölçülebilir senaryo sayısı; iki doğruluk oranının da temeli.
     toplam: int
     # Bu paydada triyaj kodu tutan senaryo sayısı.
     dogru: int
-    # dogru / toplam — eşik altı yanıtlar paydada KALIR.
-    dogruluk_tum: float
-    # dogru / cevap verilenler — eşik altı yanıtlar paydadan DÜŞÜLÜR. İki oran
+    # dogru / toplam — eşik altı yanıtlar paydada KALIR. Payda 0 ise None.
+    dogruluk_tum: float | None
+    # Sistemin cevap verdiği kapsam içi senaryo sayısı (toplam - esik_alti);
+    # `dogruluk_cevaplananlar`ın paydası. Ayrı alan çünkü aksi hâlde bu çıkarma
+    # raporu basan test edilmemiş sürücüde tekrar ediliyordu (K6 sızıntısı) ve
+    # "cevaplanan"ın tanımı değişse ikisi sessizce ayrışırdı.
+    cevaplanan: int
+    # dogru / cevaplanan — eşik altı yanıtlar paydadan DÜŞÜLÜR. İki oran
     # birlikte basılır: tek sayı olsaydı "Belirsiz"leri paydadan atmak doğruluğu
     # istendiği kadar şişirebilirdi, aradaki fark ise eşik altı oranının kendisidir.
-    dogruluk_cevaplananlar: float
+    dogruluk_cevaplananlar: float | None
     # Kapsam içi ∧ ölçülebilir Kırmızı senaryo sayısı (duyarlılığın paydası).
     kirmizi_toplam: int
     # Bunlardan gerçekten Kırmızı olarak işaretlenenler.
     kirmizi_yakalanan: int
     # kirmizi_yakalanan / kirmizi_toplam — raporun klinik olarak en kritik sayısı.
-    kirmizi_duyarlilik: float
-    # Sistemin "Belirsiz" dediği kapsam içi senaryo sayısı (cevapsızlık, yanlışlık değil).
+    # Kör sette bugün None: kullanıcının yazdığı dokuz şikayette Kırmızı yok.
+    kirmizi_duyarlilik: float | None
+    # Sistemin cevap vermekten kaçındığı kapsam içi senaryo sayısı (cevapsızlık,
+    # yanlışlık değil). Ölçütü `esik_alti_mi`: kod "Belirsiz" VE kaynak yok.
     esik_alti: int
     # esik_alti / toplam — iki doğruluk sayısı arasındaki farkın sebebi.
-    esik_alti_orani: float
-    # Cevap verilen kapsam içi senaryolarda tetkik örtüşmesinin (Jaccard) ortalaması.
-    jaccard_ortalama: float
+    esik_alti_orani: float | None
+    # Jaccard ortalamasının paydası: kaç senaryodan hesaplandı. `jaccard_ortalama`
+    # tek başına 0,00 basıldığında "model tamamen yanlış tetkik önerdi" diye
+    # okunuyordu; oysa anlamı "hiç ölçülmedi" olabilir.
+    jaccard_sayisi: int
+    # Cevap verilen kapsam içi senaryolarda tetkik örtüşmesinin (Jaccard)
+    # ortalaması. Payda 0 ise None.
+    jaccard_ortalama: float | None
     # Yanlışların A (retrieval) / B (muhakeme) / C (biçim) sayıları; Gün 24 hedefi.
     kok_neden_dagilimi: dict[str, int]
     # Doğru cevap verilmiş ama beklenen protokol hiç gelmemiş senaryo sayısı.
@@ -552,9 +632,15 @@ class Ozet:
     kapsam_disi_dogru: int
 
 
-def _oran(pay: int, payda: int) -> float:
-    """Sıfıra bölmeyi 0.0'a çeviren yardımcı — boş kümede oran tanımsızdır."""
-    return pay / payda if payda else 0.0
+def _oran(pay: int, payda: int) -> float | None:
+    """Boş kümede `None` döndürür — oran tanımsızdır, sıfır değil.
+
+    Ayrım raporda "%0,0" ile "n/d" farkı; JSON'da ise `0.0` ile `null` farkı.
+    İkincisi daha önemli: `sonuclar/<tarih>.json` Gün 24'ün girdisi ve orada
+    `0.0`, ölçülmemiş bir tabanı ölçülmüş gibi gösterip sahte bir iyileşme
+    üretebilirdi.
+    """
+    return pay / payda if payda else None
 
 
 def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
@@ -587,7 +673,9 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
         for s, r in kapsam_ici
         if triyaj_dogru_mu(s.beklenen_triage_code, r.cikan_triage_code)
     )
-    esik_alti = sum(1 for _, r in kapsam_ici if r.cikan_triage_code == "Belirsiz")
+    # `esik_alti_mi` kaynağa da bakıyor: kaynak dönmüşse retrieval çalışmıştır ve
+    # "Belirsiz" bir cevapsızlık değil, okunamamış bir cevaptır (bkz. o fonksiyon).
+    esik_alti = sum(1 for _, r in kapsam_ici if esik_alti_mi(r))
     cevaplanan = len(kapsam_ici) - esik_alti
 
     # Karşılaştırma `triyaj_dogru_mu` üzerinden: normalleştiricinin ÇIKTISINI
@@ -608,7 +696,7 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
     jaccardlar = [
         tetkik_ortusmesi(s.beklenen_tetkikler, r.cikan_tetkikler)
         for s, r in kapsam_ici
-        if r.cikan_triage_code != "Belirsiz"
+        if not esik_alti_mi(r)
     ]
 
     dagilim: dict[str, int] = {"A": 0, "B": 0, "C": 0}
@@ -624,13 +712,15 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
         toplam=len(kapsam_ici),
         dogru=dogru,
         dogruluk_tum=_oran(dogru, len(kapsam_ici)),
+        cevaplanan=cevaplanan,
         dogruluk_cevaplananlar=_oran(dogru, cevaplanan),
         kirmizi_toplam=len(kirmizi),
         kirmizi_yakalanan=kirmizi_yakalanan,
         kirmizi_duyarlilik=_oran(kirmizi_yakalanan, len(kirmizi)),
         esik_alti=esik_alti,
         esik_alti_orani=_oran(esik_alti, len(kapsam_ici)),
-        jaccard_ortalama=(sum(jaccardlar) / len(jaccardlar)) if jaccardlar else 0.0,
+        jaccard_sayisi=len(jaccardlar),
+        jaccard_ortalama=(sum(jaccardlar) / len(jaccardlar)) if jaccardlar else None,
         kok_neden_dagilimi=dagilim,
         sansli_dogru=sansli,
         olculemedi=olculemedi,

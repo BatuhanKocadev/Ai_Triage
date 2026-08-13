@@ -16,6 +16,7 @@ from degerlendirme.olcum import (
     Sonuc,
     _sadelestir,
     bolum_dogru_mu,
+    esik_alti_mi,
     kaynak_adlarini_ayikla,
     kok_neden,
     ozet,
@@ -48,6 +49,7 @@ def _senaryo_sozlugu(**degisiklikler):
 
 
 def test_senaryo_dosyasi_okunur_ve_dogrulanir(tmp_path):
+    """Yol haritasının beş zorunlu testinden biri: geçerli bir dosya Senaryo'ya çevrilir."""
     yol = tmp_path / "senaryolar.json"
     yol.write_text(json.dumps([_senaryo_sozlugu()]), encoding="utf-8")
 
@@ -60,6 +62,7 @@ def test_senaryo_dosyasi_okunur_ve_dogrulanir(tmp_path):
 
 
 def test_eksik_alanli_senaryo_hata_verir(tmp_path):
+    """Eksik alan yükleme anında patlamalı; koşum sırasında patlarsa dakikalar boşa gider."""
     bozuk = _senaryo_sozlugu()
     del bozuk["beklenen_triage_code"]
     yol = tmp_path / "senaryolar.json"
@@ -70,6 +73,7 @@ def test_eksik_alanli_senaryo_hata_verir(tmp_path):
 
 
 def test_gecersiz_triyaj_kodu_hata_verir(tmp_path):
+    """Altın standart kodu sabit kelime dağarcığının dışına çıkarsa hiçbir karşılaştırma tutmaz."""
     bozuk = _senaryo_sozlugu(beklenen_triage_code="Turuncu")
     yol = tmp_path / "senaryolar.json"
     yol.write_text(json.dumps([bozuk]), encoding="utf-8")
@@ -79,6 +83,7 @@ def test_gecersiz_triyaj_kodu_hata_verir(tmp_path):
 
 
 def test_tekrarlanan_id_hata_verir(tmp_path):
+    """Sonuçlar id ile eşleştiriliyor; tekrarlanan id sessizce bir senaryonun ölçümünü yer."""
     yol = tmp_path / "senaryolar.json"
     yol.write_text(
         json.dumps([_senaryo_sozlugu(), _senaryo_sozlugu()]), encoding="utf-8"
@@ -122,6 +127,7 @@ def test_tetkikler_metin_verilirse_hata_verir(tmp_path):
 
 
 def test_tetkik_elemanlari_metin_olmali(tmp_path):
+    """Liste içindeki metin olmayan eleman Jaccard kümesine girip skoru anlamsızlaştırır."""
     yol = _yaz(tmp_path, _senaryo_sozlugu(beklenen_tetkikler=["EKG", 42]))
 
     with pytest.raises(SenaryoHatasi, match="beklenen_tetkikler"):
@@ -171,6 +177,7 @@ def test_sinir_uzunluklu_sikayet_kabul_edilir(tmp_path, uzunluk):
 
 @pytest.mark.parametrize("uzunluk", [9, 501])
 def test_aralik_disi_sikayet_uzunlugu_hata_verir(tmp_path, uzunluk):
+    """Uç `symptom_text`e 10-500 karakter dayatıyor; aralık dışı senaryo koşumda 422 alır."""
     yol = _yaz(tmp_path, _senaryo_sozlugu(sikayet="a" * uzunluk))
 
     with pytest.raises(SenaryoHatasi, match="sikayet"):
@@ -178,6 +185,7 @@ def test_aralik_disi_sikayet_uzunlugu_hata_verir(tmp_path, uzunluk):
 
 
 def test_metin_olmayan_sikayet_hata_verir(tmp_path):
+    """Şikayet metin değilse uca giden gövde geçersizdir; hata yüklemede çıkmalı."""
     yol = _yaz(tmp_path, _senaryo_sozlugu(sikayet=12345))
 
     with pytest.raises(SenaryoHatasi, match="sikayet"):
@@ -186,6 +194,7 @@ def test_metin_olmayan_sikayet_hata_verir(tmp_path):
 
 @pytest.mark.parametrize("alan", ["id", "cinsiyet", "beklenen_bolum"])
 def test_zorunlu_metin_alanlari_str_olmali(tmp_path, alan):
+    """Zorunlu metin alanlarında tip kayması karşılaştırmaları sessizce hep False yapar."""
     yol = _yaz(tmp_path, _senaryo_sozlugu(**{alan: 7}))
 
     with pytest.raises(SenaryoHatasi, match=alan):
@@ -194,6 +203,7 @@ def test_zorunlu_metin_alanlari_str_olmali(tmp_path, alan):
 
 @pytest.mark.parametrize("alan", ["beklenen_kaynak", "kronik_hastalik", "ses_dosyasi"])
 def test_istege_bagli_metin_alanlari_str_ya_da_none_olmali(tmp_path, alan):
+    """İsteğe bağlı alanlarda tek meşru 'yok' değeri None; boş dize ikinci bir yol olurdu."""
     yol = _yaz(tmp_path, _senaryo_sozlugu(**{alan: 7}))
 
     with pytest.raises(SenaryoHatasi, match=alan):
@@ -238,6 +248,7 @@ def test_cinsiyet_sessizce_normalize_edilmez(tmp_path):
 
 
 def test_vitals_sozluk_olmali(tmp_path):
+    """`vitals` sözlük değilse uca gönderilemez; pydantic fazladan anahtarı sessizce yutuyor."""
     yol = _yaz(tmp_path, _senaryo_sozlugu(vitals=[37.5, 90]))
 
     with pytest.raises(SenaryoHatasi, match="vitals"):
@@ -605,12 +616,16 @@ def test_sansli_dogru_isaretlenir():
     assert sansli_dogru_mu(senaryo, durust) is False
 
 
-def test_kod_dogru_bolum_yanlissa_da_c_kutusuna_girer():
-    """C'nin iki kapısı var; tetkikler tamken bölüm yanlışsa da "doğru ama eksik".
+def test_bolum_yanlisligi_tek_basina_c_kutusu_yaratmaz():
+    """C'nin tek kapısı tetkikler; bölüm 13 Ağustos 2026'da ölçümden çıkarıldı.
 
-    Tetkik kapısı tek başına test edilirse bölüm karşılaştırması sessizce
-    bozulabilir (ör. hep True dönebilir) ve C kutusu olduğundan küçük görünür.
-    Bölüm hiç dönmediği (None) hâl de aynı kapıdan geçmeli.
+    Sebep `kok_neden` içinde yazılı: derlemedeki 15 protokolün hiçbiri hastane
+    bölümü adı içermiyor, dolayısıyla bölüm karşılaştırması sistemin değil altın
+    standardı yazanın seçimini ölçüyordu ve triyaj kodu doğru olan her senaryoyu
+    C'ye dolduruyordu.
+
+    Bu test kapının geri açılmasını engelliyor: bölüm eklenirse iki assert de
+    kırılır ve kırılma "ölçüm yeniden dayanaksız hâle geldi" haberi olur.
     """
     senaryo = _senaryo()
     yanlis_bolum = Sonuc(
@@ -620,7 +635,7 @@ def test_kod_dogru_bolum_yanlissa_da_c_kutusuna_girer():
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
-    assert kok_neden(senaryo, yanlis_bolum) == "C"
+    assert kok_neden(senaryo, yanlis_bolum) is None
 
     bolumsuz = Sonuc(
         senaryo_id="t01",
@@ -629,7 +644,18 @@ def test_kod_dogru_bolum_yanlissa_da_c_kutusuna_girer():
         cikan_tetkikler=["EKG", "Troponin"],
         sources=["gogus_agrisi.txt"],
     )
-    assert kok_neden(senaryo, bolumsuz) == "C"
+    assert kok_neden(senaryo, bolumsuz) is None
+
+    # Buna karşılık tetkik kapısı açık: eksik tetkik hâlâ C üretiyor. Bu assert
+    # olmadan yukarıdaki ikisi "C kutusu tamamen öldü" ile de yeşil kalırdı.
+    eksik_tetkik = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Kırmızı",
+        cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG"],
+        sources=["gogus_agrisi.txt"],
+    )
+    assert kok_neden(senaryo, eksik_tetkik) == "C"
 
 
 def test_kaynagi_yazilmamis_senaryoda_yanlis_kod_muhakemeye_yazilir():
@@ -827,6 +853,7 @@ def test_beklenen_kaynak_yuklemede_kirpilir(tmp_path):
 
 def test_wer_hesaplanir():
     # Birebir aynı
+    """WER'in temel hâli: kelime düzeyinde düzenleme mesafesi / referans kelime sayısı."""
     assert wer("başım ağrıyor", "başım ağrıyor") == 0.0
     # Beş kelimeden biri yanlış
     assert wer(
@@ -839,6 +866,7 @@ def test_wer_hesaplanir():
 
 
 def test_wer_noktalama_ve_buyuk_harf_yok_sayar():
+    """Noktalama ve büyük harf tanıma hatası değildir; katlanmazsa WER olduğundan kötü çıkar."""
     assert wer("Başım ağrıyor!", "başım ağrıyor") == 0.0
     assert wer("Işığa bakamıyorum, midem kalkıyor.", "ışığa bakamıyorum midem kalkıyor") == 0.0
 
@@ -861,6 +889,7 @@ def test_wer_noktali_noktasiz_i_harfi_dogru_kucultulur():
 
 
 def test_wer_bos_referans():
+    """Boş referansta payda sıfır; WER tanımsızdır ve ZeroDivisionError atılamaz."""
     assert wer("", "") == 0.0
     assert wer("", "bir şey") == 1.0
 
@@ -1090,9 +1119,10 @@ def test_kok_neden_dagilimi_kutulara_ayrilir():
         Sonuc(senaryo_id="b1", cikan_triage_code="Yeşil",
               cikan_bolum="Dahiliye", cikan_tetkikler=[],
               sources=["gogus_agrisi.txt"]),
-        # C: kod doğru, bölüm yanlış.
+        # C: kod doğru, tetkikler eksik. (Bölüm artık kapıda değil; buradaki
+        # "Dahiliye" bilerek duruyor ve tek başına C üretmediğini gösteriyor.)
         Sonuc(senaryo_id="c1", cikan_triage_code="Kırmızı",
-              cikan_bolum="Dahiliye", cikan_tetkikler=["EKG", "Troponin"],
+              cikan_bolum="Dahiliye", cikan_tetkikler=["EKG"],
               sources=["gogus_agrisi.txt"]),
         # None: her şey doğru.
         Sonuc(senaryo_id="n1", cikan_triage_code="Kırmızı",
@@ -1267,7 +1297,12 @@ def test_bos_hata_dizesi_altyapi_hatasi_sayilmaz():
 
 
 def test_bos_kumede_sifira_bolunmez():
-    """Boş kümede oran tanımsız; rapor basılırken ZeroDivisionError atılamaz.
+    """Boş kümede oran TANIMSIZDIR: `None` döner, `0.0` değil.
+
+    `0.0` iki ayrı şeyi birleştiriyordu — "ölçtüm, hiçbirini bilemedi" ile
+    "hiç ölçmedim". Ayrım `Ozet.__dict__` üzerinden JSON'a da geçiyor ve asıl
+    değeri orada: `sonuclar/<tarih>.json` Gün 24'ün girdisi, ve `0.0 → 0.8`
+    orada "+80 puan iyileşme" diye okunabilirdi. `None → 0.8` okunamaz.
 
     Kör set hiç koşulmazsa ya da bütün senaryolar hata alırsa payda sıfırlanır.
     Bu dal `--cov=app` dışında olduğu için yalnızca bu testle görünür.
@@ -1277,12 +1312,14 @@ def test_bos_kumede_sifira_bolunmez():
     assert isinstance(o, Ozet)
     assert o.toplam == 0
     assert o.dogru == 0
-    assert o.dogruluk_tum == 0.0
-    assert o.dogruluk_cevaplananlar == 0.0
+    assert o.dogruluk_tum is None
+    assert o.cevaplanan == 0
+    assert o.dogruluk_cevaplananlar is None
     assert o.kirmizi_toplam == 0
-    assert o.kirmizi_duyarlilik == 0.0
-    assert o.esik_alti_orani == 0.0
-    assert o.jaccard_ortalama == 0.0
+    assert o.kirmizi_duyarlilik is None
+    assert o.esik_alti_orani is None
+    assert o.jaccard_sayisi == 0
+    assert o.jaccard_ortalama is None
     assert o.kok_neden_dagilimi == {"A": 0, "B": 0, "C": 0}
     assert o.kapsam_disi_toplam == 0
     assert o.sonucsuz == 0
@@ -1293,9 +1330,9 @@ def test_bos_kumede_sifira_bolunmez():
         [Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[])],
     )
     assert yalniz_kapsam_disi.toplam == 0
-    assert yalniz_kapsam_disi.dogruluk_tum == 0.0
-    assert yalniz_kapsam_disi.dogruluk_cevaplananlar == 0.0
-    assert yalniz_kapsam_disi.jaccard_ortalama == 0.0
+    assert yalniz_kapsam_disi.dogruluk_tum is None
+    assert yalniz_kapsam_disi.dogruluk_cevaplananlar is None
+    assert yalniz_kapsam_disi.jaccard_ortalama is None
     assert yalniz_kapsam_disi.kapsam_disi_toplam == 1
     assert yalniz_kapsam_disi.kapsam_disi_dogru == 1
 
@@ -1334,6 +1371,38 @@ def test_few_shot_havuzu_olcum_setiyle_kesismiyor():
     havuz_idleri = {k["id"] for k in havuz}
     assert olcum_idleri & havuz_idleri == set()
 
+    # ÇIKTI TARAFI — kapının uzun süre kör kaldığı yön.
+    #
+    # Girdileri (şikayet, id) karşılaştırmak sızıntının yalnızca ucuz yarısını
+    # kapatıyor. Asıl tehlike çıktıda: havuz Gün 24'te prompt'a enjekte edilecek
+    # ve altın standartla ORTAK bir tetkik adı taşıyorsa modele ölçüldüğü
+    # kelimeleri öğretir. Jaccard yükselir, C kutusu çöker, önce/sonra tablosu
+    # **sızıntıyı iyileşme diye raporlar** — K4 tam bunu önlemek için var.
+    #
+    # 13 Ağustos 2026'da gerçekten böyleydi: havuzun üç tetkik adının üçü de
+    # altın standartta vardı ve bunlardan `"Bölgeye yönelik grafi"` hiçbir
+    # protokolde geçmiyordu, yani etiketleyenin kendi uydurduğu ifade hem
+    # ölçülen etikette hem öğretilen örnekteydi.
+    olcum_tetkikleri = {
+        _sadelestir(t) for s in kor + turetilmis for t in s.beklenen_tetkikler
+    }
+    havuz_tetkikleri = {
+        _sadelestir(t)
+        for k in havuz
+        for t in k["beklenen_cikti"].get("onerilen_tetkikler", [])
+    }
+    assert olcum_tetkikleri & havuz_tetkikleri == set()
+
+    # Bölüm alanı da aynı kanal: 29 senaryonun 27'si "Acil Servis" bekliyordu ve
+    # havuzun dördü de aynı dizeyi öğretiyordu.
+    olcum_bolumleri = {_sadelestir(s.beklenen_bolum) for s in kor + turetilmis}
+    havuz_bolumleri = {
+        _sadelestir(k["beklenen_cikti"]["department"])
+        for k in havuz
+        if k["beklenen_cikti"].get("department")
+    }
+    assert olcum_bolumleri & havuz_bolumleri == set()
+
 
 def test_kor_ve_turetilmis_setler_ayri_dosyada():
     """K2: iki setin sayıları ayrı raporlanabilsin diye fiziksel ayrım şart."""
@@ -1342,3 +1411,100 @@ def test_kor_ve_turetilmis_setler_ayri_dosyada():
 
     assert {s.id for s in kor} & {s.id for s in turetilmis} == set()
     assert all(s.id.startswith("kor_") for s in kor)
+
+
+def test_kaynak_donmusse_belirsiz_esik_alti_sayilmaz():
+    """`"Belirsiz"` iki ayrı sistem durumunu taşıyor; ayıran işaret kaynaklardır.
+
+    `app/api/ai.py:71-81` hem eşik kapısına hem okunamayan LLM cevabına aynı
+    kodu veriyor. Yalnızca koda bakılırsa ikincisi de **retrieval hatası**
+    (A kutusu, `esik_alti`) diye raporlanır — oysa orada retrieval çalışmış,
+    bozulan muhakeme/biçim tarafıdır ve hiçbir test kırmızıya dönmez.
+    """
+    senaryo = _senaryo()
+
+    # Kaynak YOK: sistem gerçekten cevap vermekten kaçındı.
+    gercek_esik_alti = Sonuc(
+        senaryo_id="t01", cikan_triage_code="Belirsiz", sources=[]
+    )
+    assert esik_alti_mi(gercek_esik_alti) is True
+    assert kok_neden(senaryo, gercek_esik_alti) == "A"
+
+    # Kaynak VAR: retrieval çalışmış, cevap okunamamış -> muhakeme/biçim.
+    okunamayan_cevap = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Belirsiz",
+        sources=["gogus_agrisi.txt"],
+    )
+    assert esik_alti_mi(okunamayan_cevap) is False
+    assert kok_neden(senaryo, okunamayan_cevap) == "B"
+
+    # Ham kaynak dizesi de ayıklanarak görülmeli, yoksa kapı yanlış taraftan açılır.
+    ham_kaynakli = Sonuc(
+        senaryo_id="t01",
+        cikan_triage_code="Belirsiz",
+        sources=["[Kaynak: gogus_agrisi.txt] belge metni"],
+    )
+    assert esik_alti_mi(ham_kaynakli) is False
+
+
+def test_esik_alti_sayaci_okunamayan_cevabi_saymaz():
+    """`Ozet.esik_alti` ve Jaccard paydası da aynı ayrımı kullanmak zorunda.
+
+    `kok_neden` düzeltilip `ozet` unutulursa manşet "eşik altı oranı" yanlış
+    kalır ve iki doğruluk sayısı arasındaki farkı yanlış sebebe bağlar.
+    """
+    senaryolar = [
+        _senaryo(id="e1"),
+        _senaryo(id="o1"),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="e1", cikan_triage_code="Belirsiz", sources=[]),
+        Sonuc(
+            senaryo_id="o1",
+            cikan_triage_code="Belirsiz",
+            sources=["gogus_agrisi.txt"],
+            cikan_tetkikler=["EKG"],
+        ),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.toplam == 2
+    assert o.esik_alti == 1
+    assert o.cevaplanan == 1
+    # Okunamayan cevap Jaccard'a GİRİYOR (cevap verilmiş sayılır), eşik altı girmiyor.
+    assert o.jaccard_sayisi == 1
+
+
+def test_taninmayan_alan_reddedilir(tmp_path):
+    """İsteğe bağlı bir alandaki yazım hatası sessizce düşerse ölçüm kayar.
+
+    `beklenen_kaynk` yazılırsa alan `None` okunur: o senaryonun her hatası A
+    kutusundan B'ye geçer ve "şanslı doğru" kontrolü kalıcı olarak kapanır —
+    ne istisna, ne kırmızı test. Zorunlu alanlar varlık kontrolüyle korunuyordu,
+    isteğe bağlılar hiç korunmuyordu.
+    """
+    kayit = _senaryo_sozlugu()
+    kayit["beklenen_kaynk"] = kayit.pop("beklenen_kaynak")
+
+    with pytest.raises(SenaryoHatasi, match="tanınmayan alan"):
+        senaryolari_yukle(_yaz(tmp_path, kayit))
+
+    # `gerekce` tanınan bir alan: veri dosyaları onu taşıyor ve reddedilmemeli.
+    gerekceli = _senaryo_sozlugu(gerekce="gogus_agrisi.txt Kırmızı satırı")
+    assert senaryolari_yukle(_yaz(tmp_path, gerekceli))[0].id == "t01"
+
+
+def test_senaryo_dosyalarinda_gerekce_var():
+    """`gerekce` etikete karşı tek savunma: hangi protokol satırına dayandığı.
+
+    Ölçüme girmiyor (Senaryo alanı değil), o yüzden yükleyici zorunlu tutmuyor;
+    ama altın standart dosyalarında bulunması şart. Görev 6'da üç `gerekce`
+    metninin önceden seçilmiş bir etikete uydurulmak için yazıldığı yakalandı —
+    o denetim, alanın var olmasına dayanıyordu.
+    """
+    for ad in ("kor_senaryolar.json", "senaryolar.json"):
+        kayitlar = json.loads((DEGERLENDIRME / ad).read_text(encoding="utf-8"))
+        for kayit in kayitlar:
+            assert kayit.get("gerekce", "").strip(), f"{ad}: {kayit['id']} gerekçesiz"
