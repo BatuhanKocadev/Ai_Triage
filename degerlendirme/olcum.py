@@ -497,3 +497,124 @@ def wer(referans: str, hipotez: str) -> float:
         onceki_satir = simdiki_satir
 
     return onceki_satir[len(hip)] / len(ref)
+
+
+@dataclass
+class Ozet:
+    """Bir koşumun bütün raporlanan sayıları — rapor tablosu buradan basılır."""
+
+    # Kapsam içi ∧ ölçülebilir senaryo sayısı; iki doğruluk oranının da temeli.
+    toplam: int
+    # Bu paydada triyaj kodu tutan senaryo sayısı.
+    dogru: int
+    # dogru / toplam — eşik altı yanıtlar paydada KALIR.
+    dogruluk_tum: float
+    # dogru / cevap verilenler — eşik altı yanıtlar paydadan DÜŞÜLÜR. İki oran
+    # birlikte basılır: tek sayı olsaydı "Belirsiz"leri paydadan atmak doğruluğu
+    # istendiği kadar şişirebilirdi, aradaki fark ise eşik altı oranının kendisidir.
+    dogruluk_cevaplananlar: float
+    # Kapsam içi ∧ ölçülebilir Kırmızı senaryo sayısı (duyarlılığın paydası).
+    kirmizi_toplam: int
+    # Bunlardan gerçekten Kırmızı olarak işaretlenenler.
+    kirmizi_yakalanan: int
+    # kirmizi_yakalanan / kirmizi_toplam — raporun klinik olarak en kritik sayısı.
+    kirmizi_duyarlilik: float
+    # Sistemin "Belirsiz" dediği kapsam içi senaryo sayısı (cevapsızlık, yanlışlık değil).
+    esik_alti: int
+    # esik_alti / toplam — iki doğruluk sayısı arasındaki farkın sebebi.
+    esik_alti_orani: float
+    # Cevap verilen kapsam içi senaryolarda tetkik örtüşmesinin (Jaccard) ortalaması.
+    jaccard_ortalama: float
+    # Yanlışların A (retrieval) / B (muhakeme) / C (biçim) sayıları; Gün 24 hedefi.
+    kok_neden_dagilimi: dict[str, int]
+    # Doğru cevap verilmiş ama beklenen protokol hiç gelmemiş senaryo sayısı.
+    sansli_dogru: int
+    # Altyapı hatası yüzünden hiçbir paydaya girmeyen senaryo sayısı.
+    olculemedi: int
+    # Beklentisi "Belirsiz" olan (kapsam dışı) ölçülebilir senaryo sayısı.
+    kapsam_disi_toplam: int
+    # Bunlardan doğru şekilde reddedilenler; doğruluk oranlarına KARIŞMAZ.
+    kapsam_disi_dogru: int
+
+
+def _oran(pay: int, payda: int) -> float:
+    """Sıfıra bölmeyi 0.0'a çeviren yardımcı — boş kümede oran tanımsızdır."""
+    return pay / payda if payda else 0.0
+
+
+def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
+    """Senaryo ve sonuç listelerinden raporlanan bütün sayıları üretir."""
+    sonuc_haritasi = {s.senaryo_id: s for s in sonuclar}
+
+    kapsam_ici: list[tuple[Senaryo, Sonuc]] = []
+    kapsam_disi: list[tuple[Senaryo, Sonuc]] = []
+    olculemedi = 0
+
+    for senaryo in senaryolar:
+        sonuc = sonuc_haritasi.get(senaryo.id)
+        if sonuc is None:
+            continue
+        if sonuc.hata:
+            olculemedi += 1
+            continue
+        if senaryo.beklenen_triage_code == "Belirsiz":
+            kapsam_disi.append((senaryo, sonuc))
+        else:
+            kapsam_ici.append((senaryo, sonuc))
+
+    dogru = sum(
+        1
+        for s, r in kapsam_ici
+        if triyaj_dogru_mu(s.beklenen_triage_code, r.cikan_triage_code)
+    )
+    esik_alti = sum(1 for _, r in kapsam_ici if r.cikan_triage_code == "Belirsiz")
+    cevaplanan = len(kapsam_ici) - esik_alti
+
+    kirmizi = [
+        (s, r) for s, r in kapsam_ici if _sadelestir(s.beklenen_triage_code) == "kirmizi"
+    ]
+    kirmizi_yakalanan = sum(
+        1 for s, r in kirmizi if triyaj_dogru_mu(s.beklenen_triage_code, r.cikan_triage_code)
+    )
+
+    # Jaccard yalnızca cevap verilen senaryolarda anlamlı; "Belirsiz" yanıtta
+    # tetkik listesi zaten boş döner ve ortalamayı haksız yere aşağı çeker.
+    # Kaynak `kapsam_ici`: kapsam dışı senaryolar `kok_neden`de de puanlanmıyor
+    # (cevap vermeyi reddetmiş sistemde derecelendirilecek tetkik yoktur), buraya
+    # girselerdi özet ile A/B/C tasnifi birbiriyle çelişirdi.
+    jaccardlar = [
+        tetkik_ortusmesi(s.beklenen_tetkikler, r.cikan_tetkikler)
+        for s, r in kapsam_ici
+        if r.cikan_triage_code != "Belirsiz"
+    ]
+
+    dagilim: dict[str, int] = {"A": 0, "B": 0, "C": 0}
+    sansli = 0
+    for s, r in kapsam_ici + kapsam_disi:
+        kutu = kok_neden(s, r)
+        if kutu in dagilim:
+            dagilim[kutu] += 1
+        if sansli_dogru_mu(s, r):
+            sansli += 1
+
+    return Ozet(
+        toplam=len(kapsam_ici),
+        dogru=dogru,
+        dogruluk_tum=_oran(dogru, len(kapsam_ici)),
+        dogruluk_cevaplananlar=_oran(dogru, cevaplanan),
+        kirmizi_toplam=len(kirmizi),
+        kirmizi_yakalanan=kirmizi_yakalanan,
+        kirmizi_duyarlilik=_oran(kirmizi_yakalanan, len(kirmizi)),
+        esik_alti=esik_alti,
+        esik_alti_orani=_oran(esik_alti, len(kapsam_ici)),
+        jaccard_ortalama=(sum(jaccardlar) / len(jaccardlar)) if jaccardlar else 0.0,
+        kok_neden_dagilimi=dagilim,
+        sansli_dogru=sansli,
+        olculemedi=olculemedi,
+        kapsam_disi_toplam=len(kapsam_disi),
+        kapsam_disi_dogru=sum(
+            1
+            for s, r in kapsam_disi
+            if triyaj_dogru_mu(s.beklenen_triage_code, r.cikan_triage_code)
+        ),
+    )

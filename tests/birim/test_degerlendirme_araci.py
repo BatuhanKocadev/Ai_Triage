@@ -9,12 +9,14 @@ import pytest
 
 from degerlendirme.olcum import (
     GECERLI_KODLAR,
+    Ozet,
     Senaryo,
     SenaryoHatasi,
     Sonuc,
     bolum_dogru_mu,
     kaynak_adlarini_ayikla,
     kok_neden,
+    ozet,
     sansli_dogru_mu,
     senaryolari_yukle,
     tetkik_ortusmesi,
@@ -879,3 +881,322 @@ def test_wer_birin_ustune_cikabilir():
     %100'den büyük bir değer rapora hata gibi girer. Sözleşme burada duruyor.
     """
     assert wer("ağrı", "ağrı var çok fena") == pytest.approx(3.0)
+
+
+# --- Özet: raporlanan bütün sayılar ve payda kuralları ---
+
+
+def test_kirmizi_kacirma_ayri_raporlanir():
+    """Gerçek Kırmızı iken Yeşil demek klinik olarak tek kritik hatadır."""
+    senaryolar = [
+        _senaryo(id="k1", beklenen_triage_code="Kırmızı"),
+        _senaryo(id="k2", beklenen_triage_code="Kırmızı"),
+        _senaryo(id="y1", beklenen_triage_code="Yeşil", beklenen_tetkikler=[]),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="k1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="k2", cikan_triage_code="Yeşil",
+              cikan_bolum="Acil Servis", sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="y1", cikan_triage_code="Yeşil",
+              cikan_bolum="Acil Servis", sources=["gogus_agrisi.txt"]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.kirmizi_toplam == 2
+    assert o.kirmizi_yakalanan == 1
+    assert o.kirmizi_duyarlilik == pytest.approx(0.5)
+    # Genel doğruluk Kırmızı duyarlılığından farklı bir sayıdır.
+    assert o.dogruluk_tum == pytest.approx(2 / 3)
+
+
+def test_esik_alti_yanitlar_ayri_sayilir():
+    """'Belirsiz' yanlış cevap değil, 'cevap vermedim'dir."""
+    senaryolar = [
+        _senaryo(id="s1"),
+        _senaryo(id="s2"),
+        _senaryo(id="s3"),
+        _senaryo(id="s4"),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="s1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="s2", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="s3", cikan_triage_code="Belirsiz", sources=[]),
+        Sonuc(senaryo_id="s4", cikan_triage_code="Yeşil",
+              cikan_bolum="Acil Servis", sources=["gogus_agrisi.txt"]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.esik_alti == 1
+    assert o.esik_alti_orani == pytest.approx(0.25)
+    # Tüm senaryolar üzerinden: 2/4. Cevap verilenler üzerinden: 2/3.
+    assert o.dogruluk_tum == pytest.approx(0.5)
+    assert o.dogruluk_cevaplananlar == pytest.approx(2 / 3)
+
+
+def test_kapsam_disi_senaryolar_dogruluga_karismaz():
+    senaryolar = [
+        _senaryo(id="i1"),
+        _senaryo(id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak=None),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.toplam == 1
+    assert o.dogruluk_tum == 1.0
+    assert o.kapsam_disi_toplam == 1
+    assert o.kapsam_disi_dogru == 1
+
+
+def test_altyapi_hatasi_paydadan_dusulur():
+    senaryolar = [_senaryo(id="h1"), _senaryo(id="h2")]
+    sonuclar = [
+        Sonuc(senaryo_id="h1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="h2", hata="500 Sunucu hatası"),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.olculemedi == 1
+    assert o.toplam == 1
+    assert o.dogruluk_tum == 1.0
+
+
+def test_kapsam_disi_senaryo_esik_alti_ve_cevaplanan_paydalarina_girmez():
+    """Kapsam dışı 'Belirsiz' doğru cevaptır; eşik altı sayısını şişirmemeli.
+
+    Brief'in dört testinde kapsam dışı senaryo ile eşik altı yanıt hiç yan yana
+    gelmiyor, o yüzden `esik_alti` ya da `cevaplanan` paydasının sessizce
+    `kapsam_disi`yi de kapsamasını hiçbiri yakalamıyordu. İkisi bir arada
+    ölçüldüğünde eşik altı oranı gerçekte olduğundan yüksek çıkardı ve rapor
+    "sistem her üç vakadan ikisinde cevap vermiyor" derdi.
+    """
+    senaryolar = [
+        _senaryo(id="i1"),
+        _senaryo(id="i2"),
+        _senaryo(id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak=None),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="i2", cikan_triage_code="Belirsiz", sources=[]),
+        Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.toplam == 2
+    # Eşik altı yalnızca kapsam içinde anlamlı: d1'in "Belirsiz"i doğru cevaptır.
+    assert o.esik_alti == 1
+    assert o.esik_alti_orani == pytest.approx(0.5)
+    # Cevap verilenler paydası kapsam içi ∧ cevap verilen = yalnızca i1.
+    assert o.dogruluk_tum == pytest.approx(0.5)
+    assert o.dogruluk_cevaplananlar == 1.0
+
+
+def test_jaccard_yalnizca_cevap_verilen_kapsam_ici_senaryolardan_hesaplanir():
+    """Tetkik örtüşmesi iki ayrı elemeden geçer: kapsam dışı ve eşik altı.
+
+    Eşik altı yanıtta uç boş tetkik listesi döndürüyor; hesaba katılırsa
+    ortalamayı sıfırla aşağı çeker ve "önerilen tetkikler kötü" gibi görünür.
+    Kapsam dışı senaryo ise `kok_neden`de zaten puanlanmıyor (Görev 3 kararı);
+    burada puanlansaydı özet ile tasnif birbiriyle çelişirdi.
+    """
+    senaryolar = [
+        # Kapsam içi, cevap verilmiş, tetkikler birebir tutuyor → 1.0.
+        _senaryo(id="i1"),
+        # Kapsam içi ama sistem eşik altında kaldı → hesaba girmemeli.
+        _senaryo(id="i2"),
+        # Kapsam dışı ve sistem cevap üretmiş (eşik fazla geçirgen) →
+        # `cikan_triage_code != "Belirsiz"` elemesine takılmaz, yalnızca
+        # `kapsam_ici` kısıtı dışarıda tutar.
+        _senaryo(
+            id="d1",
+            beklenen_triage_code="Belirsiz",
+            beklenen_tetkikler=["EKG"],
+            beklenen_kaynak=None,
+        ),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="i2", cikan_triage_code="Belirsiz", sources=[]),
+        Sonuc(senaryo_id="d1", cikan_triage_code="Sarı",
+              cikan_bolum="Dahiliye", cikan_tetkikler=[], sources=[]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    # Yalnızca i1 hesaba girer. i2 girseydi 0.5, d1 girseydi 0.5, ikisi de
+    # girseydi 1/3 çıkardı — üç mutasyonun üçü de bu tek sayıyı bozar.
+    assert o.jaccard_ortalama == 1.0
+
+
+def test_kok_neden_dagilimi_kutulara_ayrilir():
+    """Gün 24 "en büyük kutuya müdahale et" diyor; dağılım yanlışsa hedef yanlış.
+
+    Doğru sonuç (None) ve altyapı hatası ("HATA") hiçbir kutuya yazılmamalı:
+    yazılsalardı A/B/C toplamı senaryo sayısına şişer ve "biçim hatası" oranı
+    olduğundan küçük görünürdü. Kapsam dışıyken cevap üretmek ise A'dır ve
+    dağılıma girer — `kapsam_disi` dağılım döngüsünden düşerse o hata kaybolur.
+    """
+    senaryolar = [
+        _senaryo(id="a1"),
+        _senaryo(id="b1"),
+        _senaryo(id="c1"),
+        _senaryo(id="n1"),
+        _senaryo(id="h1"),
+        _senaryo(id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak=None),
+    ]
+    sonuclar = [
+        # A: beklenen protokol aday havuzuna hiç girmemiş.
+        Sonuc(senaryo_id="a1", cikan_triage_code="Yeşil",
+              cikan_bolum="Dahiliye", cikan_tetkikler=[],
+              sources=["bas_agrisi.txt"]),
+        # B: protokol gelmiş ama model yanlış kod vermiş.
+        Sonuc(senaryo_id="b1", cikan_triage_code="Yeşil",
+              cikan_bolum="Dahiliye", cikan_tetkikler=[],
+              sources=["gogus_agrisi.txt"]),
+        # C: kod doğru, bölüm yanlış.
+        Sonuc(senaryo_id="c1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Dahiliye", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        # None: her şey doğru.
+        Sonuc(senaryo_id="n1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        # HATA: ölçülemedi.
+        Sonuc(senaryo_id="h1", hata="timeout"),
+        # A: kapsam dışıyken cevap üretmek eşiğin fazla geçirgen olmasıdır.
+        Sonuc(senaryo_id="d1", cikan_triage_code="Sarı",
+              cikan_bolum="Dahiliye", sources=[]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.kok_neden_dagilimi == {"A": 2, "B": 1, "C": 1}
+    assert "HATA" not in o.kok_neden_dagilimi
+    assert o.olculemedi == 1
+    # c1'in kodu doğru: C kutusundadır ama doğru sayılır.
+    assert o.dogru == 2
+    assert o.toplam == 4
+
+
+def test_sansli_dogru_ozette_sayilir():
+    """Doğru cevap ama protokol gelmemiş — Gün 24'te bozulabilecek senaryolar.
+
+    Sayılmazsa önce/sonra tablosunda açıklanamayan bir gerileme olarak görünür.
+    "Şanslı" olması doğruluğu düşürmez; iki sayı birbirinden bağımsızdır.
+    """
+    senaryolar = [_senaryo(id="s1"), _senaryo(id="s2")]
+    sonuclar = [
+        # Doğru cevap, beklenen protokol hiç gelmemiş → şanslı doğru.
+        Sonuc(senaryo_id="s1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["bas_agrisi.txt"]),
+        # Doğru cevap, doğru protokol → şanslı değil.
+        Sonuc(senaryo_id="s2", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.sansli_dogru == 1
+    assert o.dogru == 2
+    assert o.dogruluk_tum == 1.0
+
+
+def test_altyapi_hatasi_kirmizi_duyarliligi_paydasindan_da_dusulur():
+    """Ölçülemeyen bir Kırmızı senaryo duyarlılık paydasına da girmemeli.
+
+    Girseydi tek bir zaman aşımı "Kırmızı duyarlılığı %50" yazdırırdı; bu sayı
+    raporun en kritik iddiası ve altyapı gürültüsüne karşı korunmak zorunda.
+    """
+    senaryolar = [_senaryo(id="k1"), _senaryo(id="k2")]
+    sonuclar = [
+        Sonuc(senaryo_id="k1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="k2", hata="timeout"),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.kirmizi_toplam == 1
+    assert o.kirmizi_yakalanan == 1
+    assert o.kirmizi_duyarlilik == 1.0
+    assert o.olculemedi == 1
+
+
+def test_sonucu_olmayan_senaryo_hicbir_sayiya_girmez():
+    """Yarım kalmış bir koşumun kısmi çıktısı sessizce paydayı küçültür.
+
+    Sürücü her senaryo için bir `Sonuc` yazar; ama çöken bir koşumun ara
+    dosyasında eksik kayıt olabilir. O dosyayla özet alınırsa doğruluk, ölçülen
+    alt küme üzerinden hesaplanır ve tam setmiş gibi raporlanır. Davranış
+    burada kilitleniyor: eksik senaryo `olculemedi`ye de yazılmaz, çünkü
+    altyapı hatası değil "hiç sorulmamış" demektir (bkz. rapordaki endişe).
+    """
+    senaryolar = [_senaryo(id="v1"), _senaryo(id="sorulmadi")]
+    sonuclar = [
+        Sonuc(senaryo_id="v1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert o.toplam == 1
+    assert o.dogruluk_tum == 1.0
+    assert o.olculemedi == 0
+
+
+def test_bos_kumede_sifira_bolunmez():
+    """Boş kümede oran tanımsız; rapor basılırken ZeroDivisionError atılamaz.
+
+    Kör set hiç koşulmazsa ya da bütün senaryolar hata alırsa payda sıfırlanır.
+    Bu dal `--cov=app` dışında olduğu için yalnızca bu testle görünür.
+    """
+    o = ozet([], [])
+
+    assert isinstance(o, Ozet)
+    assert o.toplam == 0
+    assert o.dogru == 0
+    assert o.dogruluk_tum == 0.0
+    assert o.dogruluk_cevaplananlar == 0.0
+    assert o.kirmizi_toplam == 0
+    assert o.kirmizi_duyarlilik == 0.0
+    assert o.esik_alti_orani == 0.0
+    assert o.jaccard_ortalama == 0.0
+    assert o.kok_neden_dagilimi == {"A": 0, "B": 0, "C": 0}
+    assert o.kapsam_disi_toplam == 0
+
+    # Yalnızca kapsam dışı senaryo varsa da kapsam içi payda sıfırdır.
+    yalniz_kapsam_disi = ozet(
+        [_senaryo(id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak=None)],
+        [Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[])],
+    )
+    assert yalniz_kapsam_disi.toplam == 0
+    assert yalniz_kapsam_disi.dogruluk_tum == 0.0
+    assert yalniz_kapsam_disi.dogruluk_cevaplananlar == 0.0
+    assert yalniz_kapsam_disi.jaccard_ortalama == 0.0
+    assert yalniz_kapsam_disi.kapsam_disi_toplam == 1
+    assert yalniz_kapsam_disi.kapsam_disi_dogru == 1
