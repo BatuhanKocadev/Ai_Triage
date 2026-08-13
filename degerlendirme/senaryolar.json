@@ -1,0 +1,335 @@
+[
+  {
+    "id": "tur_01",
+    "sikayet": "Göğsümün ortasına birden korkunç bir baskı çöktü, sanki üstüme biri oturuyor. Ağrı sol koluma ve çeneme vuruyor, buz gibi soğuk terliyorum, benzim kül gibi olmuş diyorlar.",
+    "yas": 62,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": "Hipertansiyon",
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "EKG",
+      "Tam kan sayımı",
+      "Rutin biyokimya",
+      "Direkt grafi"
+    ],
+    "beklenen_kaynak": "gogus_agrisi.txt",
+    "gerekce": "gogus_agrisi.txt Kırmızı: 'Fizik muayenede sempatik deşarja bağlı olarak terli, soğuk ve soluk (kül renginde) görünüme sahip hastalar' — soğuk terleme + kül rengi solukluk birebir bu satır. İlk Değerlendirme'nin sol kola ve alt çeneye yayılım ile baskı tarzı ağrı tarifi de kardiyak kökeni destekliyor. Sarı 'bekleyemeyecek akut göğüs ağrısı' der ama sempatik deşarj bulgusu Kırmızı'ya taşıyor."
+  },
+  {
+    "id": "tur_02",
+    "sikayet": "İki saattir göğsümün ortasında ağırlık gibi bir sıkışma var. Nefesim biraz daralıyor, yürüyünce artıyor. Terlemem yok, ayakta rahat durabiliyorum.",
+    "yas": 54,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "EKG",
+      "Tam kan sayımı",
+      "Rutin biyokimya",
+      "Direkt grafi"
+    ],
+    "beklenen_kaynak": "gogus_agrisi.txt",
+    "gerekce": "gogus_agrisi.txt Sarı: 'Bekleyemeyecek durumda olan, akut göğüs ağrısı şikayeti bulunan hastalar (ESI 2. Seviye)' — iki saatlik akut baskı tarzı ağrı. Kırmızı'nın dört maddesi de yok: arrest, hipotansiyon/bilinç kapalılığı, ciddi solunum sıkıntısı, terli-soğuk-soluk görünüm. Yeşil 'kardiyak kökenli olmadığı TESPİT EDİLEN' diyor; bu tespit ancak EKG/tetkik sonrası yapılabilir, triyaj anında yok."
+  },
+  {
+    "id": "tur_03",
+    "sikayet": "Astımım var, dün geceden beri göğsüm hırıl hırıl ötüyor. Spreyi iki kez sıktım ama açılmadı, konuşurken cümlenin sonunu getiremiyorum.",
+    "yas": 31,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": "Astım",
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Göğüs Radyografisi",
+      "Kan Gazı Analizi"
+    ],
+    "beklenen_kaynak": "nefes_darligi.txt",
+    "gerekce": "nefes_darligi.txt Sarı: 'Astım veya KOAH atağı geçiren, hırıltılı solunumu olan ve gecikmeden medikal tedavi başlanması gereken vakalar' — bilinen astım + hırıltı + kurtarıcı tedaviye yanıtsızlık. Kırmızı SpO2 <%94, solunum arresti ya da hipotansiyon istiyor; şikayette ölçülmüş satürasyon veya hemodinamik bozukluk yok. Yeşil 'satürasyonu normal, vital bulguları tamamen stabil' diyor, cümle tamamlayamamak stabil tabloya uymuyor."
+  },
+  {
+    "id": "tur_04",
+    "sikayet": "Sabaha karşı karnımın sağ alt tarafına saplanan bir ağrı başladı, gitgide arttı. Karnıma dokundurtmuyorum, iki kez kustum, gaz bile çıkaramıyorum.",
+    "yas": 71,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı",
+      "Biyokimya",
+      "Tam İdrar Tetkiki",
+      "EKG"
+    ],
+    "beklenen_kaynak": "karin_agrisi.txt",
+    "gerekce": "karin_agrisi.txt Sarı, YAŞTAN BAĞIMSIZ dal: 'Akut batın tablosu ile başvuran, bekleyemeyecek durumdaki yüksek riskli hastalar' — dokundurtmama (defans/periton irritasyonu), kusma ve gaz çıkaramama akut batın tablosudur. Aynı bölümdeki 'Yaşlı hastalarda ortaya çıkan akut karın ağrısı vakaları (ESI 2. Seviye)' maddesi etiketi ayrıca destekliyor ama tek dayanağı değil; sıralama bilinçli, çünkü etiket yaş seçimimin artefaktı olmamalı. Kırmızı hipotansiyon/taşikardi ile şok tablosu istiyor, tarif edilmiyor. YAŞ EŞİĞİ (71, uygulayıcı seçimi): derlemenin tek sayısal yaşlılık eşiği ates_sepsis.txt'nin '>65'i; 71 bunun üstünde, ±2 oynatmak (69) tarafı değiştirmiyor. Marj derlemedeki en incesi (6 yıl) ama etiket yukarıdaki yaştan bağımsız dala dayandığı için yaş düşse de Sarı kalır. EKG protokolde orta-ileri yaş için isteniyor, 71 bu tarafta tartışmasız."
+  },
+  {
+    "id": "tur_05",
+    "sikayet": "Bir anda, saniyeler içinde hayatımda hissettiğim en şiddetli baş ağrısı vurdu. Ensem tutuldu, kustum, gözlerim bulanık görüyor.",
+    "yas": 48,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Nörolojik değerlendirme",
+      "Bilgisayarlı Tomografi",
+      "Tam kan sayımı",
+      "Rutin biyokimya"
+    ],
+    "beklenen_kaynak": "bas_agrisi.txt",
+    "gerekce": "bas_agrisi.txt Kırmızı: 'Saniyeler içinde aniden en yüksek seviyeye ulaşan, subaraknoid kanama veya iskemik inme şüphesi uyandıran şiddetli ve ani baş ağrıları' — hasta tam olarak saniyeler içinde zirveye ulaşan, hayatının en şiddetli ağrısını tarif ediyor; ense sertliği bulgusu da eşlik ediyor. Sarı dalı 'nörolojik defisit bulunmayan, ani başlamış yüksek riskli' hastalar içindir, gök gürültüsü tipi ağrı doğrudan Kırmızı'ya giriyor. BT protokolde sekonder patolojileri dışlamak için."
+  },
+  {
+    "id": "tur_06",
+    "sikayet": "Babamın yüzünün sol tarafı yarım saat önce birden düştü. Sol kolunu hiç kaldıramıyor, konuşmaya çalışıyor ama ne dediği hiç anlaşılmıyor.",
+    "yas": 74,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": "Hipertansiyon",
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı"
+    ],
+    "beklenen_kaynak": "inme.txt",
+    "gerekce": "inme.txt Kırmızı: 'FAST-ED skoru yüksek (>=4 puan) olan ve büyük damar tıkanıklığı (LVOS) şüphesi barındıran hastalar'. İlk Değerlendirme'deki üç FAST bulgusunun üçü de var: yüzün bir tarafında düşme, kolu hiç kaldıramama, anlaşılmayan konuşma. Kolu hiç kaldıramama ve konuşmanın anlaşılmaması FAST-ED'de tek başına ikişer puandır, yüz felciyle birlikte >=4 eder; Sarı dalı 'orta (2-3 puan)' içindir. NOT: protokol FAST-ED'in madde puanlamasını İÇERMİYOR, yalnızca eşiği (>=4) ve FAST bulgu listesini veriyor; puanlama ölçeğin kendi tanımından geldi. Aynı sebeple sistem, elindeki metinle skoru hesaplayamayıp Sarı'daki 'akut inme belirtileri (ESI 2. Seviye)' maddesine düşebilir — bu, korpusun ölçülmesi gereken bir eksiğidir, etiketi değiştirmez. Tetkik listesi protokolde tek maddedir."
+  },
+  {
+    "id": "tur_07",
+    "sikayet": "Markette sırada beklerken gözüm karardı ve düşüp bayılmışım. Kendime geldiğimde ne olduğunu hatırlamıyordum, hâlâ başım dönüyor.",
+    "yas": 66,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Parmak ucu kan şekeri",
+      "Rutin laboratuvar testleri",
+      "Serum elektrolitleri"
+    ],
+    "beklenen_kaynak": "bilinc_degisikligi.txt",
+    "gerekce": "bilinc_degisikligi.txt Sarı: 'Nedeni henüz açıklanamayan geçici bilinç kaybı (senkop) veya nöbet geçiren, kardiyopulmoner risk taşıyan ve en geç 10 dakika içinde hekimce değerlendirilmesi gereken hastalar (ESI 2. Seviye)' — nedeni bilinmeyen senkop. Yeşil dalı 'vazovagal veya ortostatik kökenli olduğu NET OLARAK BİLİNEN' vakalar için; burada köken bilinmiyor. Kırmızı GKS <=9, fokal defisit veya şok istiyor: hasta kendine gelmiş ve konuşuyor."
+  },
+  {
+    "id": "tur_08",
+    "sikayet": "Arkadaşım inşaatta üçüncü kattan düştü. Bacağı ters duruyor, kalçasına dokununca bağırıyor. Bizi zor tanıyor, benzi bembeyaz oldu.",
+    "yas": 29,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "e-FAST",
+      "Tam kan sayımı",
+      "Laktat",
+      "Bilgisayarlı Tomografi"
+    ],
+    "beklenen_kaynak": "travma.txt",
+    "gerekce": "travma.txt Kırmızı: 'Multipl uzun kemik kırığı, pelvis kırığı, spinal kord yaralanması (paralizi) veya ampute ekstremitesi olan vakalar' — ters duran bacak (deplase uzun kemik kırığı) + pelviste hassasiyet. Aynı bölümdeki 'bilinci kapanmış (GKS <=13)' maddesi de 'bizi zor tanıyor' ile destekleniyor. İlk Değerlendirme mekanizma eşiğini '>6 m düşme' koyuyor; üçüncü kat bunun üstünde. Sarı dalı vitalleri stabil, izole kırıklı hastalar içindir."
+  },
+  {
+    "id": "tur_09",
+    "sikayet": "Evde yangın çıktı, dumanın içinde kaldım. Sesim kısıldı, öksürünce is geliyor, boğazım şişiyor gibi. Yüzümdeki tüyler de yanmış.",
+    "yas": 45,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Karboksihemoglobin",
+      "Kan gazı"
+    ],
+    "beklenen_kaynak": "yanik.txt",
+    "gerekce": "yanik.txt Kırmızı: 'İnhalasyon yanığı bulguları (sesi kısılmış, öksürüğü kurumlu) olan, kapalı alan yangınlarında kalmış (yangında dumanın içinde kalmış) ve solunum tehlikesi olan hastalar' — ses kısıklığı, kurumlu balgam ve kapalı alan yangını birlikte. İlk Değerlendirme'nin aradığı kaş-burun kılı yanması da var. Tetkik: protokolün 'Karboksihemoglobin (CO-oksimetri) ve Kan Gazı' maddesi inhalasyon şüphesi içindir."
+  },
+  {
+    "id": "tur_10",
+    "sikayet": "Ütü yaparken sıcak ütü önkoluma değdi. Avuç içi kadar bir yer kızardı ama kabarcık olmadı, sadece biraz yanıyor.",
+    "yas": 36,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [],
+    "beklenen_kaynak": "yanik.txt",
+    "gerekce": "yanik.txt Yeşil: 'Kızarıklık şeklinde olan, bül içermeyen (cilt yalnızca kızarmış, kabarcık oluşmamış) 1. derece epidermal yanıklar (güneş yanığı benzeri)' — avuç içi kadar (yaklaşık %1 TVYA) kızarıklık, kabarcık yok. Sarı'nın kritik bölge dalı yüz/el/ayak/perine sayıyor; önkol bunların dışında ve bül de yok. Kırmızı dallarının hiçbiri (inhalasyon, majör TVYA, elektrik/kimyasal, tam kalınlık) geçerli değil. TETKİK DÜZELTMESİ (13 Ağu 2026, inceleme I3): 'Yanık alanı değerlendirmesi' hiçbir protokolde geçmiyor; yanik.txt'nin üç tetkiki de inhalasyon/rabdomiyoliz/elektrik koşuluna bağlı ve Yeşil kod alan bu vakada hiçbiri geçerli değil."
+  },
+  {
+    "id": "tur_11",
+    "sikayet": "Oğlum mutfakta çamaşır suyunu su sanıp içmiş. Ağzının içi yanmış, sürekli salyası akıyor ve yutkunamıyor.",
+    "yas": 4,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Kapiller kan şekeri",
+      "EKG",
+      "Kan gazı"
+    ],
+    "beklenen_kaynak": "zehirlenme.txt",
+    "gerekce": "zehirlenme.txt Kırmızı: 'Kostik madde (çamaşır suyu, asit) içen, siyanür/karbonmonoksit maruziyeti yaşayan veya yüksek riskli ajan (TSA, kolşisin) alan vakalar' — çamaşır suyu protokolde adı geçen kostik maddedir; madde ve alım net olduğu için kor_09'un aksine burada dal doğrudan uygulanabiliyor. Salya akması ve yutamama havayolu tehdidini de destekliyor."
+  },
+  {
+    "id": "tur_12",
+    "sikayet": "Kavga ettikten sonra bir kutu ağrı kesici içtim, on beş tane kadar parasetamol. Şu an bir şeyim yok gibi ama korkmaya başladım.",
+    "yas": 22,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Kapiller kan şekeri",
+      "EKG",
+      "Parasetamol düzeyi"
+    ],
+    "beklenen_kaynak": "zehirlenme.txt",
+    "gerekce": "zehirlenme.txt Sarı: 'Asemptomatik görünse de potansiyel toksik doz almış ve geç toksisite riski (örn. parasetamol) nedeniyle gözlem gereken uyanık hastalar' — madde ve yaklaşık miktar biliniyor, hasta uyanık ve asemptomatik. Kırmızı bilinç değişikliği, solunum depresyonu, aritmi veya nöbet istiyor: yok. Yeşil 'toksik eşiğin çok altında kaldığı net olan' vakalar içindir, 15 tablet parasetamol bunun dışında."
+  },
+  {
+    "id": "tur_13",
+    "sikayet": "Antibiyotiği içer içmez boğazım şişmeye başladı. Nefes alırken ıslık gibi ses çıkıyor, gözüm kararıyor ve her yerim kızardı.",
+    "yas": 39,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Klinik değerlendirme ve fizik muayene"
+    ],
+    "beklenen_kaynak": "anafilaksi.txt",
+    "gerekce": "anafilaksi.txt Kırmızı: 'Solunum yolu obstrüksiyonu (stridor, wheezing, hava açlığı) veya dolaşım kollapsı/şok tablosu (hipotansiyon) mevcut olan hastalar' — nefes alırken ıslık sesi (stridor/wheezing) + boğazda şişme, buna göz kararması (presenkop) eşlik ediyor. Sarı dalı 'anafilaksi tablosu tam oturmamış' vakalar içindir; havayolu bulgusu varken geçerli değil. Protokol tanının öncelikle klinikle konduğunu, spesifik tetkik beklenmeyebileceğini söylüyor."
+  },
+  {
+    "id": "tur_14",
+    "sikayet": "Annem üç gündür ateşli, bugün hiç idrara çıkmadı. Konuşurken saçmalamaya başladı, nefesi hızlı hızlı ve elleri buz gibi.",
+    "yas": 78,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Kan laktat düzeyi",
+      "Kan kültürü",
+      "Tam kan sayımı",
+      "Rutin biyokimya"
+    ],
+    "beklenen_kaynak": "ates_sepsis.txt",
+    "gerekce": "ates_sepsis.txt Kırmızı: 'qSOFA skoru >=2 olan ... vakalar'. Protokolün kendi qSOFA tanımı (Solunum sayısı >=22, SKB <=100, bilinç değişikliği) iki bileşeniyle karşılanıyor: bilinç değişikliği (saçmalama) ve takipne (hızlı nefes). Soğuk ekstremite ve anüri İlk Değerlendirme'nin aradığı organ disfonksiyonu göstergeleri. Sarı dalı 'hemodinamisi stabil riskli vakalar' içindir, bu tablo stabil değil."
+  },
+  {
+    "id": "tur_15",
+    "sikayet": "Sabah kahve telvesi gibi kapkara kustum, ardından ağzımdan taze kan geldi. Ayağa kalkınca gözüm kararıyor, kalbim küt küt atıyor.",
+    "yas": 58,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı",
+      "Kan grubu",
+      "Cross-match",
+      "Koagülasyon paneli"
+    ],
+    "beklenen_kaynak": "gis_kanamasi.txt",
+    "gerekce": "gis_kanamasi.txt Kırmızı: 'Aktif veya masif hematemez, kahve telvesi tarzında bol kusma veya ağızdan taze kan gelmesi' — hasta iki bulguyu da tarif ediyor. İkinci Kırmızı maddesi (ortostatik göz kararması + çarpıntı, şok indeksi) de destekliyor. Sarı dalı melena tarifleyen, aktif kanaması OLMAYAN stabil hastalar içindir."
+  },
+  {
+    "id": "tur_16",
+    "sikayet": "Birkaç gündür tuvalet kağıdına bulaşan taze kan görüyorum, basurum olduğunu biliyorum. Başım dönmüyor, dışkımın rengi de normal.",
+    "yas": 42,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı"
+    ],
+    "beklenen_kaynak": "gis_kanamasi.txt",
+    "gerekce": "gis_kanamasi.txt Yeşil: 'Peçeteye bulaşan veya dışkı yüzeyinde minimal taze kanı olan (bilinen anal fissür/hemoroid) ambule hastalar' — birebir aynı tablo; ikinci Yeşil maddesindeki 'solukluğu olmayan ve antikoagülan kullanmayan risksiz hastalar' koşulu da tutuyor. Sarı melena veya orta miktarda hematokezya istiyor: dışkı rengi normal. Tetkik olarak protokolün Hemoglobin takibi maddesi bırakıldı."
+  },
+  {
+    "id": "tur_17",
+    "sikayet": "On haftalık hamileyim, sabahtan beri az miktarda kanamam var ve kasıklarımda hafif kramp giriyor. Başım dönmüyor, tansiyonum normalmiş.",
+    "yas": 28,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Beta-hCG",
+      "Yatak başı obstetrik USG",
+      "Tam kan sayımı"
+    ],
+    "beklenen_kaynak": "gebelik_acilleri.txt",
+    "gerekce": "gebelik_acilleri.txt Sarı: 'Az veya orta miktarda vajinal kanaması/lekelenmesi olan, hemodinamisi stabil (düşük tehdidi) hastalar' — az kanama + hafif kramp, hemodinami stabil. Kırmızı dalları masif kanama, eklampsi/ağır preeklampsi ya da 'amenore + karın ağrısı + hipotansiyon/senkop' üçlüsünü istiyor; hastada senkop ve hipotansiyon yok. Yeşil dalı 'kanaması bulunmayan' fizyolojik yakınmalar içindir."
+  },
+  {
+    "id": "tur_18",
+    "sikayet": "Yirmi günlük bebeğimin ateşi çıktı, 38.5 ölçtüm. Sürekli uyukluyor, memeyi de emmiyor.",
+    "yas": 0,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": {
+      "fever": 38.5
+    },
+    "beklenen_triage_code": "Kırmızı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Kapiller kan şekeri",
+      "Tam kan sayımı",
+      "Kan kültürü"
+    ],
+    "beklenen_kaynak": "pediatrik_ates.txt",
+    "gerekce": "pediatrik_ates.txt Kırmızı: '28 günden küçük yenidoğan döneminde rektal T >=38°C olan tüm bebekler (mutlak sepsis taraması)' — bebek 20 günlük ve ateş 38.5. Ölçüm yolu şikayette belirtilmemiş, ancak yenidoğanda ateş eşiği mutlak kabul edilen tek dal budur. Uyuklama ve emmeme, ilk Kırmızı maddesindeki bozuk PAT (görünüm) bulgusunu da destekliyor. Sarı dalı 3-6 ay arası bebekler içindir. Kan kültürü protokolde yenidoğan için ayrıca sayılmış."
+  },
+  {
+    "id": "tur_19",
+    "sikayet": "İki haftadır uyuyamıyorum, dün geceden beri kendime zarar verme düşüncesi aklımdan çıkmıyor. Bir de planım var ve bundan korkuyorum.",
+    "yas": 26,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Parmak ucu kan şekeri",
+      "Tam kan sayımı",
+      "Rutin biyokimya"
+    ],
+    "beklenen_kaynak": "psikiyatrik_aciller.txt",
+    "gerekce": "psikiyatrik_aciller.txt Sarı: 'Aktif intihar düşüncesi olan hastalar (ESI 2. Seviye - en geç 10 dakika içinde hekim değerlendirmesi gerekir)' — plan içeren aktif intihar düşüncesi. Kırmızı dalı 'kontrol altına alınamayan ajite' ya da bilinci kapanmış/solunumu bozulmuş hastalar içindir; hasta kendi isteğiyle yardım arıyor. Yeşil 'akut kendine zarar verme riski BULUNMAYAN' vakalar diyor. Kan şekeri protokolde organik nedeni dışlamak için."
+  },
+  {
+    "id": "tur_20",
+    "sikayet": "Üç aydır sol dizim merdiven çıkarken ağrıyor, sabahları on dakika kadar tutukluk oluyor. Şişlik yok, düşme ya da çarpma da olmadı.",
+    "yas": 44,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Belirsiz",
+    "beklenen_bolum": "Triyaj Bankosu",
+    "beklenen_tetkikler": [],
+    "beklenen_kaynak": null,
+    "gerekce": "Kapsam dışı: 15 protokolün hiçbirinin kapsamına girmiyor. travma.txt 'künt veya penetran travma, düşme, trafik kazası veya iş kazası' istiyor — hasta travmayı açıkça reddediyor. ates_sepsis.txt ateş/enfeksiyon, karin_agrisi.txt karın ağrısı gerektiriyor. Kronik, travmatik olmayan dejeneratif eklem ağrısı için yüklü protokol yok; doğru davranış eşik altında kalıp cevap üretmemektir. Kapsam dışı olduğu için beklenen_kaynak null."
+  }
+]

@@ -140,6 +140,16 @@ birine düşer:
 | **B — muhakeme** | Doğru protokol geldi ama triyaj kodu yanlış | few-shot, prompt |
 | **C — biçim** | Triyaj kodu doğru, bölüm veya tetkikler yanlış | normalizasyon, şema |
 
+**C kutusunun kapsam dışı muafiyeti** (12 Ağustos, uygulama sırasında eklendi):
+beklenen kod `"Belirsiz"` **ve** sistem de doğru şekilde çekimser kaldıysa C
+kapıları hiç çalışmaz, sonuç tam doğru sayılır. Sebep ölçüldü: eşik altında
+`app/api/ai.py:152-160` `department="Triyaj Bankosu"`, `onerilen_tetkikler=[]`
+döndürüyor, yani senaryo yazarı o iç dizeyi tahmin etmediyse doğru reddedilen
+her kapsam dışı senaryo C kutusunu şişiriyordu. Cevap vermeyi reddetmiş bir
+sistemde derecelendirilecek bölüm ya da tetkik listesi yoktur; onları puanlamak
+kategori hatasıdır. `beklenen_bolum` yüklemede zorunlu kalır ama bu senaryolarda
+**puanlanmaz**.
+
 Gerekçe: yol haritasının Gün 24'ü "en büyük kutuya müdahale et" diyor. Ölçülmezse
 o tasnif senaryo senaryo elle kazılarak yapılır — 3 iş günü kalmışken en pahalı
 yer orasıdır. Veri zaten yanıtta geliyor (`AnalysisResponse.sources`), maliyeti

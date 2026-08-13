@@ -1,0 +1,42 @@
+[
+  {
+    "id": "fs_01",
+    "sikayet": "arı soktu, kolum şişti ama nefesim rahat",
+    "beklenen_cikti": {
+      "triage_code": "Yeşil",
+      "department": "Yeşil Alan",
+      "onerilen_tetkikler": []
+    },
+    "gerekce": "anafilaksi.txt Yeşil: sistemik bulgu yok, yalnızca lokal reaksiyon. Tetkik listesi bilerek boş — Yeşil dalda tetkik gerekmiyor ve boş liste altın standartla çakışamaz. TETKİK ADI ÖĞRETİLMİYOR (13 Ağu 2026, inceleme C1): derlemenin tetkik dağarcığı küçük ve altın standart onu zaten kapsıyor, yani havuza konan HER tetkik adı ölçülen kelimeyi modele öğretirdi — Jaccard yükselir, C kutusu çöker ve Gün 24'ün önce/sonra tablosu sızıntıyı iyileşme diye raporlar. Havuz bu yüzden yalnızca triyaj kodunu ve derlemenin kendi yönlendirme dağarcığını öğretiyor. Gün 24 UYARISI: yan etki olarak model tetkik önermeyi azaltabilir; önce/sonra tablosunda tetkik sayısı da izlenmeli."
+  },
+  {
+    "id": "fs_02",
+    "sikayet": "buzda kaydım, omzum çıktı, kolumu hiç oynatamıyorum",
+    "beklenen_cikti": {
+      "triage_code": "Sarı",
+      "department": "Sarı Alan",
+      "onerilen_tetkikler": []
+    },
+    "gerekce": "travma.txt Sarı: mekanizma yaralanması, görüntüleme gerekiyor. ÖNCEDEN bu örnek 'Bölgeye yönelik grafi' öğretiyordu: hiçbir protokolde geçmeyen, etiketleyenin uydurduğu ifadeydi ve kor_02'nin altın etiketinde de aynen duruyordu — havuz, ölçülen kelimeyi öğretiyordu. TETKİK ADI ÖĞRETİLMİYOR (13 Ağu 2026, inceleme C1): derlemenin tetkik dağarcığı küçük ve altın standart onu zaten kapsıyor, yani havuza konan HER tetkik adı ölçülen kelimeyi modele öğretirdi — Jaccard yükselir, C kutusu çöker ve Gün 24'ün önce/sonra tablosu sızıntıyı iyileşme diye raporlar. Havuz bu yüzden yalnızca triyaj kodunu ve derlemenin kendi yönlendirme dağarcığını öğretiyor. Gün 24 UYARISI: yan etki olarak model tetkik önermeyi azaltabilir; önce/sonra tablosunda tetkik sayısı da izlenmeli."
+  },
+  {
+    "id": "fs_03",
+    "sikayet": "merdivenden düştü, kafasını çarptı, seslenince uyanmıyor",
+    "beklenen_cikti": {
+      "triage_code": "Kırmızı",
+      "department": "Kırmızı Alan",
+      "onerilen_tetkikler": []
+    },
+    "gerekce": "travma.txt Kırmızı: 'bilinci kapanmış (GKS <=13) travma hastaları' (satır 16). ÖNCEDEN bu örnek parmak amputasyonuydu ve 'Tam kan sayımı' ile 'Kan grubu' öğretiyordu; ikisi de altın standartta var. TETKİK ADI ÖĞRETİLMİYOR (13 Ağu 2026, inceleme C1): derlemenin tetkik dağarcığı küçük ve altın standart onu zaten kapsıyor, yani havuza konan HER tetkik adı ölçülen kelimeyi modele öğretirdi — Jaccard yükselir, C kutusu çöker ve Gün 24'ün önce/sonra tablosu sızıntıyı iyileşme diye raporlar. Havuz bu yüzden yalnızca triyaj kodunu ve derlemenin kendi yönlendirme dağarcığını öğretiyor. Gün 24 UYARISI: yan etki olarak model tetkik önermeyi azaltabilir; önce/sonra tablosunda tetkik sayısı da izlenmeli."
+  },
+  {
+    "id": "fs_04",
+    "sikayet": "ekmek keserken parmağımı hafif kestim, kanama durdu",
+    "beklenen_cikti": {
+      "triage_code": "Yeşil",
+      "department": "Yeşil Alan",
+      "onerilen_tetkikler": []
+    },
+    "gerekce": "travma.txt Yeşil: 'yüzeyel laserasyon ... kanaması durmuş küçük travmalar' (satır 28). Tetkik yok. TETKİK ADI ÖĞRETİLMİYOR (13 Ağu 2026, inceleme C1): derlemenin tetkik dağarcığı küçük ve altın standart onu zaten kapsıyor, yani havuza konan HER tetkik adı ölçülen kelimeyi modele öğretirdi — Jaccard yükselir, C kutusu çöker ve Gün 24'ün önce/sonra tablosu sızıntıyı iyileşme diye raporlar. Havuz bu yüzden yalnızca triyaj kodunu ve derlemenin kendi yönlendirme dağarcığını öğretiyor. Gün 24 UYARISI: yan etki olarak model tetkik önermeyi azaltabilir; önce/sonra tablosunda tetkik sayısı da izlenmeli."
+  }
+]

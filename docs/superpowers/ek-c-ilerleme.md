@@ -2007,3 +2007,327 @@ turda dört yerden "2,5 GB" ve "dakikalardan saniyelere" ifadelerini temizlemek
 zorunda kaldı, ve son turda kaynak olan **plan dosyası** da düzeltildi — çünkü
 düzeltilmeyen kaynak, bir sonraki turda geri kopyalanır. Aynı desen Gün 22'nin
 birinci yarısında `yanik.txt` için de yaşanmıştı.
+
+## Gün 23 · Değerlendirme seti — sistemin doğruluğu sayıya dönüşüyor (12–13 Ağustos 2026)
+
+Bugüne kadar "çalışıyor" diyorduk. Bu bölümden sonra sayı var — ve sayının
+kendisinden daha önemlisi, **sayının nasıl okunacağı**.
+
+Tasarım: `docs/superpowers/specs/2026-08-12-gun23-degerlendirme-design.md`
+(K1–K15). Plan: `docs/superpowers/plans/2026-08-12-gun23-degerlendirme.md`,
+sekiz görev. Ölçüm kodu `degerlendirme/` altında ve `app/`'a **hiç dokunmadı**
+(K1, `git diff main...HEAD -- app/` boş): ölçülen şey Gün 22'nin bitirdiği
+sistemin ta kendisi.
+
+### Ölçülen sayılar (13 Ağustos 2026)
+
+Ham çıktı `degerlendirme/sonuclar/2026-08-13.{md,json}`. Bu, tüm-dal
+incelemesinin düzeltmeleri uygulandıktan **sonraki** ikinci koşumdur; birinci
+koşumun sayıları artık üretilemez, çünkü ölçüm aracı değişti (aşağıda).
+
+| Ölçü | Kör set | Türetilmiş set |
+|---|---|---|
+| Sette senaryo | 9 | 20 |
+| Ölçülen (kapsam içi) | 8 | 19 |
+| **Genel doğruluk (tüm)** | **%37,5** | **%84,2** |
+| Genel doğruluk (cevaplananlar) | %37,5 | %88,9 |
+| **Kırmızı duyarlılık** | **n/d (0/0)** | **%100,0 (10/10)** |
+| Eşik altı oranı | %0,0 (0) | %5,3 (1) |
+| Tetkik Jaccard (ort.) | 0,10 (8 senaryodan) | 0,26 (18 senaryodan) |
+| Kök neden A/B/C | 1 / 4 / 3 | 2 / 2 / 14 |
+| Şanslı doğru | 0 | 0 |
+| Ölçülemedi / sonucu yazılmamış | 0 / 0 | 0 / 0 |
+| Kapsam dışı (doğru/toplam) | 1/1 | 0/1 |
+
+Ses tanıma: **ortalama WER 0,150** (9 kayıt), hizalama eşiğinin (0,6) çok
+altında — ses-metin eşleşmesi doğru.
+
+**Klinik olarak en önemli tek cümle:** türetilmiş setteki 10 Kırmızı vakanın
+**10'u da yakalandı**. 29 senaryonun tamamında sekiz kapsam içi hata var ve
+bunların yalnızca **ikisi alt-triyaj** (`kor_07` ve `tur_17`, ikisi de Sarı →
+Yeşil); beşi üst-triyaj (sistem daha temkinli davranmış), biri cevapsızlık
+(`tur_07` eşik altında kaldı). Ayrıca kapsam dışı `tur_20` sızdı.
+
+### Bulgu 1 — kör set ile türetilmiş set ayrışıyor: %37,5'e karşı %84,2
+
+**Bu, günün asıl sonucu ve iki yazarlı set kuralının (K2/K3) varlık sebebi.**
+Türetilmiş 20 senaryoyu protokolleri okuyan kişi yazdı; kör 9 senaryoyu
+kullanıcı, protokol metnini **hiç görmeden**, gerçek hasta diliyle yazdı. İki
+küme aynı sistemi ölçüyor ve arada iki katından fazla fark var.
+
+Doğru okuma: **%84,2 sistemin doğruluğu değil, sorusunu belgeden türeten bir
+ölçüm setinin ürettiği tavan.** Tek yazarlıkla ölçülseydi rapor "%84 doğruluk"
+derdi ve bu sayı kendi kendini doğrulardı.
+
+Üç dürüst çekince, üçü de sayıyla birlikte okunmalı:
+
+1. **Kör set küçük.** 8 ölçülebilir senaryo, yani tek senaryo ±%12,5 oynatıyor.
+   Ayrışmanın **yönü** güvenilir, büyüklüğü değil.
+2. **İki etiket tartışmalı ve ikisi ters yöne çekiyor.** `kor_01` (primer baş
+   ağrısı → Yeşil; gerçek acillerde BT çekilip Sarı denir) Sarı sayılırsa
+   doğruluk **yükselir** (sistem Sarı dedi). `kor_02` ise `travma.txt`'nin Yeşil
+   satırındaki tek literal diskalifiye edici ifadeyle çelişiyor — "(ambule
+   olabilen hastalar)" diyor, hasta "üstüne kesinlikle basamıyorum" diyor — ve
+   Sarı sayılırsa doğruluk **düşer** (sistem Yeşil dedi). Dürüst bant bu yüzden
+   %25–50. İlk yazımda yalnızca doğruluğu yükselten taraf yazılmıştı; tüm-dal
+   incelemesi tek yönlü duyarlılık analizinin kendisinin bir kayma olduğunu
+   söyledi ve haklıydı.
+3. **Sınıf dağılımı iki sette farklı.** Türetilmiş 10 Kırmızı / 7 Sarı / 2 Yeşil,
+   kör 0 Kırmızı / 3 Sarı / 5 Yeşil. Sekiz hatanın beşi üst-triyaj, yani
+   yukarı kaçan bir sistem Kırmızı ağırlıklı sette iyi, Yeşil ağırlıklı sette
+   kötü puan alır. Farkın bir kısmı **yazarlık değil bileşim**.
+
+### Bulgu 2 — kör set, klinik olarak en kritik sayıyı hiç ölçemiyor
+
+Kör setin Kırmızı duyarlılığı **n/d (0/0)**: kullanıcının yazdığı dokuz
+şikayetin hiçbiri gerçek bir Kırmızı vaka değil. Yani **%100 Kırmızı duyarlılık
+yalnızca etiketlerini uygulayıcının seçtiği sette ölçüldü** — bağımsızlık
+garantisi en zayıf olan sayı, aynı zamanda klinik olarak en önemli sayı.
+
+Bu bir kusur değil, kör setin doğal sonucu (kimse kendi acil vakasını
+uyduramaz), ama gizlenmeden söylenmeli. Gün 24 / Gün 29 için somut iş:
+kullanıcıdan **Kırmızı arketipli üç-dört kör şikayet** daha istemek. `n/d`
+işaretinin kendisi bu yüzden değerli — "%0,0" basılsaydı "hiçbir Kırmızı'yı
+yakalayamadı" diye okunurdu.
+
+### Bulgu 3 — bölüm alanının derlemede hiçbir dayanağı yok (SİSTEM bulgusu)
+
+İlk yazımda bu bir *altın standart* kusuru diye kaydedilmişti. **Ölçüm bunun
+yanlış olduğunu gösterdi ve düzeltiliyor.**
+
+15 protokolün hepsinde bir "— Yönlendirme" tablosu var, ama hiçbiri hastayı bir
+hastane bölümüne yollamıyor; hepsi **akuite alanı** söylüyor: `sarı alan`
+(derlemede 25 kez), `yeşil alan` (24), `kırmızı alan` (18), `resüsitasyon` (14),
+`şok odası`. Modelin ürettiği bölüm adları ise derlemede aranınca:
+
+| Modelin dediği | Derlemede |
+|---|---|
+| Pulmonoloji, Gastroloji, Ortopedi, Pediyatri, Acil Cerrahi, Travma Odası, Kardiyoloji, Dahiliye | **hiçbir protokolde yok** |
+| Nöroloji, Psikiyatri, Obstetrik | geçiyor, ama bölüm ataması olarak değil |
+
+Yani `department` alanı **dayanaksız**: model onu kendi ön bilgisinden
+uyduruyor, oysa prompt kaynak dokümanlarda olmayanı uydurmayı açıkça yasaklıyor
+(`app/api/ai.py:184-186`). `kor_07`'de çıkan `"İnsan Hakkında"` tekil bir
+saçmalama değil, dayanaksız bir alanın uç örneği.
+
+Bunun üzerine bölüm **C kapısından çıkarıldı** (`kok_neden`; gerekçe orada
+yazılı). Akuite alanını beklenti yapmak çare değildi: o, triyaj kodunun birebir
+fonksiyonu, yani sıfır bilgi ekler. Bölüm ölçümden atılmadı, **ölçülebilir bir
+şeye dönüştürülmek üzere Gün 24'ün sistem hedefine taşındı** — modelin
+`department` çıktısı derlemenin desteklediği kapalı kelime dağarcığına
+sıkıştırılacak.
+
+**Ama düzeltme C kutusunu kurtarmadı ve bu da bir bulgu.** Bölüm kapısı
+kapatılınca türetilmiş C yalnızca 15'ten **14**'e indi. Demek ki doygunluğun
+baskın sebebi bölüm değil, aşağıdaki adlandırma artefaktı: tetkik karşılaştırması
+tam eşitlik istiyor ve neredeyse hiçbir senaryoda 1,00 tutmuyor, dolayısıyla
+triyaj kodu doğru olan her senaryo yine C'ye düşüyor. **A/B/C tasnifi bugün Gün
+24'ün "en büyük kutuya müdahale et" kararını taşıyamaz.**
+
+### Bulgu 4 — Jaccard'ı adlandırma artefaktı bastırıyor (önceden ilan edilmişti)
+
+Görev 6, tetkik adlarının tam eşitlikle karşılaştırıldığını ve Jaccard'ın sistem
+genelinde düşük okunacağını **ölçümden önce** kaydetmişti. Doğrulandı:
+
+- `kor_03` — beklenen `Tam kan sayımı, Biyokimya, Tam İdrar Tetkiki, Beta-hCG`,
+  çıkan `Hemogram (Tam kan sayımı), Biyokimya, Tam İdrar Tetkiki (TİT), Beta-hCG`.
+  Klinik olarak **4/4 doğru**, ölçülen Jaccard **0,33**.
+- `tur_01` — `EKG` ile `Elektrokardiyografi (EKG)` eşleşmiyor.
+
+Jaccard sayıları (0,10 ve 0,26) **"model yanlış tetkik öneriyor" diye
+okunamaz.** Doğru okuma: eşanlamlı/parantezli yazım normalize edilmiyor. Kırılım
+tablosuna beklenen-vs-çıkan tetkik sütunları tam bunun için kondu — artefakt
+sayıda değil tabloda görülüyor.
+
+### Bulgu 5 — `yanik.txt` defekti KAPANDI, ama yerine bir aşırı-getirme geldi
+
+Gün 22'nin "Gün 23'e adlandırılmış defekti" `yanik.txt`'nin Kırmızı
+kriterlerinin hasta dilinden ulaşılamamasıydı (0,0002 / 0,0003 / 0,0011).
+**Kapandı:** üç yanık senaryosunda da (`kor_05`, `tur_09`, `tur_10`)
+`yanik.txt` birinci sırada geldi ve triyaj kodu doğru çıktı.
+
+**Ama aynı düzeltme yeni bir sorun üretti.** `yanik.txt` artık derlemenin en
+büyük dosyası (**6 chunk**; çoğu 3) ve kendisine ait olmayan sorguları
+kazanıyor:
+
+- **`kor_08`** — ateş/halsizlik, beklenen `ates_sepsis.txt`. Gelen tek kaynak
+  **`yanik.txt`**. Yeşil yerine **Kırmızı**, ve model hiç yanığı olmayan hastaya
+  yanık odaklı tetkik önerdi. Kör setteki tek A kutusu bu.
+- **`tur_11`** — beklenen `zehirlenme.txt`, birinci sırada yine `yanik.txt`.
+
+Gün 20'nin dersinin tekrarı: **bir belgeyi zenginleştirmek onu komşularının
+sorgularında da güçlendirir.** Retrieval kelimenin varlığını değil chunk başına
+yoğunluğunu izliyor.
+
+### Bulgu 6 — iki gerçek retrieval/eşik hatası
+
+- **`tur_07`** (beklenen `bilinc_degisikligi.txt`) — hiç kaynak dönmedi, yanıt
+  `Belirsiz`. Eşik altında kalan tek kapsam içi senaryo.
+- **`tur_20`** (kapsam dışı, beklenen `Belirsiz`) — sistem **Yeşil** dedi ve
+  tetkik uydurdu (`"Sol dizimizme testleri"`). Eşik kapsam dışı bir soruyu
+  geçirdi.
+
+`rerank_threshold = 0,005` bir tarafta fazla geçirgen, diğer tarafta fazla katı.
+Tek eşiğin iki hatayı birden çözemeyeceğinin ilk somut kanıtı.
+
+Kör setin kapsam dışı senaryosu (`kor_09`, "yanlış ilaç içtim") **doğru
+reddedildi** (1/1). Not: Görev 6 bunun bir **derleme boşluğu** olduğunu
+kaydetmişti — `zehirlenme.txt`'de bilinmeyen madde/doz dalı yok. Doğru reddetme
+burada "sistem iyi çalıştı"dan çok "bilgi tabanında yok" demek.
+
+### Bulgu 7 — ölçümün gürültü tabanı ölçüldü: bir senaryo = 5,3 puan
+
+İnceleme düzeltmelerinden sonra ölçüm ikinci kez koşuldu. Düzeltmeler triyaj
+kodlarına dokunmuyordu, ama iki koşum karşılaştırıldığında:
+
+- **29 senaryonun 1'inde** çıkan triyaj kodu değişti (`tur_04`: Kırmızı → Sarı,
+  yani yanlıştan doğruya).
+- **Kaynak listesi hiçbir senaryoda değişmedi** — retrieval tam kararlı; oynayan
+  yalnızca LLM.
+- Bu tek dönüş türetilmiş doğruluğu **%78,9 → %84,2** taşıdı.
+
+**Gün 24 için bağlayıcı sonuç:** payda 19 iken bir senaryonun oynaması manşeti
+5,3 puan değiştiriyor. Tek koşumluk bir önce/sonra tablosu, few-shot'ın
+etkisiyle Ollama'nın belirlenimsizliğini **ayırt edemez**. Gün 24 ya aynı
+koşulda birkaç kez koşup ortalama almalı, ya da iddiasını "fark gürültü
+tabanının üstünde mi" sorusuna göre kurmalı. Ölçülmemiş olsaydı Gün 24, hiçbir
+şey yapmadan "+5 puan iyileşme" raporlayabilirdi.
+
+### Bulgu 8 — WER'de rakam normalizasyonu artefaktı (önceden ilan edilmişti)
+
+Ortalama WER 0,150. Görev 4'ün incelemesi bunu önceden söylemişti ve sürücü
+kendisi işaretliyor: kullanıcı *"Üç gündür"* yazmış, whisper *"3 gündür"* yazıyor.
+Tanıma hatası değil, normalizasyon sınırı; sayı düzeltilmedi, sınır raporlandı.
+
+Dürüst sınır: kullanıcı **kendi yazdığı metni okudu**. Okunan konuşma, telaşlı
+bir hastanın konuşmasından kolaydır — bu WER iyimser taraflıdır.
+
+### Altın standardın bilinen kusurları (tüm-dal incelemesi)
+
+Ölçülen sayının bir kısmı sistemin değil, altın standardı yazanın seçimini
+ölçüyor. Bilinen dört sınıf:
+
+1. **Derlemede karşılığı olmayan tetkik adı — DÜZELTİLDİ.** Üç altın etiket
+   hiçbir protokolde geçmeyen ad taşıyordu (`kor_02` "Bölgeye yönelik grafi",
+   `kor_05` ve `tur_10` "Yanık alanı değerlendirmesi"). Model bunları yapısal
+   olarak tutturamazdı, yani üç senaryo baştan J=0,00 ve C kutusuna mahkûmdu.
+   `kor_02` `travma.txt`'nin kendi cümlesine çekildi; `kor_05` ve `tur_10` boş
+   listeye indi, çünkü `yanik.txt`'nin üç tetkiki de koşullu (inhalasyon /
+   rabdomiyoliz / elektrik) ve basit haşlanmada hiçbirinin koşulu yok.
+   **Düzeltme işe yaradı:** `tur_10` bu koşumda J=1,00 ve "doğru" kutusunda.
+2. **Akuiteye göre ayrılmamış tetkik listesi — AÇIK.** `anafilaksi.txt` üç
+   tetkiki akuite ayrımı olmadan sıralıyor; `kor_06` (Sarı) ikisini, `tur_13`
+   (Kırmızı) birini bekliyor. Aynı protokol, aynı liste, farklı alt küme ve
+   protokolde bunu gerektiren hiçbir şey yok. Jaccard bu senaryolarda kısmen
+   "etiketleyen hangi alt kümeyi seçti"yi ölçüyor.
+3. **Tartışmalı okumalar — AÇIK, ikisi de açıkça yazılı.** `kor_01` ve `kor_02`
+   (yukarıda, Bulgu 1).
+4. **Derlemede olmayan bilgiye dayanan etiket — AÇIK.** `tur_06`'nın Kırmızı'sı
+   derlemede bulunmayan bir FAST-ED puanlamasına dayanıyor; `gerekce` bunu
+   söylüyor ama sınıf olarak burada da kayda geçiyor.
+
+### Tüm-dal incelemesi
+
+İnceleyici dört geçişte tüm dalı okudu (`olcum.py`; `calistir.py`; üç veri
+dosyası 15 protokol metnine karşı; testler + belgeler), odaklı ve tam paketi
+koştu ve `git diff main..HEAD -- app/`'in boş olduğunu doğruladı. Verdict:
+**merge edilebilir, düzeltmelerle.** 1 Critical, 11 Important, 14 Minor.
+
+**Critical — sızıntı kapısı yanlış kapıyı bekliyordu.**
+`test_few_shot_havuzu_olcum_setiyle_kesismiyor` yalnızca `sikayet` ve `id`
+karşılaştırıyordu, **çıktıları hiç karşılaştırmıyordu**. Few-shot havuzunun üç
+tetkik adının üçü de altın standartta vardı ve bunlardan `"Bölgeye yönelik
+grafi"` hiçbir protokolde geçmiyordu — yani etiketleyenin uydurduğu ifade hem
+ölçülen etikette hem öğretilecek örnekteydi. Gün 24 havuzu prompt'a enjekte
+edince model **ölçüldüğü kelimeleri** öğrenirdi: Jaccard yükselir, C kutusu
+çöker ve önce/sonra tablosu **sızıntıyı iyileşme diye raporlardı.** K4 tam bunu
+önlemek için vardı ve gate'in görmediği tek kanaldan geliyordu.
+
+Düzeltme iki katmanlı: kapı artık `beklenen_cikti`'nin tetkik ve bölüm adlarını
+da altın standartla kesiştiriyor; havuz ise **hiç tetkik adı öğretmiyor**
+(derlemenin tetkik dağarcığı küçük ve altın standart onu zaten kapsıyor, yani
+havuza konan her ad ölçülen kelimeyi öğretirdi). Havuz yalnızca triyaj kodunu ve
+derlemenin kendi yönlendirme dağarcığını öğretiyor. **Gün 24 uyarısı:** yan
+etki olarak model tetkik önermeyi azaltabilir; önce/sonra tablosunda tetkik
+sayısı da izlenmeli.
+
+**Düzeltilen başlıca Important'lar:**
+
+- **Koşumu çökerten zaman aşımı.** `_429_bekleyerek_gonder`'de `try/except` yoktu;
+  tek bir `ReadTimeout` — yerel Ollama soğuk modelde 90 sn'yi bulabiliyor —
+  `main`'e kadar çıkıp saatlerce süren bir koşumun raporunu hiç yazdırmazdı.
+  K15 "senaryo hata olarak kaydedilir, koşum devam eder" diyordu; artık gerçekten
+  öyle.
+- **"Belirsiz" iki durumu birleştiriyordu.** `app/api/ai.py` hem eşik kapısına hem
+  okunamayan LLM cevabına aynı kodu veriyor. Ölçüm ikisini de retrieval hatası
+  sayıyordu (A kutusu ve `esik_alti`). Artık ayırt ediliyor: kaynak dönmüşse
+  retrieval çalışmıştır ve hata muhakeme/biçim tarafındadır (`esik_alti_mi`).
+- **Tanımsız oranlar JSON'a `0.0` yazılıyordu.** `sonuclar/<tarih>.json` Gün
+  24'ün girdisi; `0.0 → 0.8` orada "+80 puan" diye okunabilirdi. Artık `null`.
+- **Jaccard'da korumasız 0/0.** `n/d` koruması yalnızca yüzdelerdeydi; Jaccard
+  hâlâ "0.00" basıp "model tamamen yanlış tetkik önerdi" diye okunabiliyordu.
+  `Ozet` artık paydayı (`jaccard_sayisi`) da taşıyor.
+- **Sürücü bir payda kuralını yeniden hesaplıyordu** (`toplam - esik_alti`), yani
+  test edilmeyen tarafta (K6 sızıntısı). `Ozet.cevaplanan` eklendi.
+- **Ön uçuş Ollama'ya hiç bakmıyordu**, oysa docstring "dört kontrol" diyordu.
+  Ollama kapalıyken koşum sonuna kadar yanıp baştan sona `olculemedi` çıkardı.
+- **Yükleyici bilinmeyen anahtarı sessizce yutuyordu.** `beklenen_kaynk` yazılsa
+  alan `None` okunur, o senaryonun her hatası A'dan B'ye kayar ve "şanslı doğru"
+  kontrolü kalıcı kapanırdı — ne istisna, ne kırmızı test. Artık beyaz liste var.
+- **13 test Türkçe açıklama taşımıyordu** (10'u Görev 1 bloğunda; Gün 22'den
+  devredilen madde). Hepsi yazıldı.
+
+Test 265 → **269**, kapsama %87,42 dal (kapı yeşil).
+
+### Gün 24'e devredilenler
+
+1. **Ölçümün gürültü tabanı 5,3 puan** (Bulgu 7). Önce/sonra tablosu tek
+   koşumla kurulamaz.
+2. **Tetkik adı normalizasyonu** (`Hemogram (Tam kan sayımı)` ≡ `Tam kan
+   sayımı`, `TİT` ≡ `Tam İdrar Tetkiki`). C kutusunun doygunluğunun baskın
+   sebebi bu; Jaccard bu yapılmadan iyileşemez.
+3. **`department`'ı derlemenin kelime dağarcığına sıkıştır** ve bölüm kapısını
+   geri aç (Bulgu 3).
+4. **`yanik.txt` aşırı-getirmesi** (Bulgu 5). Ölçmeden düzeltilmemeli: adaylar
+   `top_k_initial` 10→20, `yanik.txt`'yi 6→4 chunk'a indirme, chunk boyutunu
+   düşürme. Ölçüt `kor_08`'in `ates_sepsis.txt` alması **ve** üç yanık
+   senaryosunun gerilememesi.
+5. **Eşik iki taraftan da hatalı:** `tur_07` altta kaldı, `tur_20` geçti.
+6. **Kör sete Kırmızı arketipli senaryo** (Bulgu 2).
+7. **Altın standardın açık üç kusur sınıfı** (yukarıdaki 2, 3, 4 numaralı
+   maddeler).
+8. **`zehirlenme.txt` derleme boşluğu** — bilinmeyen madde/doz dalı yok.
+9. **Alt-triyaj ayrıca raporlansın.** Bugün Sarı→Yeşil ile Yeşil→Sarı aynı
+   ağırlıkta "yanlış" sayılıyor; klinik olarak değiller.
+10. **Few-shot'ın tetkik bastırma riski** (Critical'in düzeltmesinin yan etkisi).
+
+### Süreç notu
+
+**Ölçüm, kendisinden beklenen şeyi yaptı: en pahalı bulgularının çoğu ölçüm
+setinin kendisiyle ilgili.** C kutusunun doygunluğu, Jaccard'ın adlandırma
+artefaktı, kör/türetilmiş ayrışması ve gürültü tabanı — hiçbiri "sistem ne kadar
+iyi" sorusunun cevabı değil, "bu soruyu sormaya hazır mıydık" sorusunun cevabı.
+
+**Önceden ilan edilen defektler işe yaradı.** Görev 4 ve Görev 6 ölçümden önce
+"şu artefakt çıkacak" diye yazmıştı; ikisi de aynen çıktı. Bir bulgunun
+**ölçümden önce** yazılmış olması sonradan bulunmasından farklıdır: sonradan
+bulunan bulgu, sayıyı kurtarmak için seçilmiş olabilir. `yanik.txt` defektinin
+**kapandığı** iddiası da bu yüzden güvenilir — kapanma önceden tanımlanmış bir
+beklentinin sonucuydu.
+
+**Bütçe sapması ve karşılığı.** 13 Ağustos'ta subagent bütçesi iki kez doldu;
+Görev 6'nın task review'u hiç koşulmadı ve Görev 7'yi kontrolcü yazdı, yani
+implementer ile inceleyen aynı kişiydi. Tüm-dal incelemesi bu iki görevi
+adlandırılmış hedef olarak aldı ve **kalıntının tam da orada olduğunu** gösterdi:
+Critical ve Important'ların çoğu Görev 6'nın verisinden çıktı, Görev 7'den
+çıkanların hiçbiri yayımlanmış bir sayıyı bozmuyordu. İnceleyicinin kendi
+sonucu: *"bütçe yine kısılırsa koltuğu sürücüye değil veriye harca."*
+
+**Bu bölüm iki kez yazıldı ve ikincisi birincisini düzeltiyor.** İlk yazımda
+Bulgu 3 "altın standart kusuru" diye çerçevelenmişti; protokoller ölçülünce
+bunun bir **sistem** bulgusu olduğu görüldü (bölüm alanının derlemede dayanağı
+yok). İnceleyici ilk çerçeveyi güçlü yan olarak övmüştü — yani bu düzeltme
+incelemeden değil, incelemeden sonra yapılan bir ölçümden geldi. **Belge, kendi
+kaydettiği sayıyı üreten koddan sonra güncellenmek zorunda:** araç değişince
+birinci koşumun sayıları üretilemez hâle geldi ve bu bölüm yeniden koşulan
+ölçümle baştan yazıldı.

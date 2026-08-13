@@ -1,0 +1,149 @@
+[
+  {
+    "id": "kor_01",
+    "sikayet": "Sabah kalktığımdan beri başımın sağ tarafı felaket zonkluyor. Ağrısı resmen gözüme vuruyor. Işığa falan hiç bakamıyorum, midem kalkıyor.",
+    "yas": 34,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Nörolojik değerlendirme"
+    ],
+    "beklenen_kaynak": "bas_agrisi.txt",
+    "gerekce": "bas_agrisi.txt Yeşil: 'Primer baş ağrısı özelliklerinde olan (örneğin gerilim tipi), vital bulguları tamamen normal hastalar' — tek taraflı zonklayıcı ağrı + fotofobi + bulantı primer baş ağrısı (migren) örüntüsüdür. Kırmızı'nın 'saniyeler içinde aniden en yüksek seviyeye ulaşan' kriteri karşılanmıyor (ağrı sabahtan beri sürüyor, ani başlangıç tarif edilmiyor); bilinç değişikliği yok. Sarı'nın 'şiddetli baş ağrısı olan, çok kaynak kullanımı gerektirecek' kriterinin ikinci koşulu yok: Yeşil'in 'en fazla tek kaynak (basit analjezik reçeteleme)' tanımına oturuyor. Tetkik Yeşil dalında BT'yi dışlıyor, geriye 'Nörolojik değerlendirme ve Anamnez' kalıyor. TARTIŞMALI: ilk kez görülen şiddetli baş ağrısında pratikte BT istenip Sarı verilebilir; ayrım Sarı satırının 'çok kaynak kullanımı gerektirecek' koşuluna dayandırıldı ve primer örüntüde bu koşul kabul edilmedi. YAŞ (34, uygulayıcı seçimi): bas_agrisi.txt hiçbir akuite kriterini yaşa bağlamıyor — protokolde tek bir yaş eşiği geçmiyor. Yaş 0-120 aralığında hangi değere çekilirse çekilsin etiket değişmez.",
+    "ses_dosyasi": "ses/kor_01.m4a"
+  },
+  {
+    "id": "kor_02",
+    "sikayet": "Merdivenden inerken ayağım burkuldu. Bileğim inanılmaz şişti, üstüne kesinlikle basamıyorum. Durduğu yerde zonkluyor resmen.",
+    "yas": 31,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tüm vücut veya bölgeye yönelik Bilgisayarlı Tomografi (BT) ve travma serisi grafiler"
+    ],
+    "beklenen_kaynak": "travma.txt",
+    "gerekce": "travma.txt Yeşil: 'Düşük enerjili izole ayak/el bileği burkulmaları (ambule olabilen hastalar)' — merdivenden inerken burkulma düşük enerjili mekanizmadır, yaralanma izole ayak bileğidir. Sarı'nın 'izole uzun kemik kırığı, deplase kırık veya çıkık BULUNAN, nörovasküler muayenesi sağlam olan hastalar' maddesi bir muayene bulgusu istiyor; şikayette kırık/çıkık bulgusu, yüksek enerjili mekanizma, bilinç kaybı ve nörovasküler defisit yok. ETİKETİN ZAYIF YERİ Yeşil satırındaki '(ambule olabilen)' kaydıdır: 'üstüne basamıyorum' bu kayıt yük verme olarak okunursa Yeşil dalı düşer ve Sarı tartışmaya açılır. Karar akuite ölçüsüyle verildi — izole, düşük enerjili, nörovasküler bulgusu olmayan bir ayak bileği yaralanması bekleyebilir; kırık çıksa bile aciliyeti değişmez. Tetkik: protokolün görüntüleme maddesindeki 'bölgeye yönelik ... grafiler'. YAŞ EŞİĞİ (31, uygulayıcı seçimi): travma.txt'de yaşa bağlı tek dal Sarı'daki 'Yaşlı hastada düşük enerjili düşmeler (antikoagülan kullanımı olan kafa/kalça travmaları)'. 31 bu daldan üç ayrı sebeple uzak: yaşlı değil, antikoagülan kullanmıyor, travma kafa/kalça değil ayak bileği. Etiket yaklaşık 18-60 bandında değişmiyor. TETKİK DÜZELTMESİ (13 Ağu 2026, inceleme I3): önceki 'Bölgeye yönelik grafi' HİÇBİR protokolde geçmiyordu — etiketleyenin uydurduğu ifadeydi ve model onu yapısal olarak tutturamazdı (app/api/ai.py:184-186 derlemede olmayan tetkik önermeyi yasaklıyor), yani bu senaryo baştan J=0,00 ve C kutusuna mahkûmdu. travma.txt:35'ten birebir alındı.",
+    "ses_dosyasi": "ses/kor_02.m4a"
+  },
+  {
+    "id": "kor_03",
+    "sikayet": "Dünden beri karnıma kramplar giriyor. Midem sürekli bulanıyor, ağzıma bir lokma bir şey koyamadım. Biraz da ateşim çıktı galiba.",
+    "yas": 27,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı",
+      "Biyokimya",
+      "Tam İdrar Tetkiki",
+      "Beta-hCG"
+    ],
+    "beklenen_kaynak": "karin_agrisi.txt",
+    "gerekce": "karin_agrisi.txt Yeşil: 'Yaşamsal bulguları tamamen stabil olan genç karın ağrılı hastalar' + 'Sadece ishal veya kusmanın eşlik ettiği, vital bulguları normal olan basit karın ağrısı durumları' — 27 yaşında, kramp tarzı ağrı, bulantı, hafif ateş. Kırmızı 'şok tablosu, hipotansif ve taşikardik' istiyor: yok. Sarı'nın 'akut batın' (defans/periton irritasyonu) ve 'yaşlı hasta' dalları da yok. Beta-hCG protokolde 15-49 yaş kadında 'kesinlikle istenir' diyor; EKG yalnızca orta-ileri yaşta isteniyor, 27 yaş için listeye alınmadı. YAŞ EŞİKLERİ (27, uygulayıcı seçimi): protokol Yeşil'de 'genç', Sarı'da 'yaşlı' diyor ama sayı vermiyor; derlemedeki tek sayısal yaşlılık eşiği ates_sepsis.txt'nin '>65 yaş'ı. 27 genç tarafında tartışmasız duruyor — etiket ±2 değil, yaklaşık 18-55 bandında sabit. Beta-hCG'nin sayısal eşiği (15-49) için 27 bandın ortasında, iki sınıra da 22 yıl uzak. EKG'yi getirecek 'orta ve ileri yaş' koşulu 27'de açıkça yok. Yaş belirsiz bölgede DEĞİL.",
+    "ses_dosyasi": "ses/kor_03.m4a"
+  },
+  {
+    "id": "kor_04",
+    "sikayet": "Üç gündür geçmeyen bir öksürüğüm var. Yutkunurken boğazım jilet gibi kesiliyor. Bir de derin nefes almaya çalışırken sırtıma garip bir ağrı saplanıyor.",
+    "yas": 30,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Göğüs Radyografisi"
+    ],
+    "beklenen_kaynak": "nefes_darligi.txt",
+    "gerekce": "nefes_darligi.txt Yeşil, birinci madde: 'Oksijen saturasyonu normal, vital bulguları tamamen stabil olan hastalar' — hasta nefes darlığı değil, derin nefeste ağrı tarif ediyor; hipoksi ya da solunum sıkıntısı belirtisi yok. İkinci Yeşil maddesi ('hafif solunum yolu enfeksiyonu bulguları') öksürük ve boğaz ağrısını karşılıyor. Kırmızı'nın SpO2 <%94 / solunum arresti / hipotansiyon dalları ve Sarı'nın 'ciddi solunum sıkıntısı', 'astım-KOAH atağı', 'göğüs ağrısının nefes darlığına eşlik ettiği AKS şüphesi' dallarının hiçbiri tarif edilmiyor. Plevratik ağrı pnömoniyi dışlamak için protokolün 'Göğüs Radyografisi' maddesini gerektiriyor; bu tek tetkik ikinci Yeşil maddesindeki 'kaynak kullanımı gerektirmeyen' ifadesiyle gerilim hâlinde olduğu için etiket birinci maddeye dayandırıldı. KAYNAK SEÇİMİ TARTIŞMALI: ates_sepsis.txt'nin 'toksik görünümü olmayan basit üst solunum yolu enfeksiyonu' maddesi de aynı kodu (Yeşil) verirdi; kod her iki okumada da değişmiyor. YAŞ (30, uygulayıcı seçimi): nefes_darligi.txt hiçbir kriterini yaşa bağlamıyor, protokolde yaş eşiği geçmiyor. Alternatif kaynak sayılan ates_sepsis.txt'nin '>65 yaş' Sarı dalı da 30'da devrede değil — yani yaş, kaynak tartışmasının hangi tarafında olursak olalım etiketi değiştirmiyor.",
+    "ses_dosyasi": "ses/kor_04.m4a"
+  },
+  {
+    "id": "kor_05",
+    "sikayet": "Çay demlerken kaynar su elime döküldü. Bileğime kadar kıpkırmızı oldu, şimdiden su toplamaya başladı. Acısından yerimde duramıyorum.",
+    "yas": 41,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [],
+    "beklenen_kaynak": "yanik.txt",
+    "gerekce": "yanik.txt Sarı: 'Yüz, el, ayak veya perine gibi kritik bölge yanığı olup (elini veya yüzünü haşlamış, bu bölgede su toplamış ya da derisi soyulmuş) vital bulguları tamamen stabil olanlar' — kaynar su eli haşlamış, su toplama (bül) başlamış: kritik bölge + bül. Aynı bölümdeki 'şiddetli ağrısı olan, yanma ve ağrıdan belirgin biçimde yakınan' maddesi de tutuyor. Kırmızı dalları (inhalasyon, TVYA >%20, elektrik/kimyasal, sirkumferansiyel, ağrısız tam kalınlık, şok) yok. Tetkik: protokolün üç laboratuvar maddesi inhalasyon/elektrik/kas yıkımı içindir; bu vakada İlk Değerlendirme'nin TVYA hesabı geçerli olan. YAŞ EŞİĞİ (41, uygulayıcı seçimi): yanik.txt majör yanık eşiğini yaşa bağlıyor — 'Erişkinde TVYA >%20, çocuk/yaşlıda TVYA >%10'. 41 tartışmasız erişkin tarafında. Üstelik el haşlanması yaklaşık %1-2 TVYA olduğu için yaş hangi tarafa çekilirse çekilsin (%20 ya da %10 eşiği) Kırmızı'ya geçmiyor; etiket yaşa karşı iki kat korumalı. TETKİK DÜZELTMESİ (13 Ağu 2026, inceleme I3): önceki 'Yanık alanı değerlendirmesi' hiçbir protokolde geçmiyordu. yanik.txt'nin ÜÇ tetkiki de koşullu — Karboksihemoglobin+Kan Gazı 'inhalasyon şüphesinde', Tam Kan Sayımı+BFT 'kas yıkımı/rabdomiyoliz takibi için', EKG 'elektrik yanıklarında'. Bilek düzeyinde haşlanmada üçünün de koşulu yok, dolayısıyla protokolün dayattığı tetkik YOK ve doğru beklenti boş listedir.",
+    "ses_dosyasi": "ses/kor_05.m4a"
+  },
+  {
+    "id": "kor_06",
+    "sikayet": "Dün akşam dışarıda bir şeyler yemiştim, sabahtan beri her yerim deliler gibi kaşınıyor. Kollarımda kırmızı kırmızı lekeler çıktı, yüzüm de hafiften şişmeye başladı.",
+    "yas": 33,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Klinik değerlendirme ve fizik muayene",
+      "Tam kan sayımı"
+    ],
+    "beklenen_kaynak": "anafilaksi.txt",
+    "gerekce": "anafilaksi.txt Sarı: 'Anafilaksi tablosu tam oturmamış ancak bekleyemeyecek durumda olan, sistemik reaksiyon (örn. yaygın ürtiker, dil/dudak ödemi) geliştiren hastalar' — yaygın kaşıntı + kollarda kırmızı lekeler (yaygın ürtiker) + yüzde başlayan şişlik (anjiyoödem). Kırmızı 'solunum yolu obstrüksiyonu (stridor, wheezing, hava açlığı) veya dolaşım kollapsı' istiyor: hiçbiri tarif edilmiyor. Yeşil ise 'sadece basit LOKALİZE ürtiker' diyor, tablo yaygın olduğu için dışarıda. YAŞ (33, uygulayıcı seçimi): anafilaksi.txt hiçbir kriterini yaşa bağlamıyor, protokolde yaş eşiği geçmiyor; etiket yaştan bağımsız.",
+    "ses_dosyasi": "ses/kor_06.m4a"
+  },
+  {
+    "id": "kor_07",
+    "sikayet": "İki gündür idrara çıkarken çok fena yanmam oluyor. Belimin sağ tarafına, boşluğuma doğru da öyle bir ağrı vuruyor ki nefesimi kesiyor.",
+    "yas": 32,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Sarı",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı",
+      "Biyokimya",
+      "Tam İdrar Tetkiki"
+    ],
+    "beklenen_kaynak": "karin_agrisi.txt",
+    "gerekce": "karin_agrisi.txt Sarı: 'Şiddetli ağrısı olan ve çoklu kaynak (kan, görüntüleme vb.) kullanımı gerektirecek hastalar' — nefes kesen yan ağrısı + dizüri, tanı için idrar + kan + görüntüleme gerekir. Yeşil 'yaşamsal bulguları tamamen stabil genç karın ağrılı hasta' derken ağrının şiddetini ve kaynak ihtiyacını kapsamıyor. Kırmızı şok/hipotansiyon istiyor: yok. Beta-hCG erkek hastada geçersiz. YAŞ DÜZELTİLDİ — 38 iken 32 yapıldı (uygulayıcı seçimi). İlgili eşik karin_agrisi.txt İlk Değerlendirme'deki 'Orta ve ileri yaş hastalarda kardiyak sorunları dışlamak için anamnezden önce EKG çekilir' koşulu. 38, orta yaşın alışıldık başlangıcına (40-45) fazla yakındı: yaşı iki basamak oynatmak EKG'nin beklenen_tetkikler'e girip girmemesini belirsiz bırakıyordu, yani beklenen liste hastanın değil benim seçimimin artefaktı oluyordu. 32 bu bandın açıkça altında, EKG tartışmasız dışarıda. Akuite (Sarı) zaten yaştan bağımsız — 'şiddetli ağrı + çoklu kaynak' satırına dayanıyor, 'yaşlı hastalarda akut karın' satırına değil; 32 renal kolik için de tipik yaş.",
+    "ses_dosyasi": "ses/kor_07.m4a"
+  },
+  {
+    "id": "kor_08",
+    "sikayet": "Kaç gündür üstümde bir kırgınlık var, bütün eklemlerim sızlıyor. Sürekli üşüyorum, ara ara titreme geliyor ama alnım da yanıyor sanki.",
+    "yas": 29,
+    "cinsiyet": "Erkek",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Yeşil",
+    "beklenen_bolum": "Acil Servis",
+    "beklenen_tetkikler": [
+      "Tam kan sayımı",
+      "Rutin biyokimya"
+    ],
+    "beklenen_kaynak": "ates_sepsis.txt",
+    "gerekce": "ates_sepsis.txt Yeşil: 'Toksik görünümü olmayan basit üst solunum yolu enfeksiyonu veya viral sendromlar' + 'Genel durumu iyi, vital bulguları tamamen normal ve oral alımı açık ambule hastalar' — kırgınlık, eklem ağrısı, üşüme-titreme viral sendrom örüntüsü. Kırmızı qSOFA >=2 / hipotansiyon / basmakla solmayan döküntü / ense sertliği istiyor: hiçbiri yok, bilinç açık. Sarı'nın üç dalı da tutmuyor: ölçülmüş >38.5 ateş + taşikardi yok (hasta ateşini ölçmemiş), 65 yaş üstü değil (29), immünsüpresyon veya ek hastalık bildirilmemiş. YAŞ EŞİĞİ (29, uygulayıcı seçimi): ates_sepsis.txt derlemedeki tek SAYISAL yaş eşiğini taşıyor — Sarı'daki 'Yaşlı (>65 yaş) ... yeni ateş tablosu ile başvuran hastalar'. 29 bu eşiğin 36 yıl altında; yaşı iki basamak değil, 36 basamak oynatmak gerekirdi. Etiket 18-65 bandının tamamında Yeşil kalıyor. Yaş belirsiz bölgede DEĞİL.",
+    "ses_dosyasi": "ses/kor_08.m4a"
+  },
+  {
+    "id": "kor_09",
+    "sikayet": "Dün akşam yanlış ilaç içmişim bu yüzden kendimi iyi hissetmiyorum",
+    "yas": 52,
+    "cinsiyet": "Kadın",
+    "kronik_hastalik": null,
+    "vitals": null,
+    "beklenen_triage_code": "Belirsiz",
+    "beklenen_bolum": "Triyaj Bankosu",
+    "beklenen_tetkikler": [],
+    "beklenen_kaynak": null,
+    "gerekce": "zehirlenme.txt'de BİLİNMEYEN MADDE / BİLİNMEYEN MİKTAR dalı yok. Kırmızı'nın üç maddesi de bulgu istiyor (GKS <=13, solunum depresyonu, instabilite/aritmi/nöbet, kostik-siyanür-CO ya da bilinen yüksek riskli ajan) — hasta hiçbirini tarif etmiyor. Sarı 'potansiyel toksik doz almış' olmasını, Yeşil ise 'toksik eşiğin çok altında kaldığı NET olan asemptomatik' olmayı şart koşuyor; ilaç adı ve miktar bilinmediği için ikisi de doğrulanamıyor, üstelik hasta asemptomatik de değil. bilinc_degisikligi.txt'nin ilaç/madde dalı ise bilinç bulanıklığı istiyor, o da tarif edilmemiş. Hiçbir protokol kriterine oturmadığı için doğru davranış cevap üretmemektir; kapsam dışı olduğundan beklenen_kaynak null. YAŞ (52, uygulayıcı seçimi): zehirlenme.txt hiçbir kriterini yaşa bağlamıyor. Belirsiz etiketi zaten kriterlerin UYGULANAMAMASINDAN geliyor, bir eşiğin hangi tarafında durulduğundan değil; yaş 0-120 aralığında hiçbir değer bunu değiştirmiyor.",
+    "ses_dosyasi": "ses/kor_09.m4a"
+  }
+]
