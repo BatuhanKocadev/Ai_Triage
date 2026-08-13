@@ -321,12 +321,16 @@ def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
 def bolum_dogru_mu(beklenen: str, cikan: str | None) -> bool:
     """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı.
 
-    Ayrı bir fonksiyon çünkü `kok_neden`'in C kutusu ile Görev 5'in bölüm oranı
-    tek bir tanımdan beslenmeli. Bugün gövdesi `triyaj_dogru_mu` ile aynı, o
-    yüzden ikisi de `_ad_esit_mi`'ye delege ediyor: aynı karşılaştırmanın
-    ikinci bir birebir kopyası, önlemek için çıkarıldığı kaymayı bir seviye
-    yukarıda geri getirirdi. Bölüm bir gün eş anlamlıları ("Acil" ~ "Acil
-    Servis") tanımak zorunda kalırsa delegasyon silinip gövde buraya yazılır.
+    Tek çağrı yeri `kok_neden`'in C kutusu; ayrı bir isim olarak duruyor çünkü
+    bölüm karşılaştırması triyaj kodu karşılaştırmasından bağımsız değişebilir.
+    Bugün gövdesi `triyaj_dogru_mu` ile aynı, o yüzden ikisi de `_ad_esit_mi`'ye
+    delege ediyor: aynı karşılaştırmanın ikinci bir birebir kopyası, önlemek
+    için çıkarıldığı kaymayı bir seviye yukarıda geri getirirdi. Bölüm bir gün
+    eş anlamlıları ("Acil" ~ "Acil Servis") tanımak zorunda kalırsa delegasyon
+    silinip gövde buraya yazılır.
+
+    Not: `Ozet` bir bölüm oranı RAPORLAMIYOR — bölüm yalnızca C kutusunun
+    kapısı olarak ölçüme giriyor.
     """
     return _ad_esit_mi(beklenen, cikan)
 
@@ -436,7 +440,16 @@ def sansli_dogru_mu(senaryo: Senaryo, sonuc: Sonuc) -> bool:
     Model cevabı yanlış bağlamdan ya da kendi ön bilgisinden üretmiştir;
     Gün 24'te retrieval düzeltilince bu senaryolar bozulabilir. İşaretlenmezse
     önce/sonra tablosunda açıklanamayan bir gerileme olarak görünür.
+
+    Kapsam dışı senaryolar (`beklenen_triage_code == "Belirsiz"`) burada da
+    puanlanmaz — `kok_neden` ile aynı kural. Eşik altı yanıt yolu hiç kaynak
+    döndürmediği için (`app/api/ai.py:152-160`), `beklenen_kaynak` yazılmış bir
+    kapsam dışı senaryo doğru reddedildiğinde HER ZAMAN "şanslı" görünürdü;
+    Gün 24 tablosuna sahte bir kırılganlık yazılırdı. Yükleyici bu alan
+    birleşimini kabul ettiği için tek koruma senaryo yazma konvansiyonu olamaz.
     """
+    if senaryo.beklenen_triage_code == "Belirsiz":
+        return False
     if sonuc.hata or not senaryo.beklenen_kaynak:
         return False
     if not triyaj_dogru_mu(senaryo.beklenen_triage_code, sonuc.cikan_triage_code):
@@ -531,6 +544,8 @@ class Ozet:
     sansli_dogru: int
     # Altyapı hatası yüzünden hiçbir paydaya girmeyen senaryo sayısı.
     olculemedi: int
+    # Sonucu hiç yazılmamış senaryo sayısı; koşum yarım kalmışsa >0.
+    sonucsuz: int
     # Beklentisi "Belirsiz" olan (kapsam dışı) ölçülebilir senaryo sayısı.
     kapsam_disi_toplam: int
     # Bunlardan doğru şekilde reddedilenler; doğruluk oranlarına KARIŞMAZ.
@@ -549,10 +564,15 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
     kapsam_ici: list[tuple[Senaryo, Sonuc]] = []
     kapsam_disi: list[tuple[Senaryo, Sonuc]] = []
     olculemedi = 0
+    sonucsuz = 0
 
     for senaryo in senaryolar:
         sonuc = sonuc_haritasi.get(senaryo.id)
         if sonuc is None:
+            # Kayıt hiç yazılmamış (koşum yarıda kalmış olabilir). Paydaya
+            # girmez ama sayılır: `Ozet.__dict__` kalıcı JSON kaydı olduğu için
+            # iz tutulmazsa alt kümede hesaplanmış doğruluk tam küme gibi okunur.
+            sonucsuz += 1
             continue
         if sonuc.hata:
             olculemedi += 1
@@ -570,8 +590,11 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
     esik_alti = sum(1 for _, r in kapsam_ici if r.cikan_triage_code == "Belirsiz")
     cevaplanan = len(kapsam_ici) - esik_alti
 
+    # Karşılaştırma `triyaj_dogru_mu` üzerinden: normalleştiricinin ÇIKTISINI
+    # ("kirmizi") koda gömmek, `_sadelestir`in katlaması değişirse bu kapıyı
+    # sessizce hep False yapar ve klinik olarak en önemli payda sıfıra düşerdi.
     kirmizi = [
-        (s, r) for s, r in kapsam_ici if _sadelestir(s.beklenen_triage_code) == "kirmizi"
+        (s, r) for s, r in kapsam_ici if triyaj_dogru_mu("Kırmızı", s.beklenen_triage_code)
     ]
     kirmizi_yakalanan = sum(
         1 for s, r in kirmizi if triyaj_dogru_mu(s.beklenen_triage_code, r.cikan_triage_code)
@@ -611,6 +634,7 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
         kok_neden_dagilimi=dagilim,
         sansli_dogru=sansli,
         olculemedi=olculemedi,
+        sonucsuz=sonucsuz,
         kapsam_disi_toplam=len(kapsam_disi),
         kapsam_disi_dogru=sum(
             1

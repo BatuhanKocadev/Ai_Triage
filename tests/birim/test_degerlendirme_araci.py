@@ -942,6 +942,11 @@ def test_esik_alti_yanitlar_ayri_sayilir():
 
 
 def test_kapsam_disi_senaryolar_dogruluga_karismaz():
+    """Kapsam dışı senaryo kendi çiftiyle raporlanır, doğruluk oranlarına girmez.
+
+    "Doğru şekilde cevap vermedi" ile "doğru triyaj etti" aynı kovaya konursa
+    iki sayı da okunamaz hâle gelir (K7).
+    """
     senaryolar = [
         _senaryo(id="i1"),
         _senaryo(id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak=None),
@@ -962,6 +967,11 @@ def test_kapsam_disi_senaryolar_dogruluga_karismaz():
 
 
 def test_altyapi_hatasi_paydadan_dusulur():
+    """Altyapı hatası yanlış cevap değildir; paydadan tamamen çıkar.
+
+    Yanlış sayılsaydı doğruluğu olduğundan düşük gösterir, üstelik hata
+    kutularını da şişirirdi — iki sayı birden bozulurdu.
+    """
     senaryolar = [_senaryo(id="h1"), _senaryo(id="h2")]
     sonuclar = [
         Sonuc(senaryo_id="h1", cikan_triage_code="Kırmızı",
@@ -1146,14 +1156,18 @@ def test_altyapi_hatasi_kirmizi_duyarliligi_paydasindan_da_dusulur():
     assert o.olculemedi == 1
 
 
-def test_sonucu_olmayan_senaryo_hicbir_sayiya_girmez():
-    """Yarım kalmış bir koşumun kısmi çıktısı sessizce paydayı küçültür.
+def test_sonucu_olmayan_senaryo_sayilir_ama_paydaya_girmez():
+    """Yarım kalmış bir koşumun kısmi çıktısı sessizce paydayı küçültmemeli.
 
     Sürücü her senaryo için bir `Sonuc` yazar; ama çöken bir koşumun ara
-    dosyasında eksik kayıt olabilir. O dosyayla özet alınırsa doğruluk, ölçülen
-    alt küme üzerinden hesaplanır ve tam setmiş gibi raporlanır. Davranış
-    burada kilitleniyor: eksik senaryo `olculemedi`ye de yazılmaz, çünkü
-    altyapı hatası değil "hiç sorulmamış" demektir (bkz. rapordaki endişe).
+    dosyasında eksik kayıt olabilir. O dosyayla özet alınırsa doğruluk ölçülen
+    alt küme üzerinden hesaplanır. `Ozet.__dict__` kalıcı JSON kaydı olduğu
+    için iz tutulmazsa yarım koşum bir daha asla tam koşumdan ayırt edilemez:
+    alt kümede hesaplanmış doğruluk tam küme gibi okunur.
+
+    `sonucsuz` bu yüzden ayrı sayılıyor — `olculemedi` değil, çünkü altyapı
+    hatası değil "hiç sorulmamış" demektir; paydaya da girmiyor, çünkü
+    ölçülmemiş bir senaryo yanlış cevap sayılamaz.
     """
     senaryolar = [_senaryo(id="v1"), _senaryo(id="sorulmadi")]
     sonuclar = [
@@ -1167,6 +1181,83 @@ def test_sonucu_olmayan_senaryo_hicbir_sayiya_girmez():
     assert o.toplam == 1
     assert o.dogruluk_tum == 1.0
     assert o.olculemedi == 0
+    # Kayıp senaryo görünür kalır: 2 senaryo verildi, 1'i ölçüldü.
+    assert o.sonucsuz == 1
+    assert o.toplam + o.kapsam_disi_toplam + o.olculemedi + o.sonucsuz == len(senaryolar)
+
+
+def test_tam_kosumda_sayilar_senaryo_sayisiyla_denklesir():
+    """Her senaryo dört kovadan tam birine düşer; toplamları seti vermeli.
+
+    Bu denklem olmadan `sonucsuz` alanı yalnızca bir sayı; denklemle birlikte
+    raporun "elimdeki kayıt tam mı" sorusuna verebileceği tek cevap oluyor.
+    """
+    senaryolar = [
+        _senaryo(id="i1"),
+        _senaryo(id="h1"),
+        _senaryo(id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak=None),
+        _senaryo(id="yok"),
+    ]
+    sonuclar = [
+        Sonuc(senaryo_id="i1", cikan_triage_code="Kırmızı",
+              cikan_bolum="Acil Servis", cikan_tetkikler=["EKG", "Troponin"],
+              sources=["gogus_agrisi.txt"]),
+        Sonuc(senaryo_id="h1", hata="500 Sunucu hatası"),
+        Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[]),
+    ]
+
+    o = ozet(senaryolar, sonuclar)
+
+    assert (o.toplam, o.kapsam_disi_toplam, o.olculemedi, o.sonucsuz) == (1, 1, 1, 1)
+    assert o.toplam + o.kapsam_disi_toplam + o.olculemedi + o.sonucsuz == len(senaryolar)
+
+
+def test_kapsam_disi_senaryo_sansli_dogru_sayilmaz():
+    """Doğru reddedilen kapsam dışı senaryo retrieval üzerinden puanlanmaz.
+
+    Eşik altı yanıt yolu hiç kaynak döndürmüyor (`app/api/ai.py:152-160`), o
+    yüzden `beklenen_kaynak` yazılmış bir kapsam dışı senaryo doğru
+    reddedildiğinde HER ZAMAN "şanslı doğru" işaretlenirdi — Gün 24 önce/sonra
+    tablosuna sahte bir kırılganlık yazılırdı. Görev 3 kapsam dışı senaryoların
+    retrieval üzerinden puanlanmamasına karar vermişti; kural burada da geçerli.
+
+    Yükleyici bu alan birleşimine izin veriyor (kapsam dışı + `beklenen_kaynak`),
+    yani tek koruma senaryo yazma konvansiyonu olamaz.
+    """
+    senaryo = _senaryo(
+        id="d1", beklenen_triage_code="Belirsiz", beklenen_kaynak="gogus_agrisi.txt"
+    )
+    reddedildi = Sonuc(senaryo_id="d1", cikan_triage_code="Belirsiz", sources=[])
+
+    assert sansli_dogru_mu(senaryo, reddedildi) is False
+
+    o = ozet([senaryo], [reddedildi])
+    assert o.sansli_dogru == 0
+    assert o.kapsam_disi_dogru == 1
+
+
+def test_bos_hata_dizesi_altyapi_hatasi_sayilmaz():
+    """`hata=""` hata değildir; `ozet` bu kararı `kok_neden` ile aynı vermeli.
+
+    Brief'in düzyazısı `hata is None` diyor, kodu doğruluk (truthiness)
+    kullanıyor; ikisi yalnızca boş dizede ayrışır. `is not None`'a çevrilirse
+    `hata=""` olan sonuç paydadan düşer ama `kok_neden` onu yine A/B/C'ye
+    tasnif eder — özet ile dağılım birbirini tutmaz. Boş dize zaten meşru bir
+    hata mesajı değil; modüldeki üç çağrı yeri de doğruluk kullanıyor.
+    """
+    senaryo = _senaryo(id="b1")
+    bos_hata = Sonuc(
+        senaryo_id="b1", cikan_triage_code="Kırmızı", cikan_bolum="Acil Servis",
+        cikan_tetkikler=["EKG", "Troponin"], sources=["gogus_agrisi.txt"], hata="",
+    )
+
+    o = ozet([senaryo], [bos_hata])
+
+    assert o.olculemedi == 0
+    assert o.toplam == 1
+    assert o.dogruluk_tum == 1.0
+    # kok_neden aynı kararı veriyor: "HATA" değil, kusursuz sonuç.
+    assert kok_neden(senaryo, bos_hata) is None
 
 
 def test_bos_kumede_sifira_bolunmez():
@@ -1188,6 +1279,7 @@ def test_bos_kumede_sifira_bolunmez():
     assert o.jaccard_ortalama == 0.0
     assert o.kok_neden_dagilimi == {"A": 0, "B": 0, "C": 0}
     assert o.kapsam_disi_toplam == 0
+    assert o.sonucsuz == 0
 
     # Yalnızca kapsam dışı senaryo varsa da kapsam içi payda sıfırdır.
     yalniz_kapsam_disi = ozet(
