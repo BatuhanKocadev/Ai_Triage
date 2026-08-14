@@ -1,17 +1,14 @@
 """Başlangıç kullanıcılarını oluşturur.
 
 Kullanım (proje kökünden):
-    .venv\\Scripts\\python.exe scripts/seed_users.py
+    .venv\\Scripts\\python.exe -m scripts.seed_users
 
 Tekrar çalıştırılabilir: var olan kullanıcının rolü ve parolası listedeki
 değerlerle senkronize edilir (idempotent seed). Canlı `ai_triage` veritabanında
 bu üç hesabın rol/parolasını bilinçli olarak yeniden yazar.
 """
 
-import io
 import sys
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 from app.db.database import SessionLocal
 from app.models.user import User
@@ -71,5 +68,19 @@ def main() -> None:
         db.close()
 
 
+def _konsolu_utf8_yap() -> None:
+    """Windows konsolunda Türkçe çıktıyı düzeltir; yalnızca script olarak koşarken.
+
+    Eskiden bu, modül düzeyinde `sys.stdout`'u değiştiriyordu — yani dosyayı
+    IMPORT ETMEK global çıktı akışını bozuyordu ve script pytest altında hiç
+    test edilemiyordu (yakalanmış akış kapanıyor). Import'un yan etkisi olmaz.
+    """
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
+
+
 if __name__ == "__main__":
+    _konsolu_utf8_yap()
     main()

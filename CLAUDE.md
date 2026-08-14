@@ -49,7 +49,13 @@ Yeni modeller `app/models/__init__.py` içinde import edilmelidir (ya da `env.py
 - `scripts/seed_users.py` — üç varsayılan hesabı doğrudan Postgres'te, ORM üzerinden oluşturur: `admin`/`admin123` (rol `admin`), `doctor`/`doctor123` (rol `doctor`), `hasta`/`hasta123` (rol `user`). Migration'lardan sonra, ilk girişten önce çalıştırılmalıdır. **Idempotent seed:** var olan satırın rolü ve parolası listedekinden farklıysa yerinde senkronize edilir (Gün 17 öncesinde `doctor` hesabı `user` rolüyle yazılmıştı; parola drift'i de aynı turda düzeltilir). Script canlı `ai_triage` veritabanına karşı çalıştığı için bu yazma işlemi bilinçli tercihtir.
 - `scripts/kalibre_esik.py` — mevcut ChromaDB içeriğine karşı ilgili/alakasız sorgular arasındaki reranker skor ayrımını ölçer ve `rerank_threshold` için bir değer önerir. Reranker modeli ya da yüklenen doküman seti değiştiğinde tekrar çalıştırılmalıdır; `/document/upload` ile önceden doküman yüklenmiş olması gerekir.
 
-İkisi de repo kökünden çalıştırılır: `.venv\Scripts\python.exe scripts/<isim>.py`.
+İkisi de repo kökünden ve **modül olarak** çalıştırılır:
+`.venv\Scripts\python.exe -m scripts.<isim>`.
+
+Dosya yolu vererek çağırmayın (`python scripts/seed_users.py`): o biçim
+`sys.path[0]`'a repo kökünü değil `scripts/` klasörünü koyar ve `app` import'u
+`ModuleNotFoundError` ile patlar. 14 Ağustos 2026 kurulum provasında temiz
+klonda gerçekten yaşandı; `tests/birim/test_script_cagrisi.py` bunu bağlıyor.
 
 ## Test ve linting
 

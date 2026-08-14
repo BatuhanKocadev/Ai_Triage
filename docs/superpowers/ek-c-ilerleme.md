@@ -2501,3 +2501,93 @@ kapatıldı (ölçüm/etiket borçları ve bilinçli tasarım sınırları ayrı
 etik tartışmaları, `zehirlenme` bilinmeyen madde dalı, zip-bomb/chunk üst sınırı
 kararı, Streamlit otomatik test, uçtan uca gerçek PDF fixture, paket geneli
 `raise_server_exceptions=False`, klinik giriş hacmi ölçümü.
+
+## Gün 26+27 · Dokümantasyon ve kurulum provası (14 Ağustos 2026)
+
+İki gün tek blokta yürütüldü, çünkü 27 atlanan 26'ya bağımlıydı: provanın
+sınayacağı belge (README) yoktu. Bulunan hâli **18 satırdı**, kurulumdan hiç söz
+etmiyordu ve bayattı — `services/ # OpenAI, FastAPI...` diyordu, oysa OpenAI
+istemcisi depodan Gün 12'de kaldırılmıştı.
+
+### Yazılanlar
+
+**README** sıfırdan yazıldı: gereksinimler, dokuz adımlık kurulum, hesap
+tablosu, tam döngü denemesi, mimari şeması, test ve ölçüm komutları, on satırlık
+sorun giderme tablosu ve **bilinen sınırlar** bölümü. Son bölüm bilinçli: gürültü
+tabanı, kör setin Kırmızı içermemesi, Jaccard'ın adlandırma artefaktı ve
+few-shot'ın neden kapalı olduğu orada yazıyor — teslimden sonra sürpriz olmasın.
+
+**`/health` zenginleştirildi.** Uç bugüne kadar sabit bir dize döndürüyordu ve
+hiçbir bağımlılık hakkında hiçbir şey kanıtlamıyordu; Gün 20'de bilgi tabanını
+boşaltmaya ramak kalan tuzak tam buydu. Artık Postgres (gerçek `SELECT 1`),
+ChromaDB (`heartbeat`) ve Ollama (model yüklü mü) ayrı ayrı yoklanıyor.
+
+İki tasarım kararı: **HTTP durumu her zaman 200** — uç "sistem sağlıklı mı"yı
+değil "API ayakta ve ne görüyor"u cevaplıyor, ve kurulum sırasında bağımlılıklar
+tanım gereği bozuk olduğu için 503 vermek teşhis aracını tam ihtiyaç duyulduğu
+anda gürültüye çevirirdi; karar veren alan `tumu_ok`. İkincisi: her yoklama
+`_guvenli_yokla` ile sarılı, çünkü teşhis aracının teşhis ettiği arızada çökmesi
+onu kullanılamaz kılar.
+
+Ollama yoklaması yalnızca "ayakta mı" demiyor, **modelin yüklü olduğunu** da
+doğruluyor: aksi hâlde uç yeşil görünür ve ilk analiz 502 ile patlar, yani
+kurulumcu yanlış yere bakar.
+
+### Provanın bulduğu gerçek hata
+
+Temiz klon ayrı bir dizine alındı, boş bir veritabanı (`ai_triage_prova`)
+yaratıldı ve adımlar sırayla koşuldu.
+
+- **Adım 2.4 — `alembic upgrade head` boş veritabanında: geçti**, dört revision,
+  **1,2 saniye**.
+- **Adım 2.5 — `scripts/seed_users.py`: KIRILDI.**
+  `ModuleNotFoundError: No module named 'app'`.
+
+Sebep: dosya yolu verilerek çağrıldığında `sys.path[0]` repo kökü değil
+`scripts/` klasörü oluyor. Bu tuzak yol haritasının "TAKILIRSAN" tablosunda
+**önceden yazılıydı** ama koda yansımamıştı — ve daha kötüsü, **hem README hem
+CLAUDE.md kurulum yapan kişiyi çalışmayan bir komuta yönlendiriyordu.** (İlk
+yazdığım README'nin sorun giderme satırı da yanlıştı: "repo kökünden
+çalıştırın" diyordu, oysa kökten çalıştırmak da çözmüyor.)
+
+**Çözüm:** `scripts/` bir paket yapıldı (`__init__.py`) ve çağrı biçimi
+`python -m scripts.<ad>` oldu. Alternatif her script'e `sys.path` yaması
+koymaktı; Gün 23'te ölçüm sürücüsü için aynı seçim yapılmış ve elle `sys.path`
+düzenlemek reddedilmişti — aynı karar burada da geçerli.
+
+Düzeltilen yerler: README (iki komut + sorun giderme satırı), CLAUDE.md ve
+**dört script'in kendi docstring'i** (hepsi yanlış biçimi gösteriyordu).
+
+**İkinci hata, birincinin yan ürünü:** `seed_users.py` modül düzeyinde
+`sys.stdout`'u sarmalıyordu, yani **dosyayı import etmek global çıktı akışını
+bozuyordu** ve script pytest altında hiç test edilemiyordu (yakalanmış akış
+kapanıyor). Konsol düzeltmesi `__main__` bloğuna alındı; import artık yan
+etkisiz.
+
+### Testle kilitlenenler
+
+| Test | Neyi bağlıyor |
+|---|---|
+| `test_saglik_ucu_bagimliliklari_raporlar` | Üç bağımlılık ayrı ayrı raporlanıyor |
+| `test_saglik_ucu_bozuk_bagimliligi_isaretler` | Düşen bağımlılık **hangisi** görünüyor, `tumu_ok` False |
+| `test_saglik_yoklamalari_istisnayi_yutar` | Yoklama patlarsa uç 500 vermiyor |
+| `test_seed_users_iki_kez_calistirilabilir` | İdempotentlik: tekrar yok, kimlikler korunuyor |
+| `test_seed_users_bozulmus_rol_ve_parolayi_duzeltir` | İdempotentlik "dokunma" değil "hedef duruma getir" |
+| `test_scripts_bir_pakettir` + `test_script_modul_olarak_import_edilebilir` | Provanın bulduğu hata; alt süreçte, temiz `sys.path` ile |
+| `test_script_import_edilince_yan_etki_uretmez` | Import sessiz olmalı |
+
+Test 304 → **311**, kapsama **%87,99** (kapı 87).
+
+### Dürüst sınır — provanın koşulmayan adımları
+
+Şunlar koşuldu: temiz klon (dosya bütünlüğü), boş veritabanında migration, seed
+(iki kez), `/health` üç bağımlılığa karşı canlı doğrulama.
+
+Şunlar koşulmadı ve sebebi yazılmalı: `pip install` (birkaç GB, ortam zaten
+kurulu), `ollama pull` (model zaten indirilmiş), `docker compose up --build`
+(imajlar zaten var), bilgi tabanı kurulumu (mevcut derleme 15 dosya / 49 chunk
+olarak doğrulanmış durumda, yeniden kurmak dakikalar sürerdi).
+
+Yani prova **kurulum mantığını** sınadı, **indirme sürelerini** değil. Videoda
+"kurulum X dakika sürüyor" denecekse o süre ayrıca ölçülmeli — bu blok o sayıyı
+üretmedi ve üretmiş gibi yapmıyor.

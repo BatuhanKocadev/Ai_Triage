@@ -1,7 +1,7 @@
 """Rerank eşiğini ölçerek kalibre eder.
 
 Kullanım (proje kökünden):
-    .venv\\Scripts\\python.exe scripts/kalibre_esik.py
+    .venv\\Scripts\\python.exe -m scripts.kalibre_esik
 
 Reranker modeli veya doküman seti değiştiğinde yeniden çalıştırılmalıdır;
 skor dağılımı modele göre değiştiği için eşik de değişir.

@@ -12,7 +12,7 @@ backend 8000'de, ChromaDB genelde 8001'de. `.env` yoksa `config.py` varsayılan�
 çalışır; bu yüzden aşağıda bağlantı açıkça heartbeat ile kanıtlanıyor.
 
 Kullanım (proje kökünden):
-    CHROMA_PORT=8001 .venv\\Scripts\\python.exe scripts/bilgi_tabani_kur.py
+    CHROMA_PORT=8001 .venv\\Scripts\\python.exe -m scripts.bilgi_tabani_kur
 """
 
 import io
