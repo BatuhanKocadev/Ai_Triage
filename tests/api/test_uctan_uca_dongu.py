@@ -1,7 +1,4 @@
-"""Hasta şikayetinden doktor onayına kadar tam döngünün tek testi.
-
-Ollama, ChromaDB ve reranker çağrılmaz; sahte servislerle koşar.
-"""
+"""Hasta şikayetinden doktor onayına kadar tam döngünün tek testi."""
 
 import uuid
 
@@ -31,8 +28,6 @@ def esik_ustu(monkeypatch):
 def test_sikayetten_doktor_onayina_tam_dongu(istemci, db_oturum, yetkili_baslik, esik_ustu):
     # Zincirin tamamı tek testte: hasta başvurusu girer, doktor kuyruğunda görür,
     # yapay zekânın kararını değiştirip onaylar, vaka kuyruktan düşer.
-    # İki ayrı kimlik kullanılıyor (tasarım kararı K11): rol ayrımının uçtan uca
-    # çalıştığı da böylece kanıtlanmış oluyor.
     hasta_baslik = yetkili_baslik(kullanici_adi="hasta_ayse", rol="user")
     doktor_baslik = yetkili_baslik(kullanici_adi="dr_veli", rol="doctor")
 

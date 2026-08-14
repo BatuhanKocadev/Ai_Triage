@@ -1,10 +1,4 @@
-"""gun22 kisitlar
-
-Revision ID: 6922a872c59d
-Revises: 72dffb9e5194
-Create Date: 2026-08-10 22:45:02.431826
-
-"""
+"""gun22 kisitlar"""
 from typing import Sequence, Union
 
 from alembic import op
@@ -34,8 +28,6 @@ def downgrade() -> None:
     """Downgrade schema."""
     # İki değişikliği de geri alır: doctor_id index'i düşer, unique kısıt kalkar
     # ve yerine eski düz index geri gelir. Unique kısıt düşerken arkasındaki
-    # index'i de götürür, ama zaten adları farklı (uq_... / ix_...) olduğu için
-    # çakışma söz konusu değil — sıra serbest.
     op.drop_index("ix_doctor_reviews_doctor_id", table_name="doctor_reviews")
     op.drop_constraint(
         "uq_ai_recommendations_visit_id", "ai_recommendations", type_="unique"

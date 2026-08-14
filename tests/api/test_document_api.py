@@ -8,11 +8,7 @@ from tests.yardimcilar.sahte_chroma import SahteKoleksiyon
 
 @pytest.fixture
 def sahte_koleksiyon(monkeypatch):
-    """Doküman uçlarını bellek içi sahte koleksiyona bağlar.
-
-    Yamalama adın arandığı ad alanına uygulanıyor (`app.api.document`), adı
-    tanımlayan `chroma_service`'e değil — uç modülü adı kendi ad alanına almış.
-    """
+    """Doküman uçlarını bellek içi sahte koleksiyona bağlar."""
     koleksiyon = SahteKoleksiyon()
     monkeypatch.setattr(document_modulu, "get_collection", lambda: koleksiyon)
     return koleksiyon
@@ -150,8 +146,6 @@ def test_user_rolu_silmeye_403_alir(istemci, sahte_koleksiyon, yetkili_baslik):
 def test_yeniden_yukleme_eski_chunklari_birakmaz(istemci, sahte_koleksiyon, yetkili_baslik):
     # upsert yalnızca kendisine verilen id'lere dokunur. Daha kısa bir sürüm
     # yüklendiğinde eski sürümün fazla chunk'ları koleksiyonda kalırsa sistem
-    # silinmiş bir metinden alıntı yapar ve sources onu hâlâ bu dosyaya bağlar —
-    # yani izlenebilirlik iddiası sessizce yalanlanır.
     baslik = yetkili_baslik(kullanici_adi="yonetici", rol="admin")
     uzun_metin = ("Gogus agrisi protokolu. " * 400).encode("utf-8")
     kisa_metin = "Gogus agrisi protokolu kisa surum.".encode("utf-8")
@@ -183,8 +177,6 @@ def test_yeniden_yukleme_eski_chunklari_birakmaz(istemci, sahte_koleksiyon, yetk
 def test_yeniden_yukleme_baska_dosyanin_chunklarina_dokunmaz(istemci, sahte_koleksiyon, yetkili_baslik):
     # Temizlik filtresinin KAPSAMINI donduruyor. Filtre "source" yerine
     # "category" olsaydı diğer testler yeşil kalırdı ama üretimde her yükleme
-    # aynı kategorideki bütün bilgi tabanını silerdi — 15 protokol dosyasının
-    # tamamı tek bir yüklemede yok olurdu.
     baslik = yetkili_baslik(kullanici_adi="yonetici", rol="admin")
     uzun_metin = ("Protokol metni ornegi. " * 400).encode("utf-8")
     kisa_metin = "Protokol kisa surum.".encode("utf-8")

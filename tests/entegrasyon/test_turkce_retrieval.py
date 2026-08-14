@@ -1,19 +1,4 @@
-"""Türkçe sorgunun doğru protokolü getirdiğini gerçek gömme modeliyle sınar.
-
-Bu testin var oluş sebebi somut: ChromaDB'nin varsayılan İngilizce gömme modeli
-(`all-MiniLM-L6-v2`) kullanılırken "kaynar su döküldü" sorgusu yanık protokolünü
-ilk BEŞE bile sokamıyordu, "yüzü düştü, kolunu kaldıramıyor" sorgusu da inme
-protokolünü getiremiyordu — ama hiçbir test bunu görmüyordu, çünkü gerçek modelle
-Türkçe retrieval'ı sınayan test yoktu.
-
-Test üretim koşullarını taklit eder: derlemenin TAMAMI, `/document/upload` ile
-aynı bölücü ayarlarıyla (chunk_size=1000, overlap=200) parçalanıp gömülür. Bütün
-dosyaları tek parça gömmek testi yapay olarak kolaylaştırırdı — 48 chunk arasından
-doğruyu bulmak, 15 bütün belge arasından bulmaktan zordur ve üretimde olan budur.
-
-`yavas` + `entegrasyon` işaretli: gerçek bge-m3 modelini (~2.2 GB) yükler ve
-ayakta bir ChromaDB ister.
-"""
+"""Türkçe sorgunun doğru protokolü getirdiğini gerçek gömme modeliyle sınar."""
 
 import uuid
 from pathlib import Path
@@ -39,12 +24,7 @@ BOLUCU = RecursiveCharacterTextSplitter(
 
 @pytest.fixture(scope="module")
 def derleme_koleksiyonu():
-    """Derlemenin tamamını chunk'layıp geçici bir koleksiyona gömer.
-
-    Modül kapsamlı: gömme işlemi pahalı, her test için tekrarlanmasın. Koleksiyon
-    geçici ve teste özel — canlı `triage_documents` her hasta sorgusunun tarandığı
-    yer, testler oraya asla dokunmaz.
-    """
+    """Derlemenin tamamını chunk'layıp geçici bir koleksiyona gömer."""
     istemci = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
     ad = f"test_turkce_retrieval_{uuid.uuid4().hex[:8]}"
     koleksiyon = istemci.create_collection(name=ad, embedding_function=_gomme_fonksiyonu())

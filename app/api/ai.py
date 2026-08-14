@@ -59,10 +59,7 @@ def _few_shot_dosya_yolu() -> Path:
 
 
 def few_shot_orneklerini_yukle(yol: Path | None = None) -> list[dict]:
-    """Few-shot JSON'unu okur; süreç ömrü boyunca önbelleğe alır.
-
-    Yol verilirse önbellek atlanır (testler tmp havuz basabilsin diye).
-    """
+    """Few-shot JSON'unu okur; süreç ömrü boyunca önbelleğe alır."""
     global _few_shot_ornekleri
     if yol is None and _few_shot_ornekleri is not None:
         return _few_shot_ornekleri
@@ -81,11 +78,7 @@ def few_shot_orneklerini_yukle(yol: Path | None = None) -> list[dict]:
 
 
 def few_shot_prompt_metni(ornekler: list[dict] | None = None) -> str:
-    """Havuz kayıtlarını prompt'a yapıştırılacak örnek blokuna çevirir.
-
-    Tetkik listesi havuzda bilerek boş bırakılır (K6); burada da yazılmaz ki
-    model ölçülen tetkik adlarını ezberlemesin.
-    """
+    """Havuz kayıtlarını prompt'a yapıştırılacak örnek blokuna çevirir."""
     if ornekler is None:
         ornekler = few_shot_orneklerini_yukle()
     if not ornekler:
@@ -133,11 +126,7 @@ class AnalysisResponse(BaseModel):
 
 
 def _sadelestir(metin: str) -> str:
-    """Türkçe karakterleri ASCII'ye indirger ve küçük harfe çevirir.
-
-    Yerel model triyaj kodunu bazen 'Kirmizi' gibi ASCII'leştirilmiş yazıyor;
-    bu sadeleştirme sayesinde 'Kırmızı' ile eşleşiyor.
-    """
+    """Türkçe karakterleri ASCII'ye indirger ve küçük harfe çevirir."""
     esleme = str.maketrans("ıİşŞğĞüÜöÖçÇ", "iisSgGuUoOcC")
     return metin.translate(esleme).lower().strip()
 
@@ -167,12 +156,7 @@ def _normalize_tetkikler(raw_tetkikler) -> list[str]:
 
 
 def _normalize_department(raw_department, triage_code: str) -> str:
-    """Modelin department çıktısını kapalı akuite dağarcığına indirger.
-
-    Dağarcıkta varsa kanonik yazımı döner; yoksa (Pulmonoloji, Dahiliye, …)
-    triyaj kodunun varsayılan alanına düşer. Eşik altı yolu zaten
-    'Triyaj Bankosu' yazar; bu fonksiyon LLM yolunu aynı sözleşmeye çeker.
-    """
+    """Modelin department çıktısını kapalı akuite dağarcığına indirger."""
     if isinstance(raw_department, str) and raw_department.strip():
         sade = _sadelestir(raw_department)
         for gecerli in GECERLI_DEPARTMANLAR:
@@ -182,12 +166,7 @@ def _normalize_department(raw_department, triage_code: str) -> str:
 
 
 def _kaydet(db: Session, request_data: "AnalysisRequest", sonuc: AnalysisResponse) -> uuid.UUID:
-    """Ziyareti ve yapay zekâ önerisini veritabanına yazar, ziyaret kimliğini döndürür.
-
-    Eşik altında kalan (LLM'e hiç gitmeyen) başvurular da kaydediliyor: bunlar
-    doktorun bizzat bakması gereken vakalar, dolayısıyla bekleyen vaka
-    listesinde görünmeleri gerekiyor.
-    """
+    """Ziyareti ve yapay zekâ önerisini veritabanına yazar, ziyaret kimliğini döndürür."""
     ziyaret = Visit(
         patient_age=request_data.patient_age,
         gender=request_data.gender.value,

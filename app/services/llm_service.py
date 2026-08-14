@@ -1,8 +1,4 @@
-"""Yerel LLM (Ollama) servisi.
-
-Bulut tabanlı `openai_client.py`'nin yerine geçer. Tüm analiz artık
-kendi makinemizde çalışan bir modelle yapılır; dışarıya istek gitmez.
-"""
+"""Yerel LLM (Ollama) servisi."""
 
 import json
 
@@ -25,16 +21,7 @@ def get_structured_completion(
     temperature: float = 0.2,
     keep_alive: str = "30m",
 ) -> dict:
-    """Modelden JSON yanıt ister ve dict olarak döndürür.
-
-    `format="json"` Ollama'ya gramer kısıtı uygulattığı için çıktı büyük
-    ölçüde geçerli JSON olur; yine de küçük modellerde kayma olabildiğinden
-    `retries` kadar yeniden denenir.
-
-    `keep_alive` modeli VRAM'de tutar. Varsayılan 5 dakikada model bellekten
-    düşüyor ve sonraki ilk istek ~90 saniye sürüyor; 30 dakika demo/kullanım
-    sırasındaki bu donmayı engelliyor.
-    """
+    """Modelden JSON yanıt ister ve dict olarak döndürür."""
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},

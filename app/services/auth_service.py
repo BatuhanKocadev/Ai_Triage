@@ -1,8 +1,4 @@
-"""Kimlik doğrulama ve rol kontrolü.
-
-Kullanıcılar artık bellekteki mock_database yerine PostgreSQL'deki `users`
-tablosunda tutuluyor. Bağımlılıklar `User` ORM nesnesi döndürür.
-"""
+"""Kimlik doğrulama ve rol kontrolü."""
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional

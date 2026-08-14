@@ -2,7 +2,6 @@
 
 # Tip açıklamalarının çalışma zamanında değerlendirilmesini kapatır. ZORUNLU:
 # aşağıdaki `_model: WhisperModel | None` satırı, WhisperModel modül düzeyinde
-# import EDİLMEDİĞİ için aksi hâlde NameError verir (tasarım K3).
 from __future__ import annotations
 
 import os
@@ -43,8 +42,6 @@ def get_model() -> WhisperModel:
     if _model is None:
         # faster_whisper BURADA import ediliyor, modül düzeyinde değil: kendisi
         # `ctranslate2` ve `onnxruntime` çekiyor ve modül düzeyine alınırsa
-        # `app.main` açılışına da CI ortamına da o ağırlığı ekler (tasarım K2).
-        # `tests/birim/test_import_agirligi.py` bunu bağlıyor.
         from faster_whisper import WhisperModel
 
         device, compute_type = _resolve_device()

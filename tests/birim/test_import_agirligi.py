@@ -1,19 +1,4 @@
-"""`app.main` import edildiğinde ağır kütüphanelerin YÜKLENMEDİĞİNİ dondurur.
-
-Bu testin var oluş sebebi ölçüldü: tembelleştirmeden önce `app.main` import'u
-**28,5 saniye** sürüyor ve torch, transformers, sentence_transformers, chromadb,
-faster_whisper dahil **5215 modül** yüklüyordu; sonrasında 1,85 saniye ve 1077
-modül. Ayrıca bu kütüphaneler CI ortamını büyütüyordu: minimal listeyle kurulan
-ortam **498 MB**, tam listeyle kurulan geliştirme ortamı **1694 MB** — torch tek
-başına 497 MB. (Kurulum SÜRESİ hiç ölçülmedi, o yüzden iddia edilmiyor.)
-
-Test olmadan, birinin `rag_service`'e modül düzeyinde bir `import torch` geri
-koyması hiçbir şeyi kırmaz ve CI sessizce yavaşlar — yol haritasının önceden
-uyardığı yere geri dönülür.
-
-Alt süreçte koşuyor (tasarım K10): pytest oturumunun kendi içinde `sys.modules`
-sorulamaz, çünkü başka testler `torch`'u zaten yüklemiş olur.
-"""
+"""`app.main` import edildiğinde ağır kütüphanelerin YÜKLENMEDİĞİNİ dondurur."""
 
 import json
 import subprocess
@@ -24,9 +9,6 @@ KOK = Path(__file__).resolve().parent.parent.parent
 
 # CI ortam boyutunu ve `app.main` açılışının ~25 saniyesini belirleyen kütüphaneler.
 # `transformers` listede çünkü lazy bir `__init__` kullanıyor: modül düzeyinde bir
-# `from transformers import ...` bugün fark edilmeden eklenebilir ve muhafız yeşil
-# kalırdı. Liste bir dize eklemekle genişler; genişletirken aşağıdaki `%` biçimini
-# de demet olarak bıraktığımıza dikkat edin.
 AGIR_MODULLER = [
     "torch",
     "transformers",
@@ -35,12 +17,6 @@ AGIR_MODULLER = [
     "chromadb",
     # `langchain_text_splitters` LISTEDE OLMAK ZORUNDA ve sebebi ince: kendisi
     # hafif ama `__init__.py`'si bir `sentence_transformers` shim'i tasiyor ve o
-    # shim import'u `try/except ImportError` ile sariyor. Yani biri
-    # `document.py`'deki import'u modul duzeyine geri koyarsa, YERELDE
-    # sentence_transformers kurulu oldugu icin zincir yuklenir ve muhafiz
-    # yakalar; ama TORCH'SUZ CI'DA shim sessizce yutar, listedeki hicbir ad
-    # gorunmez ve muhafiz YESIL kalir. Gerileme o zaman fark edilmeden,
-    # sentence_transformers'in kurulu OLDUGU uretime gider.
     "langchain_text_splitters",
 ]
 

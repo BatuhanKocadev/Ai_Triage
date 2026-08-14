@@ -1,12 +1,4 @@
-"""Başlangıç kullanıcılarını oluşturur.
-
-Kullanım (proje kökünden):
-    .venv\\Scripts\\python.exe -m scripts.seed_users
-
-Tekrar çalıştırılabilir: var olan kullanıcının rolü ve parolası listedeki
-değerlerle senkronize edilir (idempotent seed). Canlı `ai_triage` veritabanında
-bu üç hesabın rol/parolasını bilinçli olarak yeniden yazar.
-"""
+"""Başlangıç kullanıcılarını oluşturur."""
 
 import sys
 
@@ -69,12 +61,7 @@ def main() -> None:
 
 
 def _konsolu_utf8_yap() -> None:
-    """Windows konsolunda Türkçe çıktıyı düzeltir; yalnızca script olarak koşarken.
-
-    Eskiden bu, modül düzeyinde `sys.stdout`'u değiştiriyordu — yani dosyayı
-    IMPORT ETMEK global çıktı akışını bozuyordu ve script pytest altında hiç
-    test edilemiyordu (yakalanmış akış kapanıyor). Import'un yan etkisi olmaz.
-    """
+    """Windows konsolunda Türkçe çıktıyı düzeltir; yalnızca script olarak koşarken."""
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except (AttributeError, OSError):

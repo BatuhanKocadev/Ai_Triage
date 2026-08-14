@@ -1,15 +1,4 @@
-"""Rerank eşiğini ölçerek kalibre eder.
-
-Kullanım (proje kökünden):
-    .venv\\Scripts\\python.exe -m scripts.kalibre_esik
-
-Reranker modeli veya doküman seti değiştiğinde yeniden çalıştırılmalıdır;
-skor dağılımı modele göre değiştiği için eşik de değişir.
-
-İlgili sorguların geçmesi, alakasız sorguların elenmesi beklenir. Çıktıdaki
-"ONERI" satırındaki değer app/config/config.py içindeki rerank_threshold
-(veya .env içindeki RERANK_THRESHOLD) alanına yazılır.
-"""
+"""Rerank eşiğini ölçerek kalibre eder."""
 
 import io
 import sys
@@ -22,10 +11,6 @@ from app.services.rag_service import get_reranker
 
 # Bilgi tabanındaki 15 protokolün her biri için en az bir sorgu; geçmesi beklenir.
 # Sorgular bilerek HASTA AĞZINDAN yazılmıştır, protokol cümlesi kopyalanmamıştır:
-# protokolden cümle kopyalamak retrieval'ı birebir kelime eşleşmesine indirger ve
-# ölçümü yapay olarak yükseltir (veri sızıntısı).
-# Türkçe karakterli ve karaktersiz yazımlar birlikte tutuluyor: kullanıcılar sık
-# sık karaktersiz yazıyor ve bu skorları belirgin düşürüyor.
 ILGILI = [
     # göğüs ağrısı
     "Yarım saattir göğsümde baskı tarzında şiddetli ağrı var, sol koluma vuruyor.",
@@ -41,9 +26,6 @@ ILGILI = [
     "Aniden çok şiddetli bir baş ağrısı başladı, hayatımın en kötü ağrısı.",
     # inme — eski sorgu ("yüzünün bir tarafı düştü, kolunu kaldıramıyor,
     # konuşması bozuldu") inme.txt'ye eklenen FAST cümlesinin üç öbeğini de
-    # neredeyse birebir tekrarlıyordu; bu, yukarıda uyarılan veri sızıntısının
-    # ta kendisi: eşik şişirilmiş bir skorla seçiliyordu. Aynı klinik tablo,
-    # protokolün kelimeleri kullanılmadan anlatılıyor.
     "Dedem yarım saat önce birden yere yığıldı, sağ tarafını hiç oynatamıyor ve ağzından çıkanlar anlaşılmıyor.",
     "Dedem yarim saat once birden yere yigildi, sag tarafini hic oynatamiyor ve agzindan cikanlar anlasilmiyor.",
     # ateş ve sepsis
@@ -64,33 +46,17 @@ ILGILI = [
     "Kendime zarar vermeyi düşünüyorum, artık dayanamıyorum.",
     # yanık — birinci sorgu: protokolün kelimelerini kullanmadan, hasta ağzından.
     # ESKİ sorgu ("Kaynar su elimin üstüne döküldü, hemen su toplamaya başladı.")
-    # yerine yazıldı: yanik.txt'ye hasta dili eklenirken o cümlenin öbekleri
-    # belgeye girecekti ve ölçüm kendi kendini doğrulayan bir sızıntıya dönüşecekti
-    # — Gün 20'de inme.txt'de tam bu olmuştu (tasarım K4).
     "Çaydanlığı devirdim, kolum fena halde haşlandı ve derim kabardı.",
     # yanık — İKİNCİ, TUTULAN sorgu (tasarım K5). Bu satır yanik.txt'ye
     # dokunulmadan ÖNCE yazıldı ve belge düzenlenirken buna BAKILMADI. Amacı,
-    # düzeltmenin tek bir cümleye ezberlenmediğini kanıtlamak: yalnızca birinci
-    # sorgu geçip bu geçmezse düzeltme yetersizdir.
     "Ütü elimin üstüne düştü, deri soyuldu ve çok acıyor.",
     # yanık — ÜÇÜNCÜ sorgu: projeyi yürüten kişi tarafından, yanik.txt'nin yeni
     # metnini GÖRMEDEN yazıldı (11 Ağustos 2026). İlk iki sorgu aynı kişi tarafından
-    # protokol metniyle birlikte yazıldığı için K5'in "tutulan sorgu" garantisi
-    # fiilen delinmişti; gerçekten kör tek ölçüm budur.
-    #
-    # DİKKAT — bu sorgu GEÇER görünür ama tablo yanıltıcıdır. Ölçüldüğünde yalnızca
-    # yanik.txt'nin hasta-dili chunk'ı eşiği aşıyor (0.0241); Kırmızı kriterlerini
-    # taşıyan chunk 0.0011'de kalıyor, yani LLM triyaj ölçütü GÖRMEDEN karar veriyor.
-    # Bu script yalnızca en yüksek skoru ölçtüğü için o farkı gösteremez
-    # (bkz. Ek C, Gün 22 — "Kırmızı erişilebilirliği").
     "mangalda kolumu ateşe tuttum, kolum bembeyaz oldu hissetmiyorum",
 ]
 
 # Elenmesi beklenen sorgular. İKİ SINIF var ve ikincisi asıl zorlayıcı olan:
 # "hava güzel" gibi tamamen alakasız metinler kolayca elenir, ama TIBBİ olup
-# derlemede KARŞILIĞI OLMAYAN sorgular reranker'ı gerçekten sınar. Eşik yalnızca
-# kolay sınıfa göre seçilirse, sistem bilmediği bir konuda da kendinden emin
-# cevap üretir — eşik kapısının varlık sebebi tam olarak bunu önlemek.
 ALAKASIZ = [
     # tıbbi olmayan
     "Bugün hava çok güzel, parkta yürüyüş yapmayı düşünüyorum.",
@@ -108,12 +74,7 @@ ALAKASIZ = [
 
 
 def en_iyi_eslesme(sorgu: str, n_results: int | None = None) -> tuple[float, str | None]:
-    """Sorgu için en yüksek rerank skorunu ve kazanan kaynak dosya adını döndürür.
-
-    Gün 23'te bu script yalnızca skora bakıyordu; `kor_08` gibi vakalarda
-    yanlış protokol (yanik.txt) kazansa bile 'GEÇER' yazılıyordu. Kaynak
-    olmadan eşik kalibrasyonu komşu protokol gaspını göremez.
-    """
+    """Sorgu için en yüksek rerank skorunu ve kazanan kaynak dosya adını döndürür."""
     if n_results is None:
         n_results = settings.top_k_initial
     sonuc = get_collection().query(query_texts=[sorgu], n_results=n_results)
@@ -170,9 +131,6 @@ def main() -> None:
     print("\n=== EŞİK TARAMASI ===")
     # Adaylar ölçülen skorlardan türetiliyor, sabit bir aralıktan değil. Sabit
     # aralık bir kez çok pahalıya mal oldu: reranker'daki çift sigmoid
-    # düzeltilince skor ölçeği tamamen değişti, 0.300'den başlayan tarama asıl
-    # ayrım bölgesini (0.003 civarı) hiç görmedi ve 18 ilgiliden 12'sini eleyen
-    # bir eşik önerdi. Veriden türetilen adaylar ölçek değişimine bağışıktır.
     tum_skorlar = sorted(set(ilgili_skorlar + alakasiz_skorlar))
     adaylar = []
     for onceki, sonraki in zip(tum_skorlar, tum_skorlar[1:]):

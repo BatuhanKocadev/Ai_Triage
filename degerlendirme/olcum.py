@@ -1,9 +1,4 @@
-"""Gün 23 ölçüm çekirdeği — saf fonksiyonlar.
-
-Bu modül ağ, veritabanı ya da model görmez; girdi alır, çıktı döndürür.
-Sürücü (`calistir.py`) HTTP tarafını üstlenir. Ayrım, yol haritasının
-istediği birim testlerinin Ollama'sız koşabilmesi için (K6).
-"""
+"""Gün 23 ölçüm çekirdeği — saf fonksiyonlar."""
 from __future__ import annotations
 
 import json
@@ -14,13 +9,10 @@ from pathlib import Path
 
 # Sistemin üretebileceği ve senaryoların bekleyebileceği triyaj kodları.
 # "Belirsiz" hem sistemin eşik altı yanıtı hem de kapsam dışı senaryolar için
-# meşru bir beklentidir (kör set bu ihtiyacı ortaya çıkardı).
 GECERLI_KODLAR = {"Kırmızı", "Sarı", "Yeşil", "Belirsiz"}
 
 # app/api/ai.py:30-33'teki GenderEnum ile birebir eşleşmek zorunda; uca giden değer
 # tam olarak bu dizelerden biri olmalı. Büyük/küçük harf normalizasyonu bilerek
-# yapılmıyor: "erkek"i sessizce düzeltmek, yükleyicinin uçtan farklı bir sözleşme
-# dayatması olurdu — onun yerine reddedip senaryoyu yazana doğrusunu söylüyoruz.
 GECERLI_CINSIYETLER = {"Erkek", "Kadın", "Diğer"}
 
 # Ucun kaynak dizelerine taktığı önek (`app/services/rag_service.py:92`);
@@ -43,26 +35,16 @@ ZORUNLU_METIN_ALANLARI = ("id", "cinsiyet", "beklenen_bolum")
 
 # Verilirse metin olması gereken, verilmezse None kalabilen alanlar.
 # Karar: bu alanlarda boş dize de reddediliyor. "" ile None anlamca farklı
-# ("boş adlı kaynak bekle" ile "kapsam dışı"), ikisinin de geçmesi "yok" demenin
-# iki yolu olması demekti; tek meşru yol None (ya da alanı hiç yazmamak).
 ISTEGE_BAGLI_METIN_ALANLARI = ("beklenen_kaynak", "kronik_hastalik", "ses_dosyasi")
 
 # Senaryo sözlüğünde tanınan BÜTÜN anahtarlar; dışındaki bir anahtar reddedilir.
 # Beyaz liste, çünkü bilinmeyeni sessizce yok saymak isteğe bağlı alanlardaki
-# yazım hatasını görünmez kılıyordu: `beklenen_kaynk` yazılırsa alan `None`
-# okunur, o senaryonun her hatası A kutusundan B'ye kayar ve "şanslı doğru"
-# kontrolü kalıcı olarak kapanır — ne istisna, ne kırmızı test. Zorunlu alanlar
-# varlık kontrolüyle korunuyordu, isteğe bağlılar hiç korunmuyordu.
-# `gerekce` ölçüme girmiyor (Senaryo alanı değil) ama burada tanınıyor: etiketin
-# hangi protokol satırına dayandığını söyleyen tek artefakt o, ve dosyalarda
-# bulunması `test_senaryo_dosyalarinda_gerekce_var` ile ayrıca dayatılıyor.
 TANINAN_ALANLAR = frozenset(
     ZORUNLU_ALANLAR + ISTEGE_BAGLI_METIN_ALANLARI + ("vitals", "gerekce")
 )
 
 # app/api/ai.py:40 patient_age alanına ge=0 le=120 dayatıyor. Aralık dışı bir
 # senaryo koşum sırasında 422 alır ve boşa gider; koşum yerel Ollama yüzünden
-# dakikalar sürdüğü için geç patlamak pahalı, o yüzden burada yakalanıyor.
 YAS_ALT_SINIR = 0
 YAS_UST_SINIR = 120
 
@@ -99,9 +81,6 @@ class Senaryo:
     kronik_hastalik: str | None = None
     # Ölçümde yalnızca fever ve pulse kullanılıyor. Dikkat: app/api/ai.py:35'teki
     # Vitals modeli fazladan anahtarları reddetmiyor, sessizce yok sayıyor
-    # (pydantic 2.13.4 varsayılanı extra="ignore"). Yani {"ates": 39} yazılırsa
-    # uçtan 422 gelmez; senaryo vitals'sız koşar ve ölçülen senaryo yazılan
-    # senaryo olmaz. Anahtar adları bu yüzden elle doğru yazılmak zorunda.
     vitals: dict | None = None
     # Kör senaryolarda dolu; WER yalnızca bu alanı olan senaryolarda hesaplanır.
     ses_dosyasi: str | None = None
@@ -121,9 +100,6 @@ class Sonuc:
     cikan_tetkikler: list[str] = field(default_factory=list)
     # AYIKLANMIŞ kaynak dosya adları (`["gogus_agrisi.txt"]`), ham önekli belge
     # dizeleri değil; kaynak doğruluğu ve A/B ayrımı bununla ölçülür. Sürücü bu
-    # alanı uçtan gelen listeyi `kaynak_adlarini_ayikla`'dan geçirerek doldurmak
-    # zorunda — ham yazılırsa beklenen kaynak hiçbir zaman bulunamaz ve ölçüm
-    # sessizce her şeyi A kutusuna yazar (bkz. kaynak_adlarini_ayikla docstring'i).
     sources: list[str] = field(default_factory=list)
     # Koşumun yarattığı ziyaret; silinmiyor, video demosunda kullanılacak (K14).
     visit_id: str | None = None
@@ -139,11 +115,7 @@ def _hata(sira: int, mesaj: str) -> SenaryoHatasi:
 
 
 def _metin_degeri_dogrula(deger: object, ad: str, sira: int, *, zorunlu: bool) -> None:
-    """Tek bir metin değerinin tip ve boşluk kapısı.
-
-    Hem sözlük alanları hem `beklenen_tetkikler` elemanları buradan geçiyor;
-    "boş dize gerçek bir beklenti sayılmaz" kuralı tek yerde duruyor.
-    """
+    """Tek bir metin değerinin tip ve boşluk kapısı."""
     if deger is None and not zorunlu:
         return
     if not isinstance(deger, str):
@@ -164,12 +136,7 @@ def _metin_dogrula(kayit: dict, alan: str, sira: int, *, zorunlu: bool) -> None:
 
 
 def _kaydi_dogrula(kayit: dict, sira: int) -> None:
-    """Tek bir senaryo kaydının alan tiplerini ve sınır değerlerini doğrular.
-
-    Varlık kontrolü tek başına yetmiyor: elle yazılmış bir JSON'da
-    `"beklenen_tetkikler": "EKG"` sessizce `['E','K','G']`'ye dönüşür ve Jaccard
-    skoru kendinden emin ama anlamsız çıkar. Ölçüm gününün tek çıktısı o sayı.
-    """
+    """Tek bir senaryo kaydının alan tiplerini ve sınır değerlerini doğrular."""
     for alan in ZORUNLU_METIN_ALANLARI:
         _metin_dogrula(kayit, alan, sira, zorunlu=True)
 
@@ -211,7 +178,6 @@ def _kaydi_dogrula(kayit: dict, sira: int) -> None:
         )
     # Elemanlar da zorunlu metin alanlarıyla aynı kapıdan geçiyor: boş bir tetkik
     # adı ("EKG", "") beklenen kümeye gerçek bir beklenti olarak girer ve Jaccard
-    # oranını hiç ulaşılamayacak bir tavana çakar.
     for indeks, tetkik in enumerate(tetkikler):
         _metin_degeri_dogrula(
             tetkik, f"beklenen_tetkikler[{indeks}]", sira, zorunlu=True
@@ -226,13 +192,7 @@ def _kaydi_dogrula(kayit: dict, sira: int) -> None:
 
 
 def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
-    """JSON senaryo dosyasını okur ve şemayı doğrular.
-
-    Eksik alan, hatalı alan tipi, sınır dışı yaş/şikayet uzunluğu, geçersiz
-    triyaj kodu ya da tekrarlanan id durumunda `SenaryoHatasi` atar — bozuk bir
-    ölçüm setiyle koşmak, ölçüm yapmamaktan daha kötüdür çünkü çıkan sayı
-    güvenilir görünür.
-    """
+    """JSON senaryo dosyasını okur ve şemayı doğrular."""
     yol = Path(yol)
     try:
         ham = json.loads(yol.read_text(encoding="utf-8"))
@@ -241,7 +201,6 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
     except UnicodeDecodeError as exc:
         # UnicodeDecodeError, JSONDecodeError'ın alt sınıfı değil; ayrıca yakalanmazsa
         # ham traceback olarak kaçar. Dosyayı Windows'ta Türkçe konuşan biri elle
-        # yazacak ve cp1254 kaydedilmiş bir dosyadaki ğ/ı/ş geçerli UTF-8 değildir.
         raise SenaryoHatasi(
             f"Senaryo dosyası UTF-8 kodlamasında değil: {yol} — {exc}. "
             f"Dosyayı UTF-8 olarak kaydedin."
@@ -286,8 +245,6 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
 
         # Ayıklanan kaynak adları kırpılıyor; senaryo tarafı kırpılmazsa
         # `"gogus_agrisi.txt "` doğrulamayı geçer ama hiçbir zaman eşleşmez ve o
-        # senaryo hata vermeden sonsuza dek A kutusunda oturur. Dosyaları Görev
-        # 6'da elle yazan kişi bu boşluğu göremez.
         ham_kaynak = kayit.get("beklenen_kaynak")
 
         senaryolar.append(
@@ -310,15 +267,7 @@ def senaryolari_yukle(yol: str | Path) -> list[Senaryo]:
 
 
 def _sadelestir(metin: str) -> str:
-    """Türkçe karakterleri ASCII'ye indirir ve küçük harfe çevirir.
-
-    Yalnızca triyaj kodu, bölüm adı ve tetkik adı karşılaştırmasında kullanılır;
-    WER normalizasyonunda kullanılmaz (K12), çünkü orada katlama gerçek tanıma
-    hatasını gizler. Burada katlamak doğru: ölçülen şey triyaj kalitesi, yerel
-    modelin yazım tercihi değil — `app/api/ai.py` de aynı sebeple kendi
-    `_sadelestir`ini taşıyor. Seste ise "şiddetli" → "siddetli" gerçek bir
-    tanıma hatasıdır ve katlanırsa WER olduğundan iyi görünür.
-    """
+    """Türkçe karakterleri ASCII'ye indirir ve küçük harfe çevirir."""
     esleme = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
     sade = metin.translate(esleme)
     sade = unicodedata.normalize("NFKD", sade)
@@ -328,8 +277,6 @@ def _sadelestir(metin: str) -> str:
 
 # Tetkik adı eşanlamları → tek kanonik biçim (`_sadelestir` sonrası anahtar).
 # Gün 23 ölçümü: model "Hemogram (Tam kan sayımı)" derken altın "Tam kan sayımı"
-# bekliyordu; Jaccard klinik 4/4 iken 0,33 yazıyordu. Bu sözlük yalnızca ölçüm
-# tarafında (K2); üretim çıktısını yeniden adlandırmaz.
 _TETKIK_ALIAS: dict[str, str] = {
     "tam kan sayimi": "tam kan sayimi",
     "hemogram": "tam kan sayimi",
@@ -362,13 +309,7 @@ def triyaj_dogru_mu(beklenen: str, cikan: str | None) -> bool:
 
 
 def bolum_dogru_mu(beklenen: str, cikan: str | None) -> bool:
-    """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı.
-
-    Gün 24'te `department` kapalı akuite dağarcığına sıkıştırıldıktan sonra
-    `kok_neden` C kapısı bu fonksiyonu yeniden çağırıyor. Eşanlam için
-    `_ad_esit_mi` yeterli: altın standart ve üretim aynı kanonik adları kullanır
-    (`Kırmızı Alan` / `Sarı Alan` / …).
-    """
+    """Beklenen ve önerilen bölüm aynı mı — yazım farkına dayanıklı."""
     return _ad_esit_mi(beklenen, cikan)
 
 
@@ -376,8 +317,6 @@ def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
     """Beklenen ve önerilen tetkik kümeleri arasındaki Jaccard benzerliği."""
     # Çıkan taraf modelin ham çıktısı, yani güvenilmeyen girdi: boş adlar
     # birleşimi şişirip skoru haksız yere düşürmesin diye burada eleniyor.
-    # Beklenen tarafta boş ad zaten yükleme anında reddediliyor (yazım hatası).
-    # Alias kanonikleştirmesi (Gün 24): eşanlamlı yazımlar aynı kümeye düşer.
     b = {_tetkik_kanonik(t) for t in beklenen if t and t.strip()}
     c = {_tetkik_kanonik(t) for t in cikan if t and t.strip()}
     if not b and not c:
@@ -388,18 +327,7 @@ def tetkik_ortusmesi(beklenen: list[str], cikan: list[str]) -> float:
 
 
 def kaynak_adlarini_ayikla(sources: list[str]) -> list[str]:
-    """Ucun döndürdüğü `"[Kaynak: dosya] belge metni"` dizelerinden dosya adını çıkarır.
-
-    Ölçümün en sessiz tuzağı burada: uç `sources` alanını dosya adı olarak
-    döndürmüyor (`app/services/rag_service.py:92`, biçimi
-    `tests/api/test_ai_analiz_api.py:73` kilitliyor). Ham dizeler ayıklanmadan
-    karşılaştırılırsa `beklenen_kaynak` hiçbir zaman bulunamaz; her yanlış cevap
-    A kutusuna, her doğru cevap "şanslı doğru"ya yazılır ve hiçbir test kırılmaz.
-    Ayrıştırma bu yüzden sürücüde değil, testli çekirdekte duruyor (K6).
-
-    Tanınmayan biçim atılmaz, olduğu gibi geçer: uç sözleşmesi değişirse
-    eşleşmeyen bir değer görünür kalsın, sessizce boş liste üretilmesin.
-    """
+    """Ucun döndürdüğü `"[Kaynak: dosya] belge metni"` dizelerinden dosya adını çıkarır."""
     adlar: list[str] = []
     for kayit in sources:
         ad = kayit
@@ -417,32 +345,12 @@ def kaynak_adlarini_ayikla(sources: list[str]) -> list[str]:
 
 
 def _gelen_kaynaklar(sonuc: Sonuc) -> list[str]:
-    """Sonucun kaynaklarını her hâlükârda dosya adına indirger.
-
-    `Sonuc.sources`'un sözleşmesi ayıklanmış dosya adları, ama ayrıştırma tek
-    başına sürücüde dursaydı bir kez unutulduğunda ölçüm sessizce her şeyi A
-    kutusuna yazardı ve hiçbir test kırmızıya dönmezdi. `kaynak_adlarini_ayikla`
-    etkisiz eleman olduğu için burada ikinci kez çağırmak bedava.
-    """
+    """Sonucun kaynaklarını her hâlükârda dosya adına indirger."""
     return kaynak_adlarini_ayikla(sonuc.sources)
 
 
 def esik_alti_mi(sonuc: Sonuc) -> bool:
-    """Sistem gerçekten cevap vermekten mi kaçındı — yoksa cevabı mı okunamadı?
-
-    `app/api/ai.py:71-81` iki ayrı duruma **aynı** `"Belirsiz"` kodunu veriyor:
-    (a) eşik kapısı kapandı, LLM hiç çağrılmadı; (b) LLM çağrıldı ama okunamayan
-    bir kod döndürdü ve normalleştirici onu `"Belirsiz"`e indirdi. Yalnızca koda
-    bakmak ikisini birleştirir ve (b)'yi **retrieval hatası** diye raporlar (K8),
-    oysa orada retrieval çalışmış, bozulan muhakeme/biçim tarafıdır — üstelik
-    hiçbir test kırmızıya dönmez.
-
-    Ayırt edici işaret kaynaklardır: eşik altı yolu hiç kaynak döndürmüyor
-    (`app/api/ai.py:152-160`), LLM'e ulaşan yol döndürüyor.
-
-    Karşılaştırma `triyaj_dogru_mu` üzerinden; koda gömülü `== "Belirsiz"`,
-    `_sadelestir`in katlaması değişirse bu kapıyı sessizce hep False yapardı.
-    """
+    """Sistem gerçekten cevap vermekten mi kaçındı — yoksa cevabı mı okunamadı?"""
     return (
         triyaj_dogru_mu("Belirsiz", sonuc.cikan_triage_code)
         and not _gelen_kaynaklar(sonuc)
@@ -450,17 +358,7 @@ def esik_alti_mi(sonuc: Sonuc) -> bool:
 
 
 def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
-    """Bir sonucu A (retrieval) / B (muhakeme) / C (biçim) kutusuna ayırır.
-
-    Gün 24 "en büyük kutuya müdahale et" diyor; bu tasnif ölçülmezse o karar
-    tahminle verilir. Doğru sonuçta None döner, altyapı hatasında "HATA".
-
-    Kapsam dışı senaryolar (`beklenen_triage_code == "Belirsiz"`) doğru
-    reddedildiğinde `beklenen_bolum` ve `beklenen_tetkikler` **puanlanmaz**:
-    cevap vermeyi reddetmiş bir sistemde derecelendirilecek bölüm ya da tetkik
-    yoktur, onları puanlamak kategori hatası olur. Alanlar yükleyicide zorunlu
-    olmaya devam ediyor, yalnızca bu şekilde ölçüme girmiyorlar.
-    """
+    """Bir sonucu A (retrieval) / B (muhakeme) / C (biçim) kutusuna ayırır."""
     if sonuc.hata:
         return "HATA"
 
@@ -472,7 +370,6 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
             return "A"
         # Eşik altında kalmak retrieval başarısızlığıdır (K8). Kaynak dönmüşse
         # retrieval çalışmıştır; "Belirsiz" o zaman okunamayan bir LLM cevabıdır
-        # ve aşağıdaki B dalına düşer.
         if esik_alti_mi(sonuc):
             return "A"
         # Beklenen protokol aday havuzuna hiç girmediyse hata retrieval'dadır.
@@ -487,10 +384,6 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
 
     # Kod doğru: bölüm veya tetkikler tutmuyorsa biçim/kapsam hatası (C).
     #
-    # Bölüm kapısı Gün 24'te geri açıldı: üretim `department` çıktısı kapalı
-    # akuite dağarcığına (`Kırmızı Alan` / …) sıkıştırılıyor ve altın standart
-    # aynı dağarcığı bekliyor. 13 Ağustos'ta kapı kapatılmıştı çünkü model
-    # hastane bölümü uyduruyor ve ölçüm seti "Acil Servis" bekliyordu.
     bolum_tam = bolum_dogru_mu(senaryo.beklenen_bolum, sonuc.cikan_bolum)
     tetkikler_tam = tetkik_ortusmesi(
         senaryo.beklenen_tetkikler, sonuc.cikan_tetkikler
@@ -502,19 +395,7 @@ def kok_neden(senaryo: Senaryo, sonuc: Sonuc) -> str | None:
 
 
 def sansli_dogru_mu(senaryo: Senaryo, sonuc: Sonuc) -> bool:
-    """Doğru cevap verildiği hâlde beklenen protokolün gelmediği durum.
-
-    Model cevabı yanlış bağlamdan ya da kendi ön bilgisinden üretmiştir;
-    Gün 24'te retrieval düzeltilince bu senaryolar bozulabilir. İşaretlenmezse
-    önce/sonra tablosunda açıklanamayan bir gerileme olarak görünür.
-
-    Kapsam dışı senaryolar (`beklenen_triage_code == "Belirsiz"`) burada da
-    puanlanmaz — `kok_neden` ile aynı kural. Eşik altı yanıt yolu hiç kaynak
-    döndürmediği için (`app/api/ai.py:152-160`), `beklenen_kaynak` yazılmış bir
-    kapsam dışı senaryo doğru reddedildiğinde HER ZAMAN "şanslı" görünürdü;
-    Gün 24 tablosuna sahte bir kırılganlık yazılırdı. Yükleyici bu alan
-    birleşimini kabul ettiği için tek koruma senaryo yazma konvansiyonu olamaz.
-    """
+    """Doğru cevap verildiği hâlde beklenen protokolün gelmediği durum."""
     if senaryo.beklenen_triage_code == "Belirsiz":
         return False
     if sonuc.hata or not senaryo.beklenen_kaynak:
@@ -525,37 +406,14 @@ def sansli_dogru_mu(senaryo: Senaryo, sonuc: Sonuc) -> bool:
 
 
 def _kelimelere_ayir(metin: str) -> list[str]:
-    """WER için metni normalize edip kelimelere böler.
-
-    Küçük harfe indirir ve noktalamayı atar; Türkçe karakteri ASCII'ye
-    KATLAMAZ (K12) — katlarsak "şiddetli" → "siddetli" tanıma hatası doğru
-    sayılır ve WER olduğundan iyi çıkar. Bu yüzden aynı modüldeki
-    `_sadelestir` buradan ÇAĞRILMAZ; o fonksiyon triyaj/bölüm/tetkik adı
-    karşılaştırması içindir.
-
-    Küçük harfe indirmeden önce yalnızca noktalı/noktasız I çifti eşleniyor,
-    çünkü Python'un `.lower()`'ı Türkçe bilmez: "I" → "i" verir ("ı" değil) ve
-    "İ" → "i" + birleşen nokta (iki karakter) verir. Bu bir BÜYÜK/KÜÇÜK HARF
-    düzeltmesidir, harf katlaması değil — "I" ile "ı" aynı harfin iki hâli,
-    "ş" ile "s" ise ayrı harflerdir ve ikincisi katlanmaz (K12). Eşleme
-    olmasaydı cümle başındaki "Işığa", tanıma doğruyken bile hata sayılırdı ve
-    WER olduğundan kötü çıkardı.
-    """
+    """WER için metni normalize edip kelimelere böler."""
     esleme = str.maketrans("Iİ", "ıi")
     temiz = re.sub(r"[^\w\s]", " ", metin, flags=re.UNICODE)
     return temiz.translate(esleme).lower().split()
 
 
 def wer(referans: str, hipotez: str) -> float:
-    """Kelime hata oranı: düzenleme mesafesi / referans kelime sayısı.
-
-    Standart Levenshtein, kelime düzeyinde. Yeni bağımlılık eklememek için
-    elle yazıldı (K11): `jiwer` iki gereksinim dosyasını birden güncellemeyi
-    gerektirir ve ölçüm gününde gereksiz bir CI riski yaratır.
-
-    Ekleme cezalandırıldığı için sonuç 1.0'ı aşabilir; oran kırpılmıyor,
-    uydurma bir transkript uzunluğu oranında görünür kalsın.
-    """
+    """Kelime hata oranı: düzenleme mesafesi / referans kelime sayısı."""
     ref = _kelimelere_ayir(referans)
     hip = _kelimelere_ayir(hipotez)
 
@@ -585,9 +443,6 @@ class Ozet:
 
     # ORAN ALANLARI `None` OLABİLİR ve bu bilinçli: boş kümede oran tanımsızdır,
     # `0.0` değil. Eskiden `0.0` yazılıyordu ve `Ozet.__dict__` kalıcı JSON
-    # kaydı olduğu için Gün 24 o dosyayı okuyup `0.0 → 0.8`ı "+80 puan iyileşme"
-    # diye görebilirdi; oysa taban hiç ölçülmemişti. Paydası yanında duruyor ama
-    # payda "hatırlanması gereken" bir korumadır, `None` ise unutulamaz.
 
     # Kapsam içi ∧ ölçülebilir senaryo sayısı; iki doğruluk oranının da temeli.
     toplam: int
@@ -597,12 +452,9 @@ class Ozet:
     dogruluk_tum: float | None
     # Sistemin cevap verdiği kapsam içi senaryo sayısı (toplam - esik_alti);
     # `dogruluk_cevaplananlar`ın paydası. Ayrı alan çünkü aksi hâlde bu çıkarma
-    # raporu basan test edilmemiş sürücüde tekrar ediliyordu (K6 sızıntısı) ve
-    # "cevaplanan"ın tanımı değişse ikisi sessizce ayrışırdı.
     cevaplanan: int
     # dogru / cevaplanan — eşik altı yanıtlar paydadan DÜŞÜLÜR. İki oran
     # birlikte basılır: tek sayı olsaydı "Belirsiz"leri paydadan atmak doğruluğu
-    # istendiği kadar şişirebilirdi, aradaki fark ise eşik altı oranının kendisidir.
     dogruluk_cevaplananlar: float | None
     # Kapsam içi ∧ ölçülebilir Kırmızı senaryo sayısı (duyarlılığın paydası).
     kirmizi_toplam: int
@@ -618,7 +470,6 @@ class Ozet:
     esik_alti_orani: float | None
     # Jaccard ortalamasının paydası: kaç senaryodan hesaplandı. `jaccard_ortalama`
     # tek başına 0,00 basıldığında "model tamamen yanlış tetkik önerdi" diye
-    # okunuyordu; oysa anlamı "hiç ölçülmedi" olabilir.
     jaccard_sayisi: int
     # Cevap verilen kapsam içi senaryolarda tetkik örtüşmesinin (Jaccard)
     # ortalaması. Payda 0 ise None.
@@ -638,13 +489,7 @@ class Ozet:
 
 
 def _oran(pay: int, payda: int) -> float | None:
-    """Boş kümede `None` döndürür — oran tanımsızdır, sıfır değil.
-
-    Ayrım raporda "%0,0" ile "n/d" farkı; JSON'da ise `0.0` ile `null` farkı.
-    İkincisi daha önemli: `sonuclar/<tarih>.json` Gün 24'ün girdisi ve orada
-    `0.0`, ölçülmemiş bir tabanı ölçülmüş gibi gösterip sahte bir iyileşme
-    üretebilirdi.
-    """
+    """Boş kümede `None` döndürür — oran tanımsızdır, sıfır değil."""
     return pay / payda if payda else None
 
 
@@ -662,7 +507,6 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
         if sonuc is None:
             # Kayıt hiç yazılmamış (koşum yarıda kalmış olabilir). Paydaya
             # girmez ama sayılır: `Ozet.__dict__` kalıcı JSON kaydı olduğu için
-            # iz tutulmazsa alt kümede hesaplanmış doğruluk tam küme gibi okunur.
             sonucsuz += 1
             continue
         if sonuc.hata:
@@ -685,7 +529,6 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
 
     # Karşılaştırma `triyaj_dogru_mu` üzerinden: normalleştiricinin ÇIKTISINI
     # ("kirmizi") koda gömmek, `_sadelestir`in katlaması değişirse bu kapıyı
-    # sessizce hep False yapar ve klinik olarak en önemli payda sıfıra düşerdi.
     kirmizi = [
         (s, r) for s, r in kapsam_ici if triyaj_dogru_mu("Kırmızı", s.beklenen_triage_code)
     ]
@@ -695,9 +538,6 @@ def ozet(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> Ozet:
 
     # Jaccard yalnızca cevap verilen senaryolarda anlamlı; "Belirsiz" yanıtta
     # tetkik listesi zaten boş döner ve ortalamayı haksız yere aşağı çeker.
-    # Kaynak `kapsam_ici`: kapsam dışı senaryolar `kok_neden`de de puanlanmıyor
-    # (cevap vermeyi reddetmiş sistemde derecelendirilecek tetkik yoktur), buraya
-    # girselerdi özet ile A/B/C tasnifi birbiriyle çelişirdi.
     jaccardlar = [
         tetkik_ortusmesi(s.beklenen_tetkikler, r.cikan_tetkikler)
         for s, r in kapsam_ici

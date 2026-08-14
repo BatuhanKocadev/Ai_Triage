@@ -9,7 +9,6 @@ from tests.yardimcilar.veri_uretici import ziyaret_verisi
 def test_jetonsuz_istek_401_doner(istemci, esik_alti):
     # Uçtan yetkilendirme bağımlılığının düşmesini yakalar; hasta verisi
     # jetonsuz işlenmemeli. esik_alti güvenlik ağı: yetki kapısı düşerse istek
-    # gövdeye girer ve fixture olmadan gerçek ChromaDB/Ollama'ya gidilir.
     yanit = istemci.post("/ai/analiz", json=ziyaret_verisi())
     assert yanit.status_code == 401
 
@@ -18,7 +17,6 @@ def test_jetonsuz_istek_401_doner(istemci, esik_alti):
 def test_bozuk_jeton_401_doner(istemci, esik_alti):
     # Bozuk imzalı jetonun kabul edilmesini yakalar: jwt.decode'un
     # doğrulamasız çağrılması ya da except JWTError dalının düşmesi.
-    # esik_alti: kapı düşerse istek gövdeye ilerler, gerçek servise gitmesin.
     yanit = istemci.post(
         "/ai/analiz",
         json=ziyaret_verisi(),
@@ -42,7 +40,6 @@ def test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner(
 ):
     # Jeton imzası geçerli ama kullanıcı silinmişse erişim reddedilmeli.
     # esik_alti: kullanıcı arama dalı düşerse istek gövdeye ilerler,
-    # gerçek servise gitmesin.
     jeton = jeton_uret(kullanici_adi="hic_var_olmayan", rol="user")
     yanit = istemci.post(
         "/ai/analiz",
@@ -56,9 +53,6 @@ def test_veritabaninda_olmayan_kullanicinin_jetonu_401_doner(
 def test_admin_olmayan_dokuman_yukleyemez(istemci, yetkili_baslik, dokuman_yazmayi_engelle):
     # Regresyon: require_admin_role'ün rol kontrolü gevşerse (auth_service.py:78)
     # sıradan "user" rolü protokol dokümanı yükleyebilir ve tüm hastaların
-    # sorguladığı ortak ChromaDB koleksiyonunu değiştirebilir.
-    # dokuman_yazmayi_engelle: kapı gevşerse istek gövdeye ilerler ve
-    # get_collection().upsert() gerçek koleksiyona yazar — fixture o yolu keser.
     yanit = istemci.post(
         "/document/upload",
         data={"category": "protokol"},
@@ -72,8 +66,6 @@ def test_admin_olmayan_dokuman_yukleyemez(istemci, yetkili_baslik, dokuman_yazma
 def test_dokuman_yukleme_jetonsuz_401_doner(istemci, dokuman_yazmayi_engelle):
     # Regresyon: /document/upload ucundan auth bağımlılığı düşerse
     # (app/api/document.py, Depends(require_admin_role)) uç tamamen halka
-    # açılır — jetonsuz bir istek dokümanı ChromaDB'ye yazabilir.
-    # dokuman_yazmayi_engelle o yazmanın gerçek koleksiyona gitmesini keser.
     yanit = istemci.post(
         "/document/upload",
         data={"category": "protokol"},
@@ -86,7 +78,6 @@ def test_dokuman_yukleme_jetonsuz_401_doner(istemci, dokuman_yazmayi_engelle):
 def test_rol_bilgisi_auth_me_ile_donuyor(istemci, yetkili_baslik):
     # Panel rolü buradan okuyor (kullanıcı adından tahmin etmiyor); bu uç
     # bozulursa arayüz yanlış sekmeleri açar. Parola hash'inin sızmadığı da
-    # burada sabitleniyor.
     yanit = istemci.get(
         "/auth/me", headers=yetkili_baslik(kullanici_adi="dr_veli", rol="doctor")
     )

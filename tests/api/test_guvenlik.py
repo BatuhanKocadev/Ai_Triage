@@ -1,8 +1,4 @@
-"""Güvenlik kurallarının testleri; her test bir saldırıyı taklit eder.
-
-Bu dosyadaki testler "kural var mı" değil "kural UCU koruyor mu" sorusunu
-yanıtlar. Kuralın kendi davranışı tests/birim/ altında ayrıca sınanıyor.
-"""
+"""Güvenlik kurallarının testleri; her test bir saldırıyı taklit eder."""
 
 import io
 import logging
@@ -19,9 +15,6 @@ from tests.yardimcilar.veri_uretici import ziyaret_verisi
 def test_ardarda_istek_hiz_sinirina_takilir(istemci, yetkili_baslik, esik_alti):
     # /ai/analiz yerel LLM'i çalıştıran en pahalı uç; sınırsız çağrı servisi tüketir.
     # Gövde bilerek GEÇERLİ gönderiliyor: FastAPI'de gövde doğrulaması ile bağımlılık
-    # çözümü aynı aşamada yürüyor ve geçersiz gövdeyle 422'nin 429'dan önce dönme
-    # ihtimali var — o durumda test yanlış sebeple kırılır ve hız sınırı hakkında
-    # hiçbir şey kanıtlamaz. `esik_alti` fixture'ı gerçek LLM'e gidilmesini önlüyor.
     baslik = yetkili_baslik(kullanici_adi="hasta_ayse", rol="user")
     son_yanit = None
     for _ in range(settings.rate_limit_genel + 1):
@@ -38,11 +31,6 @@ def test_ardarda_istek_hiz_sinirina_takilir(istemci, yetkili_baslik, esik_alti):
 def test_transkript_ucu_hiz_sinirina_takilir(istemci, yetkili_baslik, monkeypatch):
     # /speech/transkript, /ai/analiz ile aynı pahalı sınıfta: faster-whisper
     # "medium" modelini yüklüyor, 25 MB'a kadar dosyayı belleğe alıyor, geçici
-    # dosya yazıp CPU'yu doyuruyor. Kimlik doğrulaması hız sınırı DEĞİLDİR —
-    # `user` rolündeki herhangi bir hesap ucu sınırsız çağırabiliyordu.
-    # Gövde bilerek GEÇERLİ gönderiliyor (yukarıdaki /ai/analiz testiyle aynı
-    # gerekçe): geçersiz gövdeyle 400'ün 429'dan önce dönmesi testi yanlış
-    # sebeple kırardı. transcribe yamalı, gerçek model hiç yüklenmiyor.
     monkeypatch.setattr(speech_modulu, "transcribe", sahte_transkript_uret("metin"))
     baslik = yetkili_baslik(kullanici_adi="hasta_ayse", rol="user")
 
@@ -74,10 +62,6 @@ def test_giris_denemesi_hiz_sinirli(istemci):
 def test_giris_ucu_ip_basina_hacim_sinirli(istemci):
     # Kullanıcı adına bağlı sayaç TEK BAŞINA yetmiyor: her istekte FARKLI bir
     # kullanıcı adı denenirse hiçbir kullanıcı kovası dolmaz ve parola serpme
-    # (password spraying) ile kullanıcı adı numaralandırma sınırsız hızda sürer.
-    # Backend portuna doğrudan vuran saldırgan kendi IP'sinden geldiği için
-    # "tüm arayüz tek IP'de toplanıyor" gerekçesi onun için geçerli değil.
-    # Bu yüzden IP katmanı, kullanıcı adı katmanının YERİNE değil YANINDA duruyor.
     son_durum = None
     for sira in range(settings.rate_limit_giris_ip + 1):
         son_durum = istemci.post(
@@ -92,16 +76,9 @@ def test_giris_ucu_ip_basina_hacim_sinirli(istemci):
 def test_ip_katmani_basarili_girisleri_de_sayar(istemci, kullanici_uret):
     # IP katmanı bir HACİM sınırıdır: başarılı/başarısız ayrımı YAPMAZ. Üstteki
     # test bunu bağlamıyor — orada zaten hepsi başarısız, yani katman "yalnızca
-    # başarısızları say" biçimine çevrilse de yeşil kalır. Oysa vardiya
-    # değişiminde meşru kullanıcılar 429 görünce ilk refleks tam olarak o
-    # olacak; o değişiklik geçerli tek bir hesabı olan saldırgana sınırsız
-    # istek hakkı verir (parola serpme ve sözlük büyütme yeniden açılır).
     kullanici_uret(kullanici_adi="ayse", parola="dogru-parola")
     # Kova bilerek limitin BİR ALTINA kadar ucuz denemelerle dolduruluyor.
     # Her deneme FARKLI bir ada gittiği için kullanıcı adı katmanı (5
-    # başarısızlık) tetiklenmiyor ve aşağıdaki 429'un tek olası kaynağı IP
-    # katmanı kalıyor. (Var olmayan adlarda da bcrypt çalışır — zamanlama
-    # oracle kapatması; maliyet bilinçli.)
     for sira in range(settings.rate_limit_giris_ip - 1):
         istemci.post(
             "/auth/login", data={"username": f"dolgu{sira}", "password": "yanlis"}
@@ -125,8 +102,6 @@ def test_ip_katmani_basarili_girisleri_de_sayar(istemci, kullanici_uret):
 def test_giris_hiz_siniri_kullanici_adina_bagli(istemci, kullanici_uret):
     # Anahtar IP olsaydı bir kullanıcının hatalı denemeleri HERKESİ kilitlerdi:
     # Streamlit backend'i sunucu tarafından (`requests` ile) çağırıyor, yani
-    # Docker dağıtımında tüm girişler tek IP'den — frontend konteynerinin
-    # IP'sinden — geliyor. Triyaj sisteminde bu klinik bir erişilebilirlik sorunu.
     kullanici_uret(kullanici_adi="ayse", parola="dogru-parola")
     for _ in range(settings.rate_limit_giris + 1):
         istemci.post("/auth/login", data={"username": "mehmet", "password": "yanlis"})
@@ -142,8 +117,6 @@ def test_giris_hiz_siniri_kullanici_adina_bagli(istemci, kullanici_uret):
 def test_giris_hiz_siniri_harf_durumuyla_asilamaz(istemci):
     # Anahtar HAM kullanıcı adı olsaydı "yok", "YOK" ve " yok " üç ayrı kova
     # olurdu; saldırgan yalnızca yazımı değiştirerek sınırı katlardı.
-    # Denemeler bilerek iki farklı yazımla gönderiliyor: anahtar normalize
-    # edilmezse hiçbir kova limite ulaşmaz ve son yanıt 429 yerine 401 olur.
     varyantlar = [
         "YOK" if sira % 2 else "  yok  "
         for sira in range(settings.rate_limit_giris + 1)
@@ -188,7 +161,6 @@ def test_desteklenmeyen_uzantili_dosya_reddedilir(
     assert yanit.status_code == 400
     # Mesaj iddiası doğrulayıcıyı bağlar: eski uzantı zincirinin ürettiği
     # "Unsupported file format" ile karışmasın diye (aksi halde bu test
-    # doğrulayıcı silinse de yeşil kalırdı).
     assert yanit.json()["detail"] == "Desteklenmeyen dosya"
 
 
@@ -222,7 +194,6 @@ def test_pdf_gibi_gorunen_bozuk_dosya_reddedilir(
     assert yanit.status_code == 400
     # Mesaj iddiası doğrulayıcıyı bağlar: doğrulayıcı olmasa da pdfplumber
     # geçersiz baytlarda istisna fırlatıp "PDF processing error" ile 400
-    # döner — durum kodu tek başına imza kontrolünü kanıtlamıyor.
     assert yanit.json()["detail"] == "Desteklenmeyen dosya"
 
 
@@ -283,9 +254,6 @@ def test_izleme_kodu_ve_hata_detayi_loga_yaziliyor(
 ):
     # İzleme kodunun TEK amacı, kullanıcının ekranda okuduğu kodu operatörün
     # log'da bulabilmesi. Yukarıdaki test yalnızca istemci yarısını donduruyor;
-    # log yarısı bağlanmazsa `logger.exception` -> `logger.error` değişimi
-    # (yığın izinin kaybı) ya da kodun format dizesinden düşmesi bütün testler
-    # yeşilken izleme kodunu işe yaramaz hale getirir.
     from app.api import document as document_modulu
 
     def _patlat():
@@ -313,7 +281,6 @@ def test_izleme_kodu_ve_hata_detayi_loga_yaziliyor(
 def test_gecersiz_jwt_ile_401_ve_detay_sizmaz(istemci, jeton_uret):
     # İki FARKLI başarısızlık sebebi aynı yanıtı vermeli: "kullanıcı yok" ile
     # "jeton bozuk" ayrımı dışarı verilirse saldırgan geçerli kullanıcı adı
-    # numaralandırabilir.
     olmayan_kullanici_jetonu = jeton_uret(kullanici_adi="hic_olmayan", rol="user")
     bozuk_jeton = "bu.gecerli.bir.jwt.degil"
 
@@ -331,8 +298,6 @@ def test_gecersiz_jwt_ile_401_ve_detay_sizmaz(istemci, jeton_uret):
 def test_cors_sadece_izinli_kaynaga_acik(istemci):
     # İKİ yönlü doğrulama şart. Yalnızca "izinsiz origin başlık almamalı" demek
     # bağlayıcı DEĞİL: CORS middleware'i hiç yokken de o başlık dönmez, yani test
-    # düzeltmeden önce de geçerdi. İzinli origin'in başlığı ALDIĞINI da
-    # doğrulamak, middleware'in gerçekten kurulu olmasını zorunlu kılıyor.
     izinli = [k.strip() for k in settings.cors_origins.split(",") if k.strip()][0]
 
     izinli_yanit = istemci.get("/health/", headers={"Origin": izinli})

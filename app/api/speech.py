@@ -40,7 +40,6 @@ async def ses_metnini_kaydet(istek: SpeechRequest):
 
 # /ai/analiz ile aynı pahalı sınıf: whisper "medium" modelini yükleyip 25 MB'a
 # kadar dosyayı işliyor, yani kötüye kullanım CPU'yu ve belleği tüketir —
-# kimlik doğrulaması tek başına hız sınırı değildir (10 Ağustos 2026).
 @router.post(
     "/transkript",
     response_model=TranskriptYaniti,

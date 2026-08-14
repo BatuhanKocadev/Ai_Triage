@@ -1,10 +1,4 @@
-"""ilk tablolar: users, visits, ai_recommendations
-
-Revision ID: fbc0ebaef76d
-Revises: 
-Create Date: 2026-07-26 12:25:44.946547
-
-"""
+"""ilk tablolar: users, visits, ai_recommendations"""
 from typing import Sequence, Union
 
 from alembic import op

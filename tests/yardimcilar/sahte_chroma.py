@@ -1,9 +1,4 @@
-"""ChromaDB koleksiyonu yerine geçen bellek içi sahte servis.
-
-Gerçek `triage_documents` koleksiyonu her hasta sorgusunun tarandığı yerdir;
-testlerin oraya yazması üretim davranışını bozar. Bu sınıf yalnızca doküman
-uçlarının kullandığı yöntemleri taklit eder.
-"""
+"""ChromaDB koleksiyonu yerine geçen bellek içi sahte servis."""
 
 
 class SahteKoleksiyon:

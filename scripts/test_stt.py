@@ -1,10 +1,4 @@
-"""faster-whisper ile bir ses dosyasını deneme amaçlı transkript eder.
-
-Kullanım (proje kökünden):
-    .venv\\Scripts\\python.exe -m scripts.test_stt [ses_dosyasi_yolu]
-
-Yol verilmezse varsayılan olarak ornek_dokumanlar/ses_ornek.m4a kullanılır.
-"""
+"""faster-whisper ile bir ses dosyasını deneme amaçlı transkript eder."""
 
 import io
 import sys

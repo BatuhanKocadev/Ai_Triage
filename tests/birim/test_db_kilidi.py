@@ -1,10 +1,4 @@
-"""Test veritabanı kilidinin kendi davranışını dondurur.
-
-Kilit, şemayı tamamen silen `Base.metadata.drop_all`'u koruyor. Bugünkü kontrol
-`endswith("/ai_triage_test")` idi ve iki yönden kusurluydu: üretim sunucusundaki
-aynı adlı veritabanı geçiyordu, buna karşılık `?sslmode=require` gibi meşru bir
-URL takılıyordu. Bu testler ikisini birden bağlar.
-"""
+"""Test veritabanı kilidinin kendi davranışını dondurur."""
 
 from tests.yardimcilar.db_kilidi import hedef_guvenli_mi
 
@@ -93,8 +87,6 @@ def test_ayristirilamayan_url_reddedilir():
 def test_query_stringle_ezilen_host_reddedilir():
     # libpq bağlantı hedefini query string'den de alır ve bu url.host'u EZER:
     # aşağıdaki adreste url.host "localhost" görünür ama psycopg2 "prod-host"a
-    # bağlanır, yani doğruladığımız hedef bağlanılan hedef olmaz. Bos-host
-    # deliğiyle aynı sınıf.
     guvenli, sebep = hedef_guvenli_mi(
         "postgresql://triage:triage@localhost:5432/ai_triage_test?host=prod-host"
     )
@@ -115,7 +107,6 @@ def test_hostaddr_ile_ezilen_host_reddedilir():
 def test_query_stringle_ezilen_veritabani_adi_reddedilir():
     # En tehlikelisi bu: uzak sunucu bile gerekmiyor. url.database
     # "ai_triage_test" görünür ama psycopg2 dbname=ai_triage ile bağlanır,
-    # yani drop_all geliştiricinin kendi makinesindeki ÜRETİM veritabanında koşar.
     guvenli, sebep = hedef_guvenli_mi(
         "postgresql://triage:triage@localhost:5432/ai_triage_test?dbname=ai_triage"
     )

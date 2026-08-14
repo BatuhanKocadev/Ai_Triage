@@ -1,11 +1,4 @@
-"""dosyayi_dogrula'nın yeşil yolunu ve kenar senaryolarını uç üzerinden değil,
-doğrudan fonksiyon çağrısıyla test eder (hızlı olsun).
-
-tests/api/test_guvenlik.py yalnızca ret senaryolarını (ve /document/upload
-üzerinden yalnızca .txt'yi) kanıtlıyor; gerçek .pdf/.docx hiç yüklenmiyor.
-IMZALAR sözlüğünde bir yazım hatası (ör. b"%PDFX") olsa paket yine de yeşil
-kalırdı — bu dosya tam da o boşluğu kapatıyor.
-"""
+"""dosyayi_dogrula'nın yeşil yolunu ve kenar senaryolarını uç üzerinden değil,"""
 
 import io
 import zipfile
@@ -97,7 +90,6 @@ def test_tam_sinirdaki_boyut_kabul_edilir():
 def test_imzasi_taninmayan_uzanti_reddedilir(monkeypatch):
     # settings.izinli_uzantilar'a IMZALAR'da karşılığı olmayan bir uzantı
     # (csv) eklenirse, fail-closed tasarım gereği imza kontrolü sessizce
-    # atlanmak yerine dosya reddedilmeli.
     monkeypatch.setattr(settings, "izinli_uzantilar", "pdf,docx,txt,csv")
     with pytest.raises(HTTPException) as exc_info:
         dosyayi_dogrula("a.csv", b"kolon1,kolon2\nderger1,deger2")

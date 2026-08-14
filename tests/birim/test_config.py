@@ -1,8 +1,4 @@
-"""Ayarların ortam değişkenlerinden okunduğunu doğrular.
-
-Bu test geçerse import zinciri sağlamdır: conftest ortamı app'ten önce kurmuş,
-pydantic-settings ortam değişkenini .env'e tercih etmiş demektir.
-"""
+"""Ayarların ortam değişkenlerinden okunduğunu doğrular."""
 
 from app.config.config import settings
 

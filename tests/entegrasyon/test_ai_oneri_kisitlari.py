@@ -1,12 +1,4 @@
-"""Bir ziyaretin en fazla bir yapay zekâ önerisi olabileceğini veritabanı
-seviyesinde dondurur.
-
-Bu kural bugün yalnızca ORM'de vardı: Visit.recommendation ilişkisi
-`uselist=False` diyor ama sütunda unique kısıtı yoktu. İkinci bir öneri satırı
-yazılabilseydi ilişki yalanlanır, ayrıca doktor kuyruğundaki joinedload + LIMIT
-sorgusu 20 satır yerine 19 farklı ziyaret döndürüp bekleyen bir vakayı SESSİZCE
-düşürürdü — kuyruktan kaybolan hasta demek.
-"""
+"""Bir ziyaretin en fazla bir yapay zekâ önerisi olabileceğini veritabanı"""
 
 import uuid
 

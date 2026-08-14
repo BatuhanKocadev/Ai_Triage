@@ -1,10 +1,4 @@
-"""Gün 27: `scripts/seed_users.py` iki kez çalıştırılabilir olmalı.
-
-Kurulum provasının ikinci turunda seed yeniden koşulur (README onu bir adım
-olarak listeliyor). İdempotent değilse ikinci koşum ya unique kısıtına takılır
-ya da sessizce yanlış rol/parola bırakır — ve ikisi de "bende çalışıyordu"
-sınıfının tipik sebebidir.
-"""
+"""Gün 27: `scripts/seed_users.py` iki kez çalıştırılabilir olmalı."""
 import pytest
 
 import scripts.seed_users as seed
@@ -14,12 +8,7 @@ from app.services.auth_service import verify_password
 
 @pytest.fixture
 def seed_test_oturumunda(db_oturum, monkeypatch):
-    """`seed.main()`'i test oturumuna bağlar.
-
-    Script üretim `SessionLocal`'ını kullanıyor; yamalanmazsa test gerçek
-    `ai_triage` veritabanına yazardı. `close` da etkisizleştiriliyor, yoksa
-    script ilk koşumda test oturumunu kapatır ve ikinci koşum patlar.
-    """
+    """`seed.main()`'i test oturumuna bağlar."""
     monkeypatch.setattr(db_oturum, "close", lambda: None)
     monkeypatch.setattr(seed, "SessionLocal", lambda: db_oturum)
     return db_oturum
@@ -50,12 +39,7 @@ def test_seed_users_iki_kez_calistirilabilir(seed_test_oturumunda, capsys):
 
 @pytest.mark.entegrasyon
 def test_seed_users_bozulmus_rol_ve_parolayi_duzeltir(seed_test_oturumunda, capsys):
-    """İdempotentlik "hiçbir şey yapma" değil "hedef duruma getir" demek.
-
-    Gün 17 öncesinde `doctor` hesabı `user` rolüyle yazılmıştı; seed'in bunu
-    düzeltmesi bilinçli. Yalnızca "iki kez koşuyor" sınansaydı, seed var olan
-    satıra hiç dokunmayacak şekilde bozulduğunda test yeşil kalırdı.
-    """
+    """İdempotentlik "hiçbir şey yapma" değil "hedef duruma getir" demek."""
     db = seed_test_oturumunda
     seed.main()
 

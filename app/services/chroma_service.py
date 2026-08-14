@@ -1,27 +1,16 @@
-"""ChromaDB bağlantısı ve triyaj koleksiyonu.
-
-Ayarlar pydantic-settings üzerinden okunuyor: önce ortam değişkenleri
-(Docker Compose bunları veriyor), yoksa .env dosyası, o da yoksa varsayılan.
-"""
+"""ChromaDB bağlantısı ve triyaj koleksiyonu."""
 
 from app.config.config import settings
 
 # Bağlantı tembel kuruluyor: import anında kurulursa ChromaDB kapalıyken
 # uygulama hiç açılmıyordu (/health bile cevap vermiyordu). Desen
-# `rag_service.py` içindeki `get_reranker()` ile aynı.
 _collection = None
 
 
 def _gomme_fonksiyonu():
-    """Ayarlardaki çok dilli modelden gömme fonksiyonu kurar.
-
-    Açıkça veriliyor çünkü ChromaDB'nin varsayılanı all-MiniLM-L6-v2 (İngilizce);
-    Türkçe sorguda ayırt edici olmayan vektör üretip yanlış dokümanları getiriyor.
-    """
+    """Ayarlardaki çok dilli modelden gömme fonksiyonu kurar."""
     # chromadb BURADA import ediliyor, modül düzeyinde değil. Sebebi görünmez
     # olduğu için yazılıyor: chromadb hafif görünür ama `onnxruntime` ve
-    # `tokenizers` çekiyor, ve modül düzeyinde import edilince `app.main`
-    # açılışına da CI ortamına da o ağırlığı ekliyor (tasarım K2).
     from chromadb.utils import embedding_functions
 
     return embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -34,7 +23,6 @@ def get_collection():
     if _collection is None:
         # Yukarıdaki `_gomme_fonksiyonu` ile aynı sebep: chromadb hafif görünür
         # ama `onnxruntime`/`tokenizers` çekiyor. Modül düzeyine taşımayın
-        # (tasarım K2); `tests/birim/test_import_agirligi.py` bunu bağlıyor.
         import chromadb
 
         chroma_client = chromadb.HttpClient(

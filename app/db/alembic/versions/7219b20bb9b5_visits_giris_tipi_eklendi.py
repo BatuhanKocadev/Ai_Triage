@@ -1,10 +1,4 @@
-"""visits.giris_tipi eklendi
-
-Revision ID: 7219b20bb9b5
-Revises: fbc0ebaef76d
-Create Date: 2026-07-29 12:27:10.185009
-
-"""
+"""visits.giris_tipi eklendi"""
 from typing import Sequence, Union
 
 from alembic import op

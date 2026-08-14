@@ -1,7 +1,4 @@
-"""RAG eşik kapısının davranışını dondurur: LLM ne zaman çağrılır, ne zaman çağrılmaz.
-
-Bu kapı bilinçli bir maliyet/güvenlik kontrolüdür (CLAUDE.md); bug değildir.
-"""
+"""RAG eşik kapısının davranışını dondurur: LLM ne zaman çağrılır, ne zaman çağrılmaz."""
 
 import sys
 import types
@@ -20,10 +17,6 @@ def test_koleksiyon_yoksa_bos_liste_doner():
 def test_esik_altinda_bos_liste_doner(monkeypatch):
     # 0.10 olasılığı 0.52 eşiğinin altında. Değer bilerek seçildi: eski çift
     # sigmoidli kodda sigmoid(0.10)=0.525 çıkıp eşiği GEÇİYORDU, yani bu test
-    # düzeltmenin bağlayıcı kanıtı.
-    # Eşik AÇIKÇA veriliyor: settings.rerank_threshold ölçümle değişen bir değer
-    # (kalibrasyon sonrası 0.005 oldu) ve teste varsayılanı miras bıraktığımızda
-    # test, ölçtüğü şeyden bağımsız sebeplerle kırılıp yeşile dönüyor.
     monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.10]))
     koleksiyon = SahteKoleksiyon(["Apandisit protokolü"])
     sonuc = rag_service.retrieve_and_rerank(
@@ -70,7 +63,6 @@ def test_dokumanlar_skora_gore_siralanir(monkeypatch):
 def test_metadata_filtresi_koleksiyona_gecirilir(monkeypatch):
     # source_document verildiğinde Chroma sorgusuna "where" olarak gitmeli.
     # 0.90 olasılık ölçeğinde geçerli bir skor; 10.0 logit ölçeğinden kalmıştı ve
-    # gerçek predict() böyle bir değer asla döndürmez.
     monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
     koleksiyon = SahteKoleksiyon(["Metin"])
     rag_service.retrieve_and_rerank(
@@ -89,8 +81,6 @@ def test_bos_koleksiyon_sonucu_bos_liste_doner(monkeypatch):
 def test_reranker_skoru_ikinci_kez_ezilmez(monkeypatch):
     # CrossEncoder.predict() modelin Sigmoid aktivasyonunu zaten uyguluyor.
     # Kod bunu ikinci kez sigmoid'den geçirirse 0.90 skoru 0.711'e düşer ve
-    # 0.80 eşiğini geçemez — dokuman sessizce elenir. Bu test o davranışı
-    # dondurur: skor ne verildiyse o sayılmalı.
     monkeypatch.setattr(rag_service, "get_reranker", sahte_reranker_uret([0.90]))
     koleksiyon = SahteKoleksiyon(["Yanık protokolü"])
 
@@ -104,12 +94,6 @@ def test_reranker_skoru_ikinci_kez_ezilmez(monkeypatch):
 def test_reranker_aktivasyonu_acikca_kuruluyor(monkeypatch):
     # Skor ölçeğinin tamamı predict()'in olasılık döndürmesine bağlı; bu da
     # CrossEncoder'a açıkça verilen Sigmoid aktivasyonundan geliyor. Argüman
-    # silinirse predict() modelin config dosyasındaki varsayılana düşer ve HAM
-    # LOGIT döndürür — o an bütün eşikler sessizce anlamsızlaşır. Bu ölçüldü
-    # (Gün 20, çift sigmoid hatası): 0.90'lık bir skor 0.711'e düşüp eşiği
-    # geçemiyordu. Diğer testler get_reranker()'ı sahteyle değiştirdiği için
-    # yapıcıyı hiç görmüyor; aktivasyonu donduran TEK test budur, bu yüzden
-    # sadeleştirilmemeli.
     yakalanan = {}
 
     class _SahteSigmoid:
@@ -122,10 +106,6 @@ def test_reranker_aktivasyonu_acikca_kuruluyor(monkeypatch):
 
     # torch ve sentence_transformers sys.modules'e SAHTE modül olarak
     # enjekte ediliyor. Sebebi: get_reranker() ikisini de artık fonksiyon içinde
-    # import ediyor (tembelleştirme, tasarım K2), dolayısıyla adları modül
-    # düzeyinde yamalamak imkânsız. Enjeksiyon ayrıca testi torch KURULU
-    # OLMAYAN CI ortamında da koşabilir kılıyor; alternatifi testi `yavas`
-    # işaretlemekti ve o durumda tek aktivasyon muhafızı CI'dan düşerdi (K9).
     sahte_torch = types.ModuleType("torch")
     sahte_torch.nn = types.SimpleNamespace(Sigmoid=_SahteSigmoid)
     sahte_torch.cuda = types.SimpleNamespace(is_available=lambda: False)

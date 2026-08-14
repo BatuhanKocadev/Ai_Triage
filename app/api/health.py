@@ -1,17 +1,4 @@
-"""Sistem durumu ucu.
-
-Gün 27'ye kadar bu uç sabit bir dize döndürüyordu ve **hiçbir bağımlılık
-hakkında hiçbir şey kanıtlamıyordu**. Gün 20'de bilgi tabanını boşaltmaya ramak
-kalan tuzak tam buydu: `/health` 200 dönüyor diye kimlik doğrulamanın çalıştığı
-varsayılmıştı. Artık üç bağımlılık ayrı ayrı yoklanıyor, çünkü bu ucun asıl
-müşterisi kurulum yapan kişidir: tek istekle nerede takıldığını görmeli.
-
-**HTTP durumu bilerek her zaman 200.** Uç "sistem sağlıklı mı"yı değil "API
-süreci ayakta ve ne görüyor"u cevaplıyor; kurulum sırasında bağımlılıklar tanım
-gereği bozuk olabilir ve teşhis için çağrılan ucun o yüzden 503 vermesi, aracı
-tam ihtiyaç duyulduğu anda gürültüye çevirirdi. Karar veren alan `tumu_ok` —
-çağıranlar durum koduna değil ona bakmalı.
-"""
+"""Sistem durumu ucu."""
 from fastapi import APIRouter, status
 from pydantic import BaseModel
 
@@ -59,11 +46,7 @@ def _postgres_yokla() -> tuple[bool, str]:
 
 
 def _chromadb_yokla() -> tuple[bool, str]:
-    """ChromaDB'ye heartbeat atar.
-
-    `get_collection()` çağrılmıyor: o, gömme modelini (bge-m3) indirip belleğe
-    alır ve bir sağlık yoklamasının yan etkisi olamayacak kadar pahalıdır.
-    """
+    """ChromaDB'ye heartbeat atar."""
     # chromadb ağır bağımlılık zinciri çekiyor; modül düzeyine taşımayın
     # (`tests/birim/test_import_agirligi.py` bunu bağlıyor).
     import chromadb
@@ -74,11 +57,7 @@ def _chromadb_yokla() -> tuple[bool, str]:
 
 
 def _ollama_yokla() -> tuple[bool, str]:
-    """Ollama ayakta mı ve yapılandırılmış model yüklü mü.
-
-    Yalnızca "ayakta mı" sorulsaydı, model indirilmemişken uç yeşil görünür ve
-    ilk analiz isteği 502 ile patlardı — kurulumcuyu yanlış yere bakmaya yollar.
-    """
+    """Ollama ayakta mı ve yapılandırılmış model yüklü mü."""
     import requests
 
     yanit = requests.get(
@@ -96,11 +75,7 @@ def _ollama_yokla() -> tuple[bool, str]:
 
 
 def _guvenli_yokla(yoklama) -> BagimlilikDurumu:
-    """Bir yoklamayı çalıştırır ve HER istisnayı durum bilgisine çevirir.
-
-    İstisna sızarsa uç 500 verir; teşhis aracının teşhis ettiği arızada
-    çökmesi, onu tam ihtiyaç duyulduğu anda kullanılamaz kılar.
-    """
+    """Bir yoklamayı çalıştırır ve HER istisnayı durum bilgisine çevirir."""
     try:
         ok, mesaj = yoklama()
     except Exception as exc:  # noqa: BLE001 - teşhis ucu, hiçbir arıza sızmamalı

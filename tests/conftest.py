@@ -2,7 +2,6 @@
 
 # DİKKAT: Bu blok her `app` import'undan ÖNCE gelmek zorunda.
 # app/db/database.py import edilir edilmez create_engine(settings.database_url)
-# çalışıyor; ortam burada ayarlanmazsa testler gerçek `ai_triage` veritabanına bağlanır.
 import os
 
 os.environ.setdefault("DATABASE_URL", "postgresql://triage:triage@localhost:5432/ai_triage_test")
@@ -10,7 +9,6 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-anahtari-sadece-testler-icin")
 os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434")
 # libpq DSN'i ezen ortam değişkenleri: kilit reddeder ama conftest yine de
 # drop_all öncesi temizler — geliştirici makinesinde kalıntı PGHOSTADDR yüzünden
-# tüm paket pytest.exit(3) ile düşmesin.
 for _ortam_adi in ("PGHOSTADDR", "PGSERVICE"):
     os.environ.pop(_ortam_adi, None)
 if os.environ.get("PGPORT") not in (None, "5432"):
@@ -38,9 +36,6 @@ def test_motoru():
     """Test veritabanına tek bir motor açar ve şemayı bir kez kurar."""
     # Güvenlik kilidi: aşağıdaki drop_all bir şemayı tamamen siler ve
     # os.environ.setdefault, DATABASE_URL zaten tanımlıysa (CI, docker compose)
-    # hiçbir şey yapmaz. Motora dokunmadan önce hedefi doğruluyoruz.
-    # Kararın kendisi tests/yardimcilar/db_kilidi.py'de ve orada ayrıca test
-    # ediliyor; burada yalnızca sonucu uygulanıyor.
     guvenli, sebep = hedef_guvenli_mi(settings.database_url)
     if not guvenli:
         pytest.exit(
@@ -67,7 +62,6 @@ def db_oturum(test_motoru):
         autocommit=False,
         # KRİTİK: /ai/analiz içindeki _kaydet() db.commit() çağırıyor. Bu ayar
         # olmadan o commit dış işlemi kapatır, aşağıdaki rollback etkisiz kalır
-        # ve testler birbirine veri sızdırır.
         join_transaction_mode="create_savepoint",
     )
     oturum = Oturum()
@@ -88,7 +82,6 @@ def istemci(db_oturum):
     app.dependency_overrides[get_db] = _test_oturumu
     # raise_server_exceptions=False: global exception handler'ın ürettiği 500
     # yanıtı test edilebilsin diye. Varsayılan davranış istisnayı yeniden
-    # fırlatır ve handler'ın çıktısı hiç görülmez.
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
@@ -136,12 +129,7 @@ def yetkili_baslik(kullanici_uret, jeton_uret):
 
 @pytest.fixture(autouse=True)
 def hiz_sinirlarini_sifirla():
-    """Her testten önce hız sayaçlarını temizler.
-
-    TestClient her istekte aynı IP'yi kullanıyor. Sıfırlanmazsa bir testin
-    tükettiği kota diğerini 429'a düşürür ve hata "güvenlik çalışıyor" değil
-    "test altyapısı bozuldu" biçiminde görünür — teşhisi zor bir sınıf.
-    """
+    """Her testten önce hız sayaçlarını temizler."""
     from app.utils.hiz_sinirlayici import (
         genel_sinirlayici,
         giris_ip_sinirlayici,
@@ -151,7 +139,6 @@ def hiz_sinirlarini_sifirla():
     giris_sinirlayici.sifirla()
     # Giriş ucunun IP katmanı da sıfırlanmalı: unutulursa bir testin harcadığı
     # hacim diğerini 429'a düşürür ve hata tam da yukarıda anlatılan
-    # "test altyapısı bozuldu" biçiminde görünür.
     giris_ip_sinirlayici.sifirla()
     genel_sinirlayici.sifirla()
     yield

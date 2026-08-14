@@ -1,9 +1,4 @@
-"""Koleksiyonun ayarlardaki çok dilli gömme modeliyle açıldığını dondurur.
-
-ChromaDB'nin varsayılan gömme modeli İngilizcedir; Türkçe sorguda anlamsız vektör
-üretir ve reranker doğru dokümanı hiç görmez. Bu test o varsayılana geri
-dönülmesini engeller.
-"""
+"""Koleksiyonun ayarlardaki çok dilli gömme modeliyle açıldığını dondurur."""
 
 import chromadb
 import pytest
@@ -43,9 +38,6 @@ def sahte_chromadb(monkeypatch):
 
     # Yama KAYNAĞIN kendisine uygulanıyor, uç modülün takma adına değil:
     # chroma_service bu iki adı artık modül düzeyinde tutmuyor, get_collection()
-    # ve _gomme_fonksiyonu() çağrı anında import ediyor (tembelleştirme, K2).
-    # Çağrı anındaki import sys.modules'ten çözüldüğü için gerçek modül nesnesi
-    # üzerindeki yama görülüyor.
     monkeypatch.setattr(chromadb, "HttpClient", _istemci_uret)
     monkeypatch.setattr(
         embedding_functions,

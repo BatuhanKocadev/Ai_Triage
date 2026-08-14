@@ -1,10 +1,4 @@
-"""doctor_reviews tablosu
-
-Revision ID: 72dffb9e5194
-Revises: 7219b20bb9b5
-Create Date: 2026-08-03 11:29:46.750838
-
-"""
+"""doctor_reviews tablosu"""
 from typing import Sequence, Union
 
 from alembic import op

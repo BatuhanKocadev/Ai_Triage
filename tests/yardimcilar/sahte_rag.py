@@ -18,13 +18,7 @@ class SahteKoleksiyon:
 
 
 class _SahteReranker:
-    """predict() çağrısına önceden belirlenmiş OLASILIK skorları döndürür.
-
-    Gerçek CrossEncoder.predict() modelin Sigmoid aktivasyonunu zaten uyguladığı
-    için [0,1] aralığında olasılık döndürür. Sahte bunu birebir yansıtmalı —
-    logit ölçeğinde değer döndürdüğü sürece çift sigmoid hatası testlerden
-    kaçabiliyordu.
-    """
+    """predict() çağrısına önceden belirlenmiş OLASILIK skorları döndürür."""
 
     def __init__(self, skorlar: list[float]):
         self.skorlar = skorlar

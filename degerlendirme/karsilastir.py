@@ -1,16 +1,4 @@
-"""Gün 24 önce/sonra tablosu — birden fazla koşum JSON'unu ortalar.
-
-Kullanım (repo kökünden):
-
-    .venv\\Scripts\\python.exe -m degerlendirme.karsilastir \\
-        --once degerlendirme/sonuclar/2026-08-13.json \\
-        --sonra degerlendirme/sonuclar/2026-08-14-kosum1.json \\
-                degerlendirme/sonuclar/2026-08-14-kosum2.json \\
-                degerlendirme/sonuclar/2026-08-14-kosum3.json
-
-Gürültü tabanı ~5,3 puan (`tur_04`); manşet ortalama farkın bu tabanın
-üstünde/içinde olduğunu açıkça yazar. Uydurma sayı basılmaz.
-"""
+"""Gün 24 önce/sonra tablosu — birden fazla koşum JSON'unu ortalar."""
 from __future__ import annotations
 
 import argparse

@@ -1,8 +1,4 @@
-"""ORM modelleri.
-
-Alembic'in autogenerate'i ve SQLAlchemy'nin ilişki çözümlemesi tüm modellerin
-import edilmiş olmasını gerektirir; tek yerden toplanıyor.
-"""
+"""ORM modelleri."""
 
 from app.models.doctor_review import DoctorReview
 from app.models.user import User

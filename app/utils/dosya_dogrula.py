@@ -1,10 +1,4 @@
-"""Yüklenen dosyanın uzantısını, boyutunu ve gerçek içeriğini doğrular.
-
-Uzantıya güvenmek yetmez: saldırgan yürütülebilir bir dosyayı .pdf diye
-adlandırabilir. Bu yüzden dosyanın baş baytlarındaki imza da kontrol ediliyor.
-Kütüphane kullanılmadı (tasarım K4): yalnızca üç biçim destekleniyor ve
-python-magic Windows'ta ayrıca libmagic ikilisi istiyor.
-"""
+"""Yüklenen dosyanın uzantısını, boyutunu ve gerçek içeriğini doğrular."""
 
 import io
 import zipfile
@@ -16,11 +10,6 @@ from app.utils.logger import logger
 
 # Biçimlerin dosya başındaki imzaları. DOCX aslında bir ZIP arşividir;
 # yalnızca PK imzası yetmez — aşağıda Content_Types ile sıkılaştırılır.
-# "txt" bilerek None ile kayıtlı (tasarım K4 devamı, Görev 3 düzeltmesi):
-# `IMZALAR.get(uzanti)` yerine `uzanti not in IMZALAR` kontrolü yapılıyor,
-# böylece yeni bir uzantı `izinli_uzantilar` ayarına eklenip IMZALAR'a
-# eklenmesi unutulursa imza kontrolü sessizce atlanmak yerine dosya
-# fail-closed biçimde reddedilir.
 IMZALAR = {
     "pdf": b"%PDF-",
     "docx": b"PK\x03\x04",
@@ -29,8 +18,6 @@ IMZALAR = {
 
 # Reddetme mesajı bilerek tek ve genel (tasarım K5): saldırgana hangi kontrolü
 # aştığını söylemek, kontrolü aşmasını kolaylaştırır. Ayrım yalnızca sunucu
-# log'unda tutulur (K5'in log ayağı) — her ret dalı hangi kontrolün
-# tetiklendiğini, dosya adını ve boyutu logger.warning ile kaydeder.
 GENEL_RET = "Desteklenmeyen dosya"
 
 
@@ -45,11 +32,7 @@ def max_upload_bayt() -> int:
 
 
 def _docx_zip_mi(icerik: bytes) -> bool:
-    """DOCX: ZIP olmalı ve Office Open XML Content_Types taşımalı.
-
-    Yalnızca PK imzası herhangi bir ZIP'i (ör. .jar, rastgele arşiv) kabul
-    ederdi; Content_Types yoksa reddedilir.
-    """
+    """DOCX: ZIP olmalı ve Office Open XML Content_Types taşımalı."""
     try:
         with zipfile.ZipFile(io.BytesIO(icerik)) as zf:
             return "[Content_Types].xml" in zf.namelist()

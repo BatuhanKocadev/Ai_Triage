@@ -1,12 +1,4 @@
-"""Hız sınırlayıcının kendi davranışını dondurur.
-
-Uç testleri sınırlayıcının KULLANILDIĞINI gösterir; bu testler DOĞRU ÇALIŞTIĞINI.
-İkisi birbirinin yerine geçmez — Gün 17+18'de mutasyonla ölçülen kusur tam olarak
-bu ayrımın atlanmasıydı.
-
-Saat enjekte ediliyor: gerçek zamana bağlı test, pencere kaymasını ya hiç
-sınayamaz ya da rastgele kırılır.
-"""
+"""Hız sınırlayıcının kendi davranışını dondurur."""
 
 from app.utils.hiz_sinirlayici import HizSinirlayici
 
@@ -96,7 +88,6 @@ def test_bayat_anahtarlar_temizlenir():
 
 # --- Kontrol ile kaydetmenin ayrıldığı yol (giriş ucu, 10 Ağustos 2026) ---
 # /auth/login "yalnızca başarısız denemeyi say" diyebilmek için tek çağrıda
-# hem bakıp hem sayan izin_ver()'i kullanamıyor; aşağıdaki testler o ayrımı dondurur.
 
 
 def test_izin_var_mi_kota_tuketmez():
@@ -139,7 +130,6 @@ def test_istegi_kaydet_kotayi_tuketir():
 def test_izin_var_mi_pencere_kayinca_yeniden_izin_verir():
     # Kritik: kontrol yolu bayat kayıtları düşürmezse kotasını dolduran kullanıcı
     # BİR DAHA HİÇ giremez — kaydetme yolu artık yalnızca başarısızlıkta
-    # çalıştığı için kuyruğu temizleyecek başka çağrı kalmıyor.
     saat = SahteSaat()
     sinirlayici = HizSinirlayici(limit=1, pencere_sn=60, saat=saat)
     sinirlayici.istegi_kaydet("ayse")
@@ -153,7 +143,6 @@ def test_izin_var_mi_pencere_kayinca_yeniden_izin_verir():
 def test_istegi_kaydet_bayat_kayitlari_kuyruktan_dusurur():
     # Kaydetme yolu kuyruğu kaydırmazsa aynı anahtarın kayıtları pencereler
     # boyunca birikir: kota `izin_var_mi` okurken doğru hesaplansa bile kuyruk
-    # sınırsız büyür. Uzun süre parolasını yanlış giren tek bir kullanıcı yeter.
     saat = SahteSaat()
     sinirlayici = HizSinirlayici(limit=5, pencere_sn=60, saat=saat)
 
@@ -168,8 +157,6 @@ def test_istegi_kaydet_bayat_kayitlari_kuyruktan_dusurur():
 def test_izin_var_mi_supurmeyi_tetikler():
     # Kontrol yolu bir anahtarın kuyruğunu BOŞALTABİLİYOR. Süpürme yalnızca
     # kaydetme yolunda kalsaydı, boşalan kayıt başka bir çağrı eşiği aşana kadar
-    # sözlükte asılı kalırdı. Anahtar uzayı saldırganın seçtiği kullanıcı
-    # adlarından oluştuğu için bu birikim doğrudan bellek baskısına dönüşür.
     saat = SahteSaat()
     sinirlayici = HizSinirlayici(limit=5, pencere_sn=60, saat=saat, temizlik_esigi=2)
     sinirlayici.istegi_kaydet("ayse")

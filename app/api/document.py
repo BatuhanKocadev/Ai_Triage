@@ -5,11 +5,6 @@ import pdfplumber
 import docx
 # DİKKAT: `langchain_text_splitters` bilerek modül düzeyinde import EDİLMİYOR
 # (aşağıda upload_document içinde). Paketin __init__.py'si
-# `langchain_text_splitters.sentence_transformers`i her hâlükârda import ediyor,
-# o da kuruluysa `sentence_transformers` -> `transformers` -> `torch` zincirini
-# çekiyor. Ölçüldü: modül düzeyinde bırakıldığında `app.main` import'u tek başına
-# 25 saniye sürüyordu (tasarım K2). pdfplumber ve docx hafif oldukları için
-# yukarıda kalıyor.
 from app.utils.logger import logger
 from app.models.user import User
 from app.services.chroma_service import get_collection
@@ -77,7 +72,6 @@ async def upload_document(
     try:
         # Starlette UploadFile.size gövde çalışmadan önce dolu olabilir; 413'ü
         # 2 GB RAM tahsis etmeden önce vermek için read()'ten ÖNCE bakıyoruz.
-        # size None ise (bazı istemciler) yalnızca read sonrası kontrol kalır.
         if file.size is not None and file.size > max_upload_bayt():
             logger.warning(
                 f"Dosya reddedildi (boyut asimi, read oncesi): "
@@ -119,12 +113,6 @@ async def upload_document(
 
         # Bölücü BURADA import ediliyor, modül düzeyinde değil: import zinciri
         # torch'a kadar iniyor ve uygulama açılışını ~25 saniye bekletiyordu.
-        #
-        # TAKAS AÇIK OLSUN: bu maliyet kaybolmadı, YER DEĞİŞTİRDİ. Yeniden
-        # başlatmadan sonraki İLK yükleme o ~25 saniyeyi olay döngüsünde öder,
-        # eskiden açılışta ödeniyordu. Süreç başına bir kez ve uç yalnızca
-        # admin'e açık; ayrıca depo bu deseni zaten kabul ediyor
-        # (`get_reranker()` istek yolunda 2 GB'lık model yüklüyor).
         from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -171,7 +159,6 @@ async def upload_document(
 
         # Yeni sürümde karşılığı olmayan eski chunk'lar siliniyor (hayalet chunk).
         # upsert yalnızca kendisine verilen id'lere dokunduğu için, daha kısa bir
-        # sürüm yüklendiğinde bunlar aksi hâlde koleksiyonda kalırdı.
         artakalan = sorted(eski_idler - set(id_list))
         if artakalan:
             koleksiyon.delete(ids=artakalan)
@@ -195,11 +182,7 @@ async def upload_document(
 async def dokumanlari_listele(
     current_user: User = Depends(require_admin_role)
 ):
-    """Yüklenen dokümanları kaynak dosya adına göre gruplayıp döndürür.
-
-    Bilgi tabanında ne olduğunu görmenin tek yolu bu uç; yol haritasının
-    "yüklenen doküman sayısı" metriği buradan okunuyor.
-    """
+    """Yüklenen dokümanları kaynak dosya adına göre gruplayıp döndürür."""
     kayitlar = get_collection().get(include=["metadatas"])
     ustveriler = kayitlar.get("metadatas") or []
 
@@ -233,11 +216,7 @@ async def dokumani_sil(
     kaynak: str = Query(..., min_length=1, description="Silinecek dosyanın adı"),
     current_user: User = Depends(require_admin_role)
 ):
-    """Bir dosyaya ait bütün chunk'ları bilgi tabanından siler.
-
-    Dosya adı yol parametresi değil sorgu parametresi olarak alınıyor (K2):
-    dosya adlarında nokta, boşluk ve Türkçe karakter var.
-    """
+    """Bir dosyaya ait bütün chunk'ları bilgi tabanından siler."""
     koleksiyon = get_collection()
     mevcut = koleksiyon.get(where={"source": kaynak})
     silinecek = mevcut.get("ids") or []

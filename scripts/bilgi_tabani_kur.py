@@ -1,19 +1,4 @@
-"""Bilgi tabanını sıfırdan kurar: koleksiyonu düşürüp derlemeyi yeniden yükler.
-
-Gömme modeli değiştiğinde ZORUNLUDUR: eski vektörler farklı bir modelle üretildiği
-için yeni sorgu vektörleriyle karşılaştırılamaz. Derleme değiştiğinde de temiz bir
-başlangıç için kullanılır.
-
-Backend'in ayakta olması gerekir; yükleme gerçek /document/upload ucundan geçer.
-
-İki ayrı port var ve karıştırılması bu script'i sessizce yanlış işe sokuyor:
-backend 8000'de, ChromaDB genelde 8001'de. `.env` yoksa `config.py` varsayılanı
-`chroma_port=8000` olduğu için script backend'in portuna Chroma diye bağlanmaya
-çalışır; bu yüzden aşağıda bağlantı açıkça heartbeat ile kanıtlanıyor.
-
-Kullanım (proje kökünden):
-    CHROMA_PORT=8001 .venv\\Scripts\\python.exe -m scripts.bilgi_tabani_kur
-"""
+"""Bilgi tabanını sıfırdan kurar: koleksiyonu düşürüp derlemeyi yeniden yükler."""
 
 import io
 import sys
@@ -48,12 +33,7 @@ def yonetici_basligi():
 
 
 def backend_saglik_kontrolu():
-    """Koleksiyonu düşürmeden önce backend'in ayakta olduğunu doğrular.
-
-    Backend kapalıyken düşürme yapılırsa bilgi tabanı boş kalır ve geri dönüş
-    olmaz; bu yüzden ulaşılamıyorsa ya da 200 dönmüyorsa koleksiyona hiç
-    dokunmadan anlaşılır bir mesajla çıkılır.
-    """
+    """Koleksiyonu düşürmeden önce backend'in ayakta olduğunu doğrular."""
     try:
         yanit = requests.get(f"{BACKEND}/health/", timeout=5)
     except requests.exceptions.RequestException as baglanti_hatasi:
@@ -65,14 +45,7 @@ def backend_saglik_kontrolu():
 
 
 def kimlik_on_ucusu(baslik: dict) -> None:
-    """Koleksiyonu düşürmeden önce jetonun backend tarafından kabul edildiğini doğrular.
-
-    Tek çağrıda iki şeyi birden sınar: script'in imzaladığı JWT anahtarı
-    backend'inkiyle aynı mı ve `admin` satırı veritabanında var mı. Bu kontrol
-    olmadan koleksiyon düşürülüp ardından bütün yüklemeler 401 alıyor ve bilgi
-    tabanı boş kalıyordu. `/document/liste` bilerek kullanılmıyor: o uç
-    `get_collection()` çağırıp koleksiyonu boşuna açar.
-    """
+    """Koleksiyonu düşürmeden önce jetonun backend tarafından kabul edildiğini doğrular."""
     try:
         yanit = requests.get(f"{BACKEND}/auth/me", headers=baslik, timeout=10)
     except requests.exceptions.RequestException as istek_hatasi:
@@ -90,11 +63,7 @@ def kimlik_on_ucusu(baslik: dict) -> None:
 
 
 def koleksiyonu_dusur():
-    """Eski vektörleri tamamen siler; yeni model farklı bir anlam uzayı kullanıyor.
-
-    Kurduğu Chroma istemcisini geri döndürür: yükleme sonrası doğrulama aynı
-    bağlantıyı kullanır.
-    """
+    """Eski vektörleri tamamen siler; yeni model farklı bir anlam uzayı kullanıyor."""
     adres = f"{settings.chroma_host}:{settings.chroma_port}"
 
     # Silmeden ÖNCE bağlantı kanıtlanıyor. HttpClient yanlış porta kurulduğunda
@@ -128,13 +97,7 @@ def koleksiyonu_dusur():
 
 
 def gomme_yapilandirmasini_dogrula(istemci) -> None:
-    """Yükleme bittikten sonra koleksiyonu geri okuyup gömmenin doğru modelle yapıldığını kanıtlar.
-
-    `/health/` ucunun 200 dönmesi hangi KODUN koştuğunu kanıtlamaz: backend eski
-    kodla ayaktaysa yükleme başarıyla tamamlanır, script "0 hata" basar ve bilgi
-    tabanı sessizce eski İngilizce modelle dolar. Tek gerçek kanıt, koleksiyona
-    yazılmış vektörlerin kendisidir.
-    """
+    """Yükleme bittikten sonra koleksiyonu geri okuyup gömmenin doğru modelle yapıldığını kanıtlar."""
     try:
         # embedding_function=None: yalnizca yapilandirma okunacak, 2 GB'lik model
         # bu surecte bosuna yuklenmesin (ve kayitli EF ile catisma dogmasin).

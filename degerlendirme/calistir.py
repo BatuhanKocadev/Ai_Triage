@@ -1,23 +1,4 @@
-"""Gün 23 ölçüm sürücüsü.
-
-Senaryoları gerçek HTTP uçlarına gönderir, sonuçları `olcum.py` ile
-değerlendirir ve `sonuclar/` altına tarihli rapor yazar. `app` modülünü
-import etmez (K5): ölçülen şey gerçek kullanım yoludur.
-
-Kullanım (repo kökünden, `.env`'in bulunduğu checkout'tan):
-
-    .venv\\Scripts\\python.exe -m degerlendirme.calistir
-
-**Modül olarak çağrılmak zorunda.** `python degerlendirme/calistir.py` biçimi
-`sys.path`'e repo kökünü değil `degerlendirme/` klasörünü koyar ve import
-patlar; `sys.path.insert` ile elle yamamak, spec'in kendi işaret ettiği
-`scripts/*.py` tuzağını tekrarlamak olurdu (Görev 1 incelemesinin kararı).
-
-Bu dosya birim testi almıyor (K6): saf olmayan tek parça budur ve doğrulaması
-Görev 8'deki gerçek koşumdur. Bu yüzden karar verilen her şey — payda kuralı,
-kaynak ayrıştırma, A/B/C tasnifi — burada değil, testli `olcum.py` çekirdeğinde
-durur; sürücü yalnızca HTTP konuşur ve basar.
-"""
+"""Gün 23 ölçüm sürücüsü."""
 from __future__ import annotations
 
 import json
@@ -86,14 +67,7 @@ def jeton_al(kullanici: str, parola: str) -> str:
 
 
 def on_ucus() -> tuple[str, str, list[dict]]:
-    """Koşum öncesi dört kontrol; biri düşerse hiç başlamayız.
-
-    Gün 20'nin dersi: `/health/` 200 dönmesi kimlik doğrulamasının çalıştığını
-    kanıtlamaz — `bilgi_tabani_kur.py` tam bu yüzden bilgi tabanını
-    boşaltacaktı. Bilgi tabanının boyutu da burada doğrulanıyor: yanlış ya da
-    yarım bir derlemeye karşı ölçülen doğruluk, hatasız görünen ama hiçbir şey
-    ifade etmeyen bir sayıdır.
-    """
+    """Koşum öncesi dört kontrol; biri düşerse hiç başlamayız."""
     try:
         saglik = requests.get(f"{BACKEND}/health/", timeout=10)
     except requests.RequestException as exc:
@@ -124,8 +98,6 @@ def on_ucus() -> tuple[str, str, list[dict]]:
 
     # Ollama ayakta mı? `/health/` sabit bir dize döndürüyor ve LLM hakkında
     # HİÇBİR şey kanıtlamıyor — Gün 20'nin dersi tam buydu. Ollama kapalıyken
-    # her senaryo 502 alır, koşum sonuna kadar yanar ve rapor baştan sona
-    # `olculemedi` çıkar; ön uçuş bunu önlemek için var.
     try:
         etiketler = requests.get(f"{OLLAMA}/api/tags", timeout=10)
         etiketler.raise_for_status()
@@ -146,7 +118,6 @@ def on_ucus() -> tuple[str, str, list[dict]]:
     )
     # Dosya kırılımı çağırana veriliyor ve rapora basılıyor: bilgi tabanının
     # hangi sürümüne karşı ölçtüğümüz aksi hâlde hiçbir yerde kayıtlı olmuyor,
-    # ve "yanik.txt 6 chunk" gibi iddialar depoda kanıtsız kalıyor (M8).
     kirilim = sorted(
         ({"kaynak": k["kaynak"], "chunk_sayisi": k["chunk_sayisi"]} for k in kayitlar),
         key=lambda k: k["kaynak"],
@@ -155,17 +126,7 @@ def on_ucus() -> tuple[str, str, list[dict]]:
 
 
 def _429_bekleyerek_gonder(gonder, aciklama: str, deneme_sayisi: int = 4):
-    """429 alınca artan aralıklarla bekler; sınırı kapatmıyoruz (K10).
-
-    Hız sınırı ölçüm için gevşetilirse ölçülen yol üretimdeki yol olmaz.
-
-    Ağ istisnaları burada YAKALANIYOR ve `(None, hata_metni)` olarak dönüyor.
-    Yakalanmasaydı tek bir `ReadTimeout` — yerel Ollama soğuk modelde 90 sn'yi
-    bulabiliyor — `seti_kosur`'u aşıp `main`'den ham traceback olarak çıkardı:
-    kalan senaryolar hiç denenmez, rapor hiç yazılmaz ve saatlerce süren bir
-    koşum yalnızca ara dosyayla kalırdı. Spec'in hata tablosu ve K15 "senaryo
-    hata olarak kaydedilir, koşum devam eder" diyor; bu, o sözü tutan yer.
-    """
+    """429 alınca artan aralıklarla bekler; sınırı kapatmıyoruz (K10)."""
     bekleme = 20
     son_hata = "tükenen 429 denemesi"
     for deneme in range(deneme_sayisi):
@@ -227,8 +188,6 @@ def senaryoyu_sor(senaryo: Senaryo, jeton: str) -> Sonuc:
         cikan_tetkikler=veri.get("onerilen_tetkikler") or [],
         # ZORUNLU AYIKLAMA: uç `sources`'ı "[Kaynak: dosya] belge" biçiminde
         # döndürüyor. Ham yazılırsa beklenen kaynak hiçbir zaman bulunamaz,
-        # her yanlış cevap A kutusuna ve her doğru cevap "şanslı doğru"ya
-        # yazılır — ve hiçbir test kırılmaz (Sonuc.sources sözleşmesi).
         sources=kaynak_adlarini_ayikla(veri.get("sources") or []),
         # Ziyaret silinmiyor: video demosunun denetim izi buradan bulunacak (K14).
         visit_id=str(visit_id) if visit_id else None,
@@ -288,23 +247,12 @@ def seti_kosur(senaryolar: list[Senaryo], jeton: str, etiket: str) -> list[Sonuc
 
 
 def _yuzde(oran: float, payda: int) -> str:
-    """Oranı yüzde olarak biçimler; payda sıfırsa 'n/d' basar.
-
-    Boş kümede `_oran` 0.0 döndürüyor ve "%0.0" olarak basılsaydı
-    "cevapladıklarının hiçbirini bilememiş" diye okunurdu — oysa anlamı
-    "hiç cevaplamamış" (Görev 5 incelemesi, M4).
-    """
+    """Oranı yüzde olarak biçimler; payda sıfırsa 'n/d' basar."""
     return TANIMSIZ if not payda else f"%{oran * 100:.1f}"
 
 
 def _ondalik(deger: float | None, payda: int) -> str:
-    """Ondalık bir ortalamayı biçimler; payda sıfırsa 'n/d' basar.
-
-    Jaccard, `_yuzde`nin kapattığı M4 sınıfının son kalıntısıydı: bütün kapsam
-    içi senaryolar eşik altında kalırsa ortalama hiç hesaplanamaz ve "0.00"
-    basılırsa "model tamamen yanlış tetkik önerdi" diye okunur — oysa anlamı
-    "hiç ölçülmedi".
-    """
+    """Ondalık bir ortalamayı biçimler; payda sıfırsa 'n/d' basar."""
     return TANIMSIZ if not payda or deger is None else f"{deger:.2f}"
 
 
@@ -348,13 +296,7 @@ def _ozet_tablosu(o: Ozet) -> list[str]:
 
 
 def _kirilim_tablosu(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> list[str]:
-    """Senaryo kırılımı; beklenen-vs-çıkan tetkikler artefaktı görünür kılsın.
-
-    Tetkik adları tam eşitlikle karşılaştırılıyor ("Tam İdrar Tetkiki" ≠ "TİT"),
-    yani Jaccard sistem genelinde düşük okunacak. Sütunlar yan yana basılıyor ki
-    sayıyı okuyan kişi bunun adlandırma artefaktı mı yoksa gerçekten yanlış
-    tetkik mi olduğunu tabloda görebilsin (Görev 6, bulgu B).
-    """
+    """Senaryo kırılımı; beklenen-vs-çıkan tetkikler artefaktı görünür kılsın."""
     satirlar = [
         "| id | Beklenen | Çıkan | Kaynak geldi mi | Kutu | Beklenen tetkikler | Çıkan tetkikler | J |",
         "|---|---|---|---|---|---|---|---|",
@@ -374,7 +316,6 @@ def _kirilim_tablosu(senaryolar: list[Senaryo], sonuclar: list[Sonuc]) -> list[s
         kutu = kok_neden(senaryo, sonuc) or "doğru"
         # Kapsam dışı senaryoda tetkik PUANLANMIYOR (kok_neden ile aynı kural):
         # cevap vermeyi reddetmiş sistemde derecelendirilecek tetkik yoktur.
-        # Sayı basmak, raporun başka yerde "—" dediği şeye değer atfetmek olurdu.
         kapsam_disi = senaryo.beklenen_triage_code == "Belirsiz"
         jaccard = (
             "—"
@@ -395,11 +336,7 @@ def rapor_yaz(
     kirilim: list[dict] | None = None,
     etiket: str | None = None,
 ) -> Path:
-    """Markdown raporu ve ham JSON'u sonuclar/ altına yazar.
-
-    `etiket` verilirse dosya adı `YYYY-AA-GG-<etiket>.{md,json}` olur; Gün 24
-    çoklu koşumları aynı güne çakışmadan yazar.
-    """
+    """Markdown raporu ve ham JSON'u sonuclar/ altına yazar."""
     SONUCLAR.mkdir(parents=True, exist_ok=True)
     bugun = date.today().isoformat()
     dosya_kok = f"{bugun}-{etiket}" if etiket else bugun
@@ -414,7 +351,6 @@ def rapor_yaz(
 
     # Bilgi tabanının parmak izi: bu sayılar HANGİ derlemeye karşı ölçüldü.
     # Derleme değişince retrieval de değişir, yani parmak izi olmayan bir ölçüm
-    # sonradan başka bir ölçümle kıyaslanamaz (Gün 24 tam bunu yapacak).
     if kirilim:
         toplam = sum(k["chunk_sayisi"] for k in kirilim)
         md.append("## Ölçülen bilgi tabanı")
@@ -489,7 +425,6 @@ def rapor_yaz(
             md.append("")
         # Rakam normalizasyonu yok: kullanıcı sayıları kelimeyle yazdı ("Üç
         # gündür") ama whisper "3" yazabilir. Bu tanıma hatası değil ölçüm
-        # artefaktıdır; elle aranmak yerine burada işaretleniyor (Görev 4 notu).
         rakamlilar = [sid for sid, _, metin in satirlar if re.search(r"\d", metin)]
         if rakamlilar:
             md.append(

@@ -29,7 +29,6 @@ def test_izolasyon_denegi_ilk_testte_commit_edilir(db_oturum, kullanici_uret):
 def test_izolasyon_denegi_ikinci_testte_hala_yaratilabilir(db_oturum, kullanici_uret):
     # Bu test, yukarıdaki testten SONRA çalışmalı (dosya içi çalıştırma sırası).
     # Önceki testin commit'i gerçekten kalıcıysa burada unique kısıt ihlali
-    # (IntegrityError) alırız; almamak izolasyonun gerçekten çalıştığını kanıtlar.
     kullanici_uret(kullanici_adi=IZOLASYON_KULLANICI_ADI)
     db_oturum.commit()
 
@@ -44,13 +43,7 @@ def _durumlar(yanit_govdesi: dict) -> dict:
 
 @pytest.mark.entegrasyon
 def test_saglik_ucu_bagimliliklari_raporlar(istemci, monkeypatch):
-    """Kurulum sorunu yaşayan biri tek istekle NEREDE takıldığını görebilmeli.
-
-    Bugüne kadar `/health` sabit bir dize döndürüyordu ve hiçbir bağımlılık
-    hakkında hiçbir şey kanıtlamıyordu. Gün 20'de bilgi tabanını boşaltmaya
-    ramak kalan tuzak tam buydu: `/health` 200 dönüyor diye kimlik
-    doğrulamanın çalıştığı varsayılmıştı.
-    """
+    """Kurulum sorunu yaşayan biri tek istekle NEREDE takıldığını görebilmeli."""
     import app.api.health as saglik
 
     monkeypatch.setattr(saglik, "_postgres_yokla", lambda: (True, "ok"))
@@ -69,12 +62,7 @@ def test_saglik_ucu_bagimliliklari_raporlar(istemci, monkeypatch):
 
 @pytest.mark.entegrasyon
 def test_saglik_ucu_bozuk_bagimliligi_isaretler(istemci, monkeypatch):
-    """Tek bir bağımlılık düştüğünde HANGİSİ olduğu görünmeli, `tumu_ok` False olmalı.
-
-    Yalnızca "hepsi ok" hâli sınansaydı, yoklama fonksiyonu her zaman True
-    dönecek şekilde bozulduğunda hiçbir test kırmızıya dönmezdi — uç yine
-    yararsız hâle gelir ve bunu kimse fark etmezdi.
-    """
+    """Tek bir bağımlılık düştüğünde HANGİSİ olduğu görünmeli, `tumu_ok` False olmalı."""
     import app.api.health as saglik
 
     monkeypatch.setattr(saglik, "_postgres_yokla", lambda: (True, "ok"))
@@ -93,12 +81,7 @@ def test_saglik_ucu_bozuk_bagimliligi_isaretler(istemci, monkeypatch):
 
 @pytest.mark.entegrasyon
 def test_saglik_yoklamalari_istisnayi_yutar(istemci, monkeypatch):
-    """Bir yoklama istisna fırlatırsa uç 500 vermemeli — teşhis aracı çökmemeli.
-
-    Kurulum sırasında bağımlılıklar tanım gereği bozuk olabilir; teşhis için
-    çağrılan ucun o yüzden patlaması, aracı tam ihtiyaç duyulduğu anda
-    kullanılamaz kılar.
-    """
+    """Bir yoklama istisna fırlatırsa uç 500 vermemeli — teşhis aracı çökmemeli."""
     import app.api.health as saglik
 
     def _patla():

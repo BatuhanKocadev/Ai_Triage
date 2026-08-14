@@ -1,13 +1,4 @@
-"""`requirements-ci.txt` ile `requirements.txt` arasındaki sürüm paritesini dondurur.
-
-CI, üretimin kurduğundan farklı bir sürümle koşarsa kanıtladığı şey üretim için
-geçerli olmaz — yeşil bir CI, çalışmayan bir üretim sürümünü örtebilir.
-`requirements-ci.txt` bu sözü başlığında veriyor; bu test onu dayatıyor.
-
-Kapsamı bilinçli olarak dar: yalnızca CI listesindeki paketler denetleniyor.
-Geçişli bağımlılıklar CI listesinde pinli değil (sebebi o dosyanın başlığında
-yazılı), dolayısıyla burada da denetlenemez.
-"""
+"""`requirements-ci.txt` ile `requirements.txt` arasındaki sürüm paritesini dondurur."""
 
 import re
 from pathlib import Path
@@ -19,16 +10,7 @@ PIN_DESENI = re.compile(r"^([A-Za-z0-9._-]+)==([^\s#]+)")
 
 
 def _ad_normalize(ad: str) -> str:
-    """PyPI paket adlarını karşılaştırılabilir biçime indirger.
-
-    `SQLAlchemy` ile `sqlalchemy`, `python_docx` ile `python-docx` aynı pakettir;
-    normalize edilmezse test gerçek bir ayrışma olmadan kırılır ve yanlış alarm,
-    hiç test olmamasından beterdir.
-
-    PEP 503'ün kanonik biçimi: `-`, `_` ve `.` ayırıcılarının hepsi tek bir `-`
-    olur. Nokta da dahil, çünkü `pdfminer.six` gibi adlar mevcut ve ileride
-    `paket.x` / `paket-x` çifti sessiz bir yanlış-negatif üretebilir.
-    """
+    """PyPI paket adlarını karşılaştırılabilir biçime indirger."""
     return re.sub(r"[-_.]+", "-", ad).lower()
 
 

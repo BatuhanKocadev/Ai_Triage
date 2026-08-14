@@ -23,7 +23,6 @@ class Visit(Base):
     vitals = Column(JSON, nullable=True)
     # Şikayetin geliş kanalı ("ses"/"metin"): doktor transkript hatası ihtimalini
     # bilmeli, rapor da "vakaların %X'i sesli girildi" diyebilmeli.
-    # server_default sayesinde tablodaki eski satırlar migration'da "metin" alır.
     giris_tipi = Column(String(10), default="metin", server_default="metin", nullable=False)
     # bekliyor -> incelendi -> tamamlandi
     status = Column(String(20), default="bekliyor", nullable=False, index=True)
@@ -64,7 +63,6 @@ class AIRecommendation(Base):
         nullable=False,
         # unique: bir ziyaretin en fazla bir önerisi olur. Visit.recommendation
         # ilişkisi zaten uselist=False diyordu; kısıt onu veritabanında da
-        # dayatıyor (Gün 22). unique zaten index oluşturur, ayrıca index=True gerekmez.
         unique=True,
     )
     triage_code = Column(String(20), nullable=False)

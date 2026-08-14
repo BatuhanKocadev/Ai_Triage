@@ -2478,10 +2478,11 @@ değiştirmedi, ama getirilen protokol kriterini ezerek bir Kırmızı'yı düş
 altyapısının çalıştığının kanıtıdır — Gün 23'ün gürültü tabanı ölçülmemiş
 olsaydı bu karar verilemezdi.
 
-## Borç kapatma turu — DEVIR §9 gerçek defektler (14 Ağustos 2026)
+## Borç kapatma turu — birikmiş kod defektleri (14 Ağustos 2026)
 
-Devir brief §9’daki **kod defektleri** `gun24-prompt-olcum` worktree’sinde
-kapatıldı (ölçüm/etiket borçları ve bilinçli tasarım sınırları ayrı):
+Gün 19–22 arasında biriken ve bu belgenin altı ayrı "devredilenler" bölümünde
+kayıtlı olan **kod defektleri** `gun24-prompt-olcum` worktree’sinde kapatıldı
+(ölçüm/etiket borçları ve bilinçli tasarım sınırları ayrı tutuldu):
 
 | Madde | Kapanış |
 |---|---|

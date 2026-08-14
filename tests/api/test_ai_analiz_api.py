@@ -77,14 +77,7 @@ def test_basarili_analiz_200_ve_sema_alanlari(istemci, yetkili_baslik, esik_ustu
 def test_few_shot_ornekleri_prompta_enjekte_edilir(
     istemci, yetkili_baslik, monkeypatch
 ):
-    """Few-shot enjeksiyonu `settings.few_shot_aktif`e bağlı ve VARSAYILAN KAPALI.
-
-    Kapalı olması ölçümle alınmış bir karardır (14 Ağustos 2026): açıkken model,
-    retrieval'ın getirdiği ve önünde duran protokol kriterini örneklere bakarak
-    eziyordu — `tur_11` izole deneyde açıkken 0/6, kapalıyken 6/6 Kırmızı verdi.
-    Bu test kapının iki yönünü de bağlıyor; yalnızca "kapalı" tarafı sınansaydı
-    bayrak etkisiz hâle geldiğinde (ör. koşul silinince) hiçbir test kırılmazdı.
-    """
+    """Few-shot enjeksiyonu `settings.few_shot_aktif`e bağlı ve VARSAYILAN KAPALI."""
     yakalanan = {}
 
     def _yakala(system_prompt: str, user_prompt: str, **kwargs):

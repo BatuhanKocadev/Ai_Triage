@@ -42,8 +42,6 @@ app.add_middleware(
     allow_origins=[k.strip() for k in settings.cors_origins.split(",") if k.strip()],
     # False: kimlik doğrulama Bearer başlığıyla yapılıyor, projede hiç çerez yok —
     # yani açık olmasının hiçbir faydası yok, buna karşılık ayar "*" yapıldığında
-    # Starlette her origin'i "credentials: true" ile yankılar ve elde edilebilecek
-    # en kötü CORS yapılandırması ortaya çıkardı (10 Ağustos 2026).
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,11 +49,7 @@ app.add_middleware(
 
 
 def _cors_basliklari(request: Request) -> dict[str, str]:
-    """Global 500 handler CORS middleware'inin dışında doğduğu için başlıkları elle ekler.
-
-    ServerErrorMiddleware CORS'un dışında çalışır; tarayıcı istemcisi aksi hâlde
-    izleme_kodu'nu okuyamaz. allow_credentials=False ile uyumlu tutuluyor.
-    """
+    """Global 500 handler CORS middleware'inin dışında doğduğu için başlıkları elle ekler."""
     origin = request.headers.get("origin")
     if not origin:
         return {}
@@ -71,12 +65,7 @@ def _cors_basliklari(request: Request) -> dict[str, str]:
 
 @app.exception_handler(Exception)
 async def beklenmeyen_hata_yakalayici(request: Request, hata: Exception):
-    """Beklenmeyen istisnada tam izi log'a yazar, istemciye yalnızca kod döner.
-
-    Yığın izi ve dosya yolları istemciye sızarsa saldırgan iç yapıyı öğrenir.
-    İzleme kodu, sızıntı yaratmadan log'daki satırla eşleşmeyi mümkün kılıyor:
-    kullanıcı "şu kodu aldım" der, operatör log'da o kodu arar.
-    """
+    """Beklenmeyen istisnada tam izi log'a yazar, istemciye yalnızca kod döner."""
     izleme_kodu = uuid.uuid4().hex[:8]
     logger.exception(
         f"[{izleme_kodu}] Beklenmeyen hata: {request.method} {request.url.path}"

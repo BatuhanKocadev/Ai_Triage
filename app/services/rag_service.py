@@ -2,7 +2,6 @@
 
 # Tip açıklamalarının çalışma zamanında değerlendirilmesini kapatır. ZORUNLU:
 # aşağıdaki `_reranker: CrossEncoder | None` satırı, CrossEncoder modül düzeyinde
-# import EDİLMEDİĞİ için aksi hâlde NameError verir (tasarım K3).
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -23,8 +22,6 @@ def get_reranker() -> CrossEncoder:
     if _reranker is None:
         # torch ve sentence_transformers BURADA import ediliyor, modül düzeyinde
         # değil: modül düzeyinde import `app.main` açılışına ~25 saniye ekliyordu
-        # (28,5 sn → 1,85 sn ölçüldü) ve CI ortamını ~1,2 GB büyütüyordu (torch
-        # tek başına 497 MB). Tasarım K2.
         import torch
         from sentence_transformers import CrossEncoder
 
@@ -32,7 +29,6 @@ def get_reranker() -> CrossEncoder:
         logger.info(f"Reranker yükleniyor: {settings.reranker_model} ({device})")
         # Aktivasyon açıkça veriliyor: predict()'in olasılık döndürmesi aksi hâlde
         # modelin config dosyasına bağlı kalır. Model ya da kütüphane varsayılanı
-        # değişirse predict() sessizce ham logit döndürür ve her eşik anlamsızlaşır.
         _reranker = CrossEncoder(
             settings.reranker_model,
             device=device,

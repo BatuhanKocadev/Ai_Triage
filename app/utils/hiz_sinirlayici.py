@@ -1,12 +1,4 @@
-"""Bellek içi kayan pencere hız sınırlayıcı ve onu uçlara bağlayan bağımlılık.
-
-Kütüphane yerine elle yazıldı (tasarım K1): yeni bağımlılık requirements ve Docker
-imajına yayılırdı, buna karşılık sayaç kırk satır. Asıl belirleyici test izolasyonu
-oldu — burada `sifirla()` bir metot, kütüphanede iç depolamaya elle müdahale.
-
-Sayaçlar süreç belleğinde yaşıyor. Tek uvicorn süreci çalıştığı için bu doğru
-çözüm; çok süreçli bir dağıtımda paylaşılan bir depo (Redis vb.) gerekir.
-"""
+"""Bellek içi kayan pencere hız sınırlayıcı ve onu uçlara bağlayan bağımlılık."""
 
 import time
 from collections import deque
@@ -56,12 +48,7 @@ class HizSinirlayici:
         return True
 
     def izin_var_mi(self, anahtar: str) -> bool:
-        """Kota dolmuş mu diye SALT BAKAR; hiçbir şey kaydetmez.
-
-        `izin_ver()` bakmakla saymayı tek çağrıda birleştirdiği için "yalnızca
-        başarısız denemeyi say" kuralı onunla ifade edilemiyor; giriş ucu bu
-        yüzden önce buraya bakıp sonra ayrıca `istegi_kaydet()` çağırıyor.
-        """
+        """Kota dolmuş mu diye SALT BAKAR; hiçbir şey kaydetmez."""
         simdi = self._saat()
         # get(): olmayan anahtar için kayıt AÇMIYOR — salt kontrol sözlüğü
         # şişirmemeli, yoksa her denenen kullanıcı adı kalıcı iz bırakırdı.
@@ -70,22 +57,16 @@ class HizSinirlayici:
             return True
         # Bayat kayıtlar burada da düşürülmeli: kaydetme yolu artık yalnızca
         # başarısızlıkta çalıştığı için kuyruğu kaydıracak başka çağrı yok ve
-        # temizlenmezse kotasını dolduran kullanıcı bir daha hiç giremezdi.
         while kuyruk and simdi - kuyruk[0] >= self.pencere_sn:
             kuyruk.popleft()
         # Süpürme bu yolda da tetikleniyor: kontrol yolu bir anahtarın kuyruğunu
         # boşaltabiliyor ve temizlik yalnızca kaydetme yolunda kalsaydı o boş
-        # kayıt, başka bir çağrı eşiği aşana kadar sözlükte asılı kalırdı.
         if len(self._kayitlar) > self.temizlik_esigi:
             self._bayat_anahtarlari_temizle(simdi)
         return len(kuyruk) < self.limit
 
     def istegi_kaydet(self, anahtar: str) -> None:
-        """Bir denemeyi kotaya SALT YAZAR; kabul edilir mi diye bakmaz.
-
-        Limit kontrolü çağırana ait (bkz. `izin_var_mi`); burada koşulsuz
-        yazılıyor ki giriş ucu yalnızca başarısız denemeleri sayabilsin.
-        """
+        """Bir denemeyi kotaya SALT YAZAR; kabul edilir mi diye bakmaz."""
         simdi = self._saat()
         kuyruk = self._kayitlar.setdefault(anahtar, deque())
         # Kuyruk zaman sırasında olduğu için pencereden çıkanları baştan atmak yeter.
@@ -94,7 +75,6 @@ class HizSinirlayici:
         kuyruk.append(simdi)
         # Bayat anahtar temizliği bu yolda da yapılmalı: giriş ucu artık
         # `izin_ver()` çağırmıyor, temizlik yalnızca orada kalsaydı sözlük
-        # denenen her kullanıcı adıyla sınırsız büyürdü.
         if len(self._kayitlar) > self.temizlik_esigi:
             self._bayat_anahtarlari_temizle(simdi)
 
@@ -102,7 +82,6 @@ class HizSinirlayici:
         """Kuyruğu boş ya da son kaydı pencere dışında kalan anahtarları siler."""
         # Kuyruk zaman sırasıyla dolduğu için en yeni kayıt (kuyruk[-1]) bile
         # pencere dışındaysa tüm kuyruk bayattır; aktif anahtar asla silinmez
-        # çünkü kendi son kaydı biraz önce eklendi.
         bayat_anahtarlar = [
             anahtar
             for anahtar, kuyruk in self._kayitlar.items()
@@ -131,11 +110,7 @@ giris_ip_sinirlayici = HizSinirlayici(
 
 
 def hiz_siniri(sinirlayici: HizSinirlayici):
-    """Verilen sınırlayıcıyı uygulayan bir FastAPI bağımlılığı üretir.
-
-    Bağımlılık olarak yazıldı, middleware olarak değil (tasarım K2): yol haritası
-    uç bazında farklı sınır istiyor ve hangi ucun korunduğu böylece kodda görünür.
-    """
+    """Verilen sınırlayıcıyı uygulayan bir FastAPI bağımlılığı üretir."""
 
     async def _kontrol(request: Request):
         # İstemci IP'si yoksa (test/proxy) tek bir kovada toplanıyor.
